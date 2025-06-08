@@ -1,0 +1,53 @@
+﻿@using Dashy.Net.Web.ViewModels
+@using System.ComponentModel.DataAnnotations
+
+<EditForm Model="@ItemToEdit" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+
+    <div class="form-group">
+        <label for="title">Title</label>
+        <InputText id="title" class="form-control" @bind-Value="ItemToEdit.Title" />
+        <ValidationMessage For="@(() => ItemToEdit.Title)" />
+    </div>
+
+    <div class="form-group">
+        <label for="url">URL</label>
+        <InputText id="url" class="form-control" @bind-Value="ItemToEdit.Url" />
+    </div>
+
+    <div class="form-group">
+        <label for="description">Description</label>
+        <InputText id="description" class="form-control" @bind-Value="ItemToEdit.Description" />
+    </div>
+
+    <div class="form-group">
+        <label for="icon">Icon</label>
+        <InputText id="icon" class="form-control" @bind-Value="ItemToEdit.Icon" />
+    </div>
+
+    <div class="form-actions">
+        <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter, EditorRequired]
+    public ItemVm ItemToEdit { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<ItemVm> OnSave { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    private async Task HandleValidSubmit()
+    {
+        await OnSave.InvokeAsync(ItemToEdit);
+    }
+
+    private async Task Cancel()
+    {
+        await OnCancel.InvokeAsync();
+    }
+}

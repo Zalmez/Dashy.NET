@@ -1,0 +1,23 @@
+<div class="item-card unknown-widget">
+    <div class="item-icon">
+        <i class="fas fa-question-circle"></i>
+    </div>
+    <div class="item-details">
+        <div class="item-title">Unkown Widget</div>
+        <div class="item-description">
+            The widget type '<code>@Widget</code> is not supported
+        </div>
+    </div>
+</div>
+
+<style>
+    .unknown-widget {
+        background-color: #712b2b;
+        border: 1px solid #ff8a8a;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public string? Widget { get; set; }
+}

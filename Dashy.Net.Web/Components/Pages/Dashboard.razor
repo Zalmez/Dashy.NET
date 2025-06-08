@@ -1,0 +1,191 @@
+﻿@page "/"
+@using Dashy.Net.Web.Clients
+@using Dashy.Net.Web.ViewModels
+@using Dashy.Net.Web.Services 
+@using Dashy.Net.Web.Components.Widgets
+@using Dashy.Net.Web.Components.Widgets.StaticLink
+@using Dashy.Net.Web.Components.Widgets.Clock
+@using Dashy.Net.Web.Components.Shared
+@using Dashy.Net.Shared.DTOs
+@using Dashy.Net.Web
+@using System.Text.Json
+@inject ILogger<Dashboard> Logger
+@inject DashboardClient DashboardClient
+@inject HttpClient Http
+@inject ViewOptionsService ViewOptions 
+@implements IDisposable 
+
+<PageTitle>@_config?.Title</PageTitle>
+
+@if (_config is null)
+{
+    <p><em>Loading dashboard...</em></p>
+}
+else
+{
+    <h1>Welcome to @_config.Title</h1>
+
+    @foreach (var currentSection in _config.Sections)
+    {
+        <div class="section-container">
+            <h2>@currentSection.Name</h2>
+            <div class="item-grid">
+                @foreach (var item in currentSection.Items)
+                {
+                    @switch (item.Widget?.ToLower() ?? "static-link")
+                    {
+                        case "static-link":
+                            <StaticLinkWidget Item="item" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(item)" />
+                            break;
+
+                        case "clock":
+                            <ClockWidget Item="item" />
+                            break;
+
+                        default:
+                            <UnknownWidget Widget="@item.Widget" />
+                            break;
+                    }
+                }
+            </div>
+        </div>
+    }
+}
+
+<Modal Title="@_modalTitle" IsOpen="@_isModalOpen" OnClose="CloseModal">
+    @if (_currentItemToEdit is not null)
+    {
+        <ItemEditor ItemToEdit="_currentItemToEdit" OnSave="HandleSaveItem" OnCancel="CloseModal" />
+    }
+</Modal>
+
+
+@code {
+    private DashboardConfigVm? _config;
+    private bool _isModalOpen = false;
+    private string _modalTitle = "";
+    private ItemVm? _currentItemToEdit;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // This subscription tells the page to re-render when the edit mode changes.
+        ViewOptions.OnEditModeChanged += OnEditModeToggled;
+        _config = await DashboardClient.GetDashboardConfigAsync();
+    }
+
+    private void OnEditModeToggled()
+    {
+        Logger.LogInformation("Edit mode toggled! The Dashboard page received the event.");
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OpenEditModal(ItemVm item)
+    {
+        _modalTitle = $"Edit '{item.Title}'";
+        // Clone the item to avoid modifying the list directly until save
+        _currentItemToEdit = new ItemVm
+        {
+            Id = item.Id,
+            Title = item.Title,
+            Url = item.Url,
+            Description = item.Description,
+            Icon = item.Icon,
+            Widget = item.Widget,
+            SectionId = item.SectionId,
+            Options = item.Options
+        };
+        _isModalOpen = true;
+        StateHasChanged();
+    }
+
+    private void CloseModal()
+    {
+        _isModalOpen = false;
+        _currentItemToEdit = null;
+        StateHasChanged();
+    }
+
+    private async Task HandleSaveItem(ItemVm itemToSave)
+    {
+        Logger.LogInformation("Attempting to save item: {ItemTitle}", itemToSave.Title);
+
+        // 1. Map our frontend ViewModel to the backend API's DTO
+        var updateDto = new UpdateItemDto(
+            itemToSave.Title,
+            itemToSave.Description,
+            itemToSave.Url,
+            itemToSave.Icon,
+            itemToSave.Widget ?? "static-link",
+            itemToSave.SectionId,
+            itemToSave.Options
+        );
+
+        try
+        {
+            // 2. Call the PUT endpoint we created earlier
+            var response = await Http.PutAsJsonAsync($"api/dashboard/items/{itemToSave.Id}", updateDto);
+
+            if (response.IsSuccessStatusCode)
+            {
+                // 3. If the save was successful, find the original item in our list and update it
+                var section = _config?.Sections.FirstOrDefault(s => s.Id == itemToSave.SectionId); // Assuming SectionVm has an Id
+                var originalItem = section?.Items.FirstOrDefault(i => i.Id == itemToSave.Id);
+                if (originalItem is not null)
+                {
+                    originalItem.Title = itemToSave.Title;
+                    originalItem.Url = itemToSave.Url;
+                    originalItem.Description = itemToSave.Description;
+                    originalItem.Icon = itemToSave.Icon;
+                    // You can update other properties here as needed
+                }
+                Logger.LogInformation("Successfully saved item {ItemId}", itemToSave.Id);
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Logger.LogError("Failed to save item {ItemId}. Status: {StatusCode}, Reason: {Reason}",
+                    itemToSave.Id, response.StatusCode, errorContent);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Exception while saving item {ItemId}", itemToSave.Id);
+        }
+        finally
+        {
+            // 4. Close the modal regardless of success or failure
+            CloseModal();
+        }
+    }
+
+    private async Task HandleItemDeleted(ItemVm itemToDelete)
+    {
+        try
+        {
+            var response = await Http.DeleteAsync($"api/dashboard/items/{itemToDelete.Id}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var section = _config?.Sections.FirstOrDefault(s => s.Items.Contains(itemToDelete));
+                if (section is not null)
+                {
+                    section.Items.Remove(itemToDelete);
+                    StateHasChanged();
+                }
+            }
+            else
+            {
+                Logger.LogError("Failed to delete item {ItemId}. Status code: {StatusCode}", itemToDelete.Id, response.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Exception while deleting item {ItemId}", itemToDelete.Id);
+        }
+    }
+    
+    public void Dispose() 
+    {
+        ViewOptions.OnEditModeChanged -= OnEditModeToggled;
+    }
+}

@@ -1,0 +1,27 @@
+# .NET
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+*.cache
+*.log
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+*.vspscc
+*.vssscc
+.vscode/
+.vs/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Rider
+.idea/
+*.sln.iml
+
+# Visual Studio Code
+.vscode/
+.history/

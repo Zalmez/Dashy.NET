@@ -1,0 +1,29 @@
+﻿@using Dashy.Net.Web.Components.Shared
+@using Dashy.Net.Web.Services
+@inherits LayoutComponentBase
+@inject ThemeService ThemeService
+@implements IDisposable
+
+<div class="page @ThemeService.CurrentTheme.CssClass">
+    <header class="main-header">
+        <h1>Dashy.net</h1>
+        <ThemeSelector />
+        <EditModeToggle />
+    </header>
+
+    <main class="content">
+        @Body
+    </main>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        ThemeService.OnThemeChanged += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        ThemeService.OnThemeChanged -= StateHasChanged;
+    }
+}

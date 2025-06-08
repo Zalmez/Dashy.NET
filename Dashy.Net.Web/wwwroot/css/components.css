@@ -1,0 +1,222 @@
+.section-container {
+    margin-bottom: 2rem;
+}
+
+.item-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.item-card {
+    background-color: var(--card-background-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.2s ease-in-out;
+    cursor: pointer; /* <-- ADD THIS LINE */
+}
+
+.item-card:hover {
+    transform: translateY(-4px);
+    background-color: var(--card-hover-background-color);
+    border-color: var(--accent-color);
+}
+
+.item-icon {
+    font-size: 2rem;
+    width: 40px;
+    text-align: center;
+    color: var(--accent-color);
+}
+
+.item-description {
+    font-size: 0.875rem;
+    color: var(--subtle-text-color);
+}
+
+.edit-toggle {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: 60px;
+    height: 34px;
+    cursor: pointer;
+}
+
+.edit-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.edit-toggle .slider {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--card-background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 34px;
+    transition: .4s;
+}
+
+.edit-toggle .toggle-icon {
+    position: absolute;
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: var(--subtle-text-color);
+    color: var(--background-color);
+    border-radius: 50%;
+    transition: .4s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+}
+
+.edit-mode-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: var(--card-background-color);
+    color: var(--subtle-text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    font-size: 0.9rem;
+}
+
+.edit-mode-button:hover {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.edit-mode-button.active {
+    background-color: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+}
+
+
+.item-card-wrapper {
+    position: relative;
+}
+
+.item-edit-controls {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    display: flex;
+    gap: 0.5rem;
+    z-index: 10;
+}
+
+.item-edit-controls button {
+    background: var(--card-background-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.item-edit-controls button:hover {
+    background: var(--accent-color);
+    color: white;
+}
+
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background-color: var(--card-background-color);
+    padding: 2rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-color);
+    min-width: 500px;
+    max-width: 90%;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+}
+
+.modal-close-btn {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    color: var(--text-color);
+    cursor: pointer;
+}
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.5rem;
+    background-color: var(--background-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    border-radius: 0.25rem;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 0.25rem;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background-color: var(--accent-color);
+    color: white;
+}
+
+.btn-secondary {
+    background-color: var(--card-hover-background-color);
+    color: var(--text-color);
+}

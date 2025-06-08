@@ -1,0 +1,66 @@
+@using Dashy.Net.Web.ViewModels
+@using Dashy.Net.Web.Services
+@inject ViewOptionsService ViewOptions
+@inject IJSRuntime JSRuntime
+@inject ILogger<StaticLinkWidget> Logger
+@inject NavigationManager NavManager
+
+<div class="item-card-wrapper">
+    @if (ViewOptions.IsEditMode)
+    {
+        <div class="item-edit-controls">
+            <button class="edit-btn" title="Edit Item" @onclick="OnEditClick"><i class="fas fa-pencil-alt"></i></button>
+            <button class="delete-btn" title="Delete Item" @onclick="OnDeleteClick"><i class="fas fa-trash-alt"></i></button>
+        </div>
+    }
+    <div class="item-card" @onclick="NavigateToUrl">
+        <div class="item-icon">
+            @if (!string.IsNullOrWhiteSpace(Item.Icon))
+            {
+                <i class="@Item.Icon"></i>
+            }
+        </div>
+        <div class="item-details">
+            <div class="item-title">@Item.Title</div>
+            @if (!string.IsNullOrWhiteSpace(Item.Description))
+            {
+                <div class="item-description">@Item.Description</div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ItemVm Item { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<ItemVm> OnItemDeleted { get; set; }
+
+    [Parameter]
+    public EventCallback OnItemEdited { get; set; }
+
+    private async Task OnDeleteClick()
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{Item.Title}'?");
+        if (confirmed)
+        {
+            await OnItemDeleted.InvokeAsync(Item);
+        }
+    }
+
+    private async Task OnEditClick()
+    {
+        await OnItemEdited.InvokeAsync();
+    }
+
+    private void NavigateToUrl()
+    {
+        // This method now handles the click on the card.
+        // It ONLY navigates if we are NOT in edit mode.
+        if (!ViewOptions.IsEditMode && !string.IsNullOrWhiteSpace(Item.Url))
+        {
+            NavManager.NavigateTo(Item.Url, forceLoad: true);
+        }
+    }
+}

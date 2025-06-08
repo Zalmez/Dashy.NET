@@ -1,0 +1,26 @@
+﻿@using Dashy.Net.Web.Services
+@inject ThemeService ThemeService
+
+<div class="theme-selector">
+    <label for="theme-select">Theme:</label>
+    <select id="theme-select" @onchange="OnThemeSelected">
+        @foreach (var theme in ThemeService.AvailableThemes)
+        {
+            <option value="@theme.CssClass" selected="@(theme.CssClass == ThemeService.CurrentTheme.CssClass)">
+                @theme.Name
+            </option>
+        }
+    </select>
+</div>
+
+@code {
+    private void OnThemeSelected(ChangeEventArgs e)
+    {
+        var selectedThemeClass = e.Value?.ToString();
+        var newTheme = ThemeService.AvailableThemes.FirstOrDefault(t => t.CssClass == selectedThemeClass);
+        if (newTheme is not null)
+        {
+            ThemeService.SetTheme(newTheme);
+        }
+    }
+}

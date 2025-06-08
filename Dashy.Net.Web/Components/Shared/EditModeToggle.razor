@@ -1,0 +1,15 @@
+﻿@using Dashy.Net.Web.Services
+@inject ViewOptionsService ViewOptions
+
+<button class="edit-mode-button @(ViewOptions.IsEditMode ? "active" : "")" @onclick="Toggle" title="Toggle Edit Mode" type="button">
+    <i class="fas fa-pencil-alt"></i>
+    <span>Edit Mode</span>
+</button>
+
+@code {
+    private void Toggle()
+    {
+        ViewOptions.ToggleEditMode();
+        StateHasChanged();
+    }
+}

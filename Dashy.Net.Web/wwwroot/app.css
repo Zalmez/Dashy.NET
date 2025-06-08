@@ -1,0 +1,59 @@
+/*
+  Instead of using :root, we define variable sets inside each theme class.
+  This ensures they apply correctly to the element with the theme class.
+*/
+
+.theme-dark {
+    --background-color: #1a202c;
+    --text-color: #e2e8f0;
+    --card-background-color: #2d3748;
+    --card-hover-background-color: #4a5568;
+    --border-color: #4a5568;
+    --subtle-text-color: #a0aec0;
+    --accent-color: #3182ce;
+}
+
+.theme-light {
+    --background-color: #f7fafc;
+    --text-color: #2d3748;
+    --card-background-color: #ffffff;
+    --card-hover-background-color: #edf2f7;
+    --border-color: #e2e8f0;
+    --subtle-text-color: #718096;
+    --accent-color: #3182ce;
+}
+
+html {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Apply the theme variables to the .page container and its children */
+.page {
+    background-color: var(--background-color);
+    color: var(--text-color);
+    min-height: 100vh;
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--text-color);
+}
+
+.main-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 2rem;
+}
+
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.content {
+    padding: 0 2rem;
+}

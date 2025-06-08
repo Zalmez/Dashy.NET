@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Dashy.Net.ServiceDefaults\Dashy.Net.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="wwwroot\css\themes\" />
+  </ItemGroup>
+
+  <!-- Ensure no duplicate Content/None items for JS modules to avoid static web assets build errors -->
+  <ItemGroup>
+    <Content Remove="wwwroot\**\*.razor.js" />
+    <None Remove="wwwroot\**\*.razor.js" />
+  </ItemGroup>
+
+</Project>

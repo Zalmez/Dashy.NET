@@ -1,0 +1,45 @@
+@using Dashy.Net.Web.ViewModels
+@implements IDisposable
+
+<div class="item-card">
+    <div class="item-icon">
+        @if (!string.IsNullOrWhiteSpace(Item.Icon))
+        {
+            <i class="@Item.Icon"></i>
+        }
+    </div>
+    <div class="item-details">
+        <div class="item-title">@Item.Title</div>
+        <div class="clock-display">@_currentTime.ToString("T")</div>
+    </div>
+</div>
+
+@code
+{
+    [Parameter, EditorRequired]
+    public ItemVm Item { get; set; } = null!;
+    
+    private DateTime _currentTime = DateTime.Now;
+    private System.Timers.Timer? _timer;
+
+    protected override void OnInitialized()
+    {
+        _timer = new System.Timers.Timer(1000);
+        _timer.Elapsed += OnTimerElapsed;
+        _timer.AutoReset = true;
+        _timer.Start();
+    }
+    
+    private async void OnTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
+    {
+        _currentTime = DateTime.Now;
+        await InvokeAsync(StateHasChanged);
+    }
+    
+    public void Dispose()
+    {
+        _timer?.Stop();
+        _timer?.Dispose();
+    }
+    
+}

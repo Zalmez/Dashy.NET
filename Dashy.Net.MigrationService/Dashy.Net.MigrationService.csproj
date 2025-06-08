@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>dotnet-Dashy.Net.MigrationService-c5d50591-1cd0-4ddb-91e7-d35699515047</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.3.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Dashy.Net.ServiceDefaults\Dashy.Net.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\Dashy.net.Shared\Dashy.Net.Shared.csproj" />
+  </ItemGroup>
+</Project>
