@@ -1,6 +1,6 @@
 ﻿@page "/"
 @using Dashy.Net.Web.Clients
-@using Dashy.Net.Web.ViewModels
+@using Dashy.Net.Shared.ViewModels
 @using Dashy.Net.Web.Services 
 @using Dashy.Net.Web.Components.Widgets
 @using Dashy.Net.Web.Components.Widgets.StaticLink
@@ -11,7 +11,6 @@
 @using System.Text.Json
 @inject ILogger<Dashboard> Logger
 @inject DashboardClient DashboardClient
-@inject HttpClient Http
 @inject ViewOptionsService ViewOptions 
 @implements IDisposable 
 
@@ -68,7 +67,6 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        // This subscription tells the page to re-render when the edit mode changes.
         ViewOptions.OnEditModeChanged += OnEditModeToggled;
         _config = await DashboardClient.GetDashboardConfigAsync();
     }
@@ -82,18 +80,7 @@ else
     private void OpenEditModal(ItemVm item)
     {
         _modalTitle = $"Edit '{item.Title}'";
-        // Clone the item to avoid modifying the list directly until save
-        _currentItemToEdit = new ItemVm
-        {
-            Id = item.Id,
-            Title = item.Title,
-            Url = item.Url,
-            Description = item.Description,
-            Icon = item.Icon,
-            Widget = item.Widget,
-            SectionId = item.SectionId,
-            Options = item.Options
-        };
+        _currentItemToEdit = item with { };
         _isModalOpen = true;
         StateHasChanged();
     }
@@ -107,9 +94,8 @@ else
 
     private async Task HandleSaveItem(ItemVm itemToSave)
     {
-        Logger.LogInformation("Attempting to save item: {ItemTitle}", itemToSave.Title);
+        Logger.LogInformation("Attempting to save item ID: {ItemId}", itemToSave.Id);
 
-        // 1. Map our frontend ViewModel to the backend API's DTO
         var updateDto = new UpdateItemDto(
             itemToSave.Title,
             itemToSave.Description,
@@ -120,68 +106,31 @@ else
             itemToSave.Options
         );
 
-        try
-        {
-            // 2. Call the PUT endpoint we created earlier
-            var response = await Http.PutAsJsonAsync($"api/dashboard/items/{itemToSave.Id}", updateDto);
+        var success = await DashboardClient.UpdateItemAsync(itemToSave.Id, updateDto);
 
-            if (response.IsSuccessStatusCode)
-            {
-                // 3. If the save was successful, find the original item in our list and update it
-                var section = _config?.Sections.FirstOrDefault(s => s.Id == itemToSave.SectionId); // Assuming SectionVm has an Id
-                var originalItem = section?.Items.FirstOrDefault(i => i.Id == itemToSave.Id);
-                if (originalItem is not null)
-                {
-                    originalItem.Title = itemToSave.Title;
-                    originalItem.Url = itemToSave.Url;
-                    originalItem.Description = itemToSave.Description;
-                    originalItem.Icon = itemToSave.Icon;
-                    // You can update other properties here as needed
-                }
-                Logger.LogInformation("Successfully saved item {ItemId}", itemToSave.Id);
-            }
-            else
-            {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                Logger.LogError("Failed to save item {ItemId}. Status: {StatusCode}, Reason: {Reason}",
-                    itemToSave.Id, response.StatusCode, errorContent);
-            }
-        }
-        catch (Exception ex)
+        if (!success)
         {
-            Logger.LogError(ex, "Exception while saving item {ItemId}", itemToSave.Id);
+            // TODO: Add error handling here. Message to the user
+            Logger.LogError("Failed to update item with ID: {ItemId}", itemToSave.Id);
         }
-        finally
-        {
-            // 4. Close the modal regardless of success or failure
-            CloseModal();
-        }
+        _config = await DashboardClient.GetDashboardConfigAsync();
+        CloseModal();
+        StateHasChanged();
     }
 
     private async Task HandleItemDeleted(ItemVm itemToDelete)
     {
-        try
-        {
-            var response = await Http.DeleteAsync($"api/dashboard/items/{itemToDelete.Id}");
+        var success = await DashboardClient.DeleteItemAsync(itemToDelete.Id);
 
-            if (response.IsSuccessStatusCode)
+        if (!success)
+            // TODO: Add error handling here. Message to the user
+            Logger.LogError("Failed to delete item with ID: {ItemId}", itemToDelete.Id);
+
+        var section = _config?.Sections.FirstOrDefault(s => s.Items.Contains(itemToDelete));
+            if (section is not null)
             {
-                var section = _config?.Sections.FirstOrDefault(s => s.Items.Contains(itemToDelete));
-                if (section is not null)
-                {
-                    section.Items.Remove(itemToDelete);
-                    StateHasChanged();
-                }
+                section.Items.Remove(itemToDelete);
             }
-            else
-            {
-                Logger.LogError("Failed to delete item {ItemId}. Status code: {StatusCode}", itemToDelete.Id, response.StatusCode);
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Exception while deleting item {ItemId}", itemToDelete.Id);
-        }
     }
     
     public void Dispose() 

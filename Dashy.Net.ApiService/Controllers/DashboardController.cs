@@ -25,8 +25,6 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
         {
             return NotFound();
         }
-
-        // In a real app, we would map this to a ViewModel before returning.
         return Ok(item);
     }
 
@@ -37,8 +35,6 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
             .Include(s => s.Items)
             .AsNoTracking()
             .ToListAsync();
-
-        // --- Map the Database Entities to the ViewModels ---
         var configVm = new DashboardConfigVm(
             "Database-Driven Dashboard",
             sectionsFromDb.Select(dbSection => new SectionVm
@@ -81,7 +77,6 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
             var section = new DashboardSection
             {
                 Name = "From The Database",
-                // 2. We create the child 'items' and put them INSIDE the parent's 'Items' list
                 Items =
                 [
                     new DashboardItem { Title = "Test Item 1", Widget = "static-link", Url = "#", Icon = "fas fa-database" },
@@ -130,11 +125,36 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
 
         logger.LogInformation("Created new item '{ItemTitle}' with ID {ItemId} in section {SectionId}", newItem.Title, newItem.Id, newItem.SectionId);
 
-        // The 'CreatedAtAction' returns a proper 201 Created HTTP response.
-        // It requires the name of the "Get" action for this resource.
         return CreatedAtAction(nameof(GetItem), new { id = newItem.Id }, newItem);
     }
 
+    #endregion
+
+
+    #region puts
+    [HttpPut("items/{id}")]
+    public async Task<IActionResult> UpdateItem(int id, [FromBody] UpdateItemDto itemDto)
+    {
+        var itemToUpdate = await dbContext.Items.FindAsync(id);
+        if (itemToUpdate is null)
+        {
+            logger.LogWarning("Attempted to update non-existent item with ID: {ItemId}", id);
+            return NotFound();
+        }
+        itemToUpdate.Title = itemDto.Title;
+        itemToUpdate.Description = itemDto.Description;
+        itemToUpdate.Url = itemDto.Url;
+        itemToUpdate.Icon = itemDto.Icon;
+        itemToUpdate.Widget = itemDto.Widget;
+        itemToUpdate.SectionId = itemDto.SectionId;
+        itemToUpdate.OptionsJson = itemToUpdate.OptionsJson = itemDto.Options is not null
+            ? JsonSerializer.Serialize(itemDto.Options)
+            : null;
+        await dbContext.SaveChangesAsync();
+
+        logger.LogInformation("Updated item with ID: {ItemId}", id);
+        return NoContent();
+    }
     #endregion
 
     #region Deletes
@@ -156,4 +176,6 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
         return NoContent();
     }
     #endregion
+
+
 }

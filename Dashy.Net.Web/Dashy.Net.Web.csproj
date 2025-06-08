@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Dashy.Net.ServiceDefaults\Dashy.Net.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\Dashy.net.Shared\Dashy.Net.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>

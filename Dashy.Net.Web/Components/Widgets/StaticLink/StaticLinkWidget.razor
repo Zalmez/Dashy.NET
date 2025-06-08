@@ -1,4 +1,4 @@
-@using Dashy.Net.Web.ViewModels
+@using Dashy.Net.Shared.ViewModels
 @using Dashy.Net.Web.Services
 @inject ViewOptionsService ViewOptions
 @inject IJSRuntime JSRuntime
@@ -56,8 +56,6 @@
 
     private void NavigateToUrl()
     {
-        // This method now handles the click on the card.
-        // It ONLY navigates if we are NOT in edit mode.
         if (!ViewOptions.IsEditMode && !string.IsNullOrWhiteSpace(Item.Url))
         {
             NavManager.NavigateTo(Item.Url, forceLoad: true);
