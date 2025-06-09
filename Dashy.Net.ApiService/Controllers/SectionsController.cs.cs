@@ -26,7 +26,7 @@ public class SectionsController(AppDbContext dbContext, ILogger<SectionsControll
         logger.LogInformation("Created new section '{SectionName}' with ID {SectionId}", newSection.Name, newSection.Id);
 
         // Map to a clean ViewModel for the response. An empty section has an empty list of items.
-        var sectionVm = new SectionVm(newSection.Id, newSection.Name, new List<ItemVm>());
+        var sectionVm = new SectionVm(newSection.Id, newSection.Name, newSection.Icon, new List<ItemVm>());
 
         return CreatedAtAction(nameof(GetSection), new { id = newSection.Id }, sectionVm);
     }
@@ -47,6 +47,7 @@ public class SectionsController(AppDbContext dbContext, ILogger<SectionsControll
         var sectionVm = new SectionVm(
             section.Id,
             section.Name,
+            section.Icon,
             section.Items.Select(dbItem => new ItemVm(
                 dbItem.Id,
                 dbItem.Title!,

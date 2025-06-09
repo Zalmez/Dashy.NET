@@ -24,6 +24,7 @@ public class DashboardSection
     public int Id { get; set; }
     [Required]
     public required string Name { get; set; }
+    public string? Icon { get; set; }
     public List<DashboardItem> Items { get; set; } = [];
     public int Position { get; set; } = 0;
 }

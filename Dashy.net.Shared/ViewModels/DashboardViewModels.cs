@@ -9,6 +9,7 @@ public record DashboardConfigVm(
 public record SectionVm(
     int Id,
     string Name,
+    string? Icon,
     List<ItemVm> Items
 );
 

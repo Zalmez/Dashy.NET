@@ -29,6 +29,7 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
             sectionsFromDb.Select(dbSection => new SectionVm(
                 dbSection.Id,
                 dbSection.Name,
+                dbSection.Icon,
                 dbSection.Items.Select(dbItem => new ItemVm(
                     dbItem.Id,
                     dbItem.Title!,
@@ -61,6 +62,7 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
             var section = new DashboardSection
             {
                 Name = "From The Database",
+                Icon = "fas fa-database",
                 Items =
                 [
                     new DashboardItem { Title = "Test Item 1", Widget = "static-link", Url = "#", Icon = "fas fa-database" },
