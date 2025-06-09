@@ -23,4 +23,8 @@ public record UpdateItemDto(
     Dictionary<string, object>? Options
 );
 
+public record ReorderItemsDto(List<int> OrderedItemIds);
+
 public record CreateSectionDto([Required] string Name);
+public record UpdateSectionDto([Required] string Name);
+public record ReorderSectionsDto(List<int> OrderedSectionIds);

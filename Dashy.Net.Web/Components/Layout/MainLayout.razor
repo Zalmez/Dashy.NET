@@ -2,13 +2,18 @@
 @using Dashy.Net.Web.Services
 @inherits LayoutComponentBase
 @inject ThemeService ThemeService
+@inject IJSRuntime JSRuntime
 @implements IDisposable
 
-<div class="page @ThemeService.CurrentTheme.CssClass">
+@* This is the simplified layout without the side panel *@
+<div>
     <header class="main-header">
-        <h1>Dashy.net</h1>
-        <ThemeSelector />
-        <EditModeToggle />
+        @* We no longer need the header-left container or the toggle button *@
+        <h1>Dashy.Net</h1>
+        <div class="header-controls">
+            <ThemeToggleButton IsLightMode="isLightMode" OnToggle="HandleThemeToggle" />
+            <EditModeToggle />
+        </div>
     </header>
 
     <main class="content">
@@ -17,13 +22,42 @@
 </div>
 
 @code {
-    protected override void OnInitialized()
+    private bool isLightMode = false;
+
+    // The C# code for handling themes remains the same.
+    // We are only removing the 'isSidePanelCollapsed' field and 'ToggleSidePanel' method.
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        ThemeService.OnThemeChanged += StateHasChanged;
+        if (firstRender)
+        {
+            var savedThemeClass = await JSRuntime.InvokeAsync<string?>("getFromLocalStorage", "dashy-theme");
+            var initialThemeClass = savedThemeClass ?? ThemeService.CurrentTheme.CssClass;
+            ThemeService.SetCurrentThemeWithoutNotification(initialThemeClass);
+            OnThemeChangedHandler();
+            ThemeService.OnThemeChanged += OnThemeChangedHandler;
+        }
+    }
+
+    private async Task HandleThemeToggle()
+    {
+        var newThemeClass = ThemeService.CurrentTheme.CssClass == "theme-dark" ? "theme-light" : "theme-dark";
+        await JSRuntime.InvokeVoidAsync("saveToLocalStorage", "dashy-theme", newThemeClass);
+        ThemeService.SetTheme(newThemeClass);
+    }
+
+    private void OnThemeChangedHandler()
+    {
+        InvokeAsync(async () =>
+        {
+            isLightMode = ThemeService.CurrentTheme.CssClass == "theme-light";
+            await JSRuntime.InvokeVoidAsync("setBodyClass", ThemeService.CurrentTheme.CssClass);
+            StateHasChanged();
+        });
     }
 
     public void Dispose()
     {
-        ThemeService.OnThemeChanged -= StateHasChanged;
+        ThemeService.OnThemeChanged -= OnThemeChangedHandler;
     }
 }

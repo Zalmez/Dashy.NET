@@ -47,6 +47,25 @@ public class ItemsClient(HttpClient httpClient, ILogger<ItemsClient> logger)
         }
     }
 
+    public async Task<bool> ReorderAsync(ReorderItemsDto dto)
+    {
+        try
+        {
+            var response = await httpClient.PostAsJsonAsync("api/items/reorder", dto);
+            if (!response.IsSuccessStatusCode)
+            {
+                logger.LogError("Failed to reorder items. Status: {StatusCode}", response.StatusCode);
+                return false;
+            }
+            logger.LogInformation("Successfully reordered items.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Exception while reordering items.");
+            return false;
+        }
+    }
     public async Task<bool> DeleteAsync(int itemId)
     {
         try

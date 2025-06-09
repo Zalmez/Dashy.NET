@@ -15,6 +15,7 @@ public class DashboardItem
 
     public int SectionId { get; set; }
     public DashboardSection Section { get; set; } = null!;
+    public int Position { get; set; } = 0;
 
 }
 
@@ -24,4 +25,5 @@ public class DashboardSection
     [Required]
     public required string Name { get; set; }
     public List<DashboardItem> Items { get; set; } = [];
+    public int Position { get; set; } = 0;
 }

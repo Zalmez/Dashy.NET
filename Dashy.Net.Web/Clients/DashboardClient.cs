@@ -9,7 +9,6 @@ public class DashboardClient
     private readonly HttpClient _httpClient;
     private readonly ILogger<DashboardClient> _logger;
 
-    // Public properties for the fluent API
     public ItemsClient Items { get; }
     public SectionsClient Sections { get; }
 

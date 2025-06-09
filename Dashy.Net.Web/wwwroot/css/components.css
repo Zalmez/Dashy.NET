@@ -239,3 +239,81 @@
     color: var(--accent-color);
     border-color: var(--accent-color);
 }
+
+.theme-toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    cursor: pointer;
+}
+
+.theme-toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.theme-toggle-switch .slider {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #3e4c5f; /* A neutral dark-ish color */
+    border-radius: 34px;
+    transition: .4s;
+    display: flex;
+    align-items: center;
+}
+
+.theme-toggle-switch .slider::before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    border-radius: 50%;
+    transition: .4s;
+    z-index: 2;
+}
+
+.theme-toggle-switch .slider .icon-sun,
+.theme-toggle-switch .slider .icon-moon {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    color: #fdd835; /* Sun color */
+}
+
+.theme-toggle-switch .slider .icon-sun {
+    left: 8px;
+}
+
+.theme-toggle-switch .slider .icon-moon {
+    right: 8px;
+    color: #7e57c2; /* Moon color */
+}
+
+.theme-toggle-switch input:checked + .slider::before {
+    transform: translateX(26px);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.section-edit-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.sortable-item {
+    cursor: grab;
+}

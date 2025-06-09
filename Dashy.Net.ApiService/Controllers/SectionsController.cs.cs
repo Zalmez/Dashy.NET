@@ -61,4 +61,62 @@ public class SectionsController(AppDbContext dbContext, ILogger<SectionsControll
 
         return Ok(sectionVm);
     }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateSection(int id, [FromBody] UpdateSectionDto sectionDto)
+    {
+        var sectionToUpdate = await dbContext.Sections.FindAsync(id);
+        if (sectionToUpdate is null)
+        {
+            logger.LogWarning("Attempted to update non-existent section with ID: {SectionId}", id);
+            return NotFound();
+        }
+
+        sectionToUpdate.Name = sectionDto.Name;
+        await dbContext.SaveChangesAsync();
+
+        logger.LogInformation("Updated section with ID: {SectionId}", id);
+        return NoContent();
+    }
+
+    [HttpPost("reorder")]
+    public async Task<IActionResult> ReorderSections([FromBody] ReorderSectionsDto dto)
+    {
+        var sectionsToReorder = await dbContext.Sections
+            .Where(section => dto.OrderedSectionIds.Contains(section.Id))
+            .ToListAsync();
+
+        for (int i = 0; i < dto.OrderedSectionIds.Count; i++)
+        {
+            var sectionId = dto.OrderedSectionIds[i];
+            var section = sectionsToReorder.FirstOrDefault(s => s.Id == sectionId);
+            if (section != null)
+            {
+                section.Position = i;
+            }
+        }
+
+        await dbContext.SaveChangesAsync();
+        return Ok();
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteSection(int id)
+    {
+        var section = await dbContext.Sections
+            .Include(s => s.Items)
+            .FirstOrDefaultAsync(s => s.Id == id);
+
+        if (section is null)
+        {
+            logger.LogWarning("Attempted to delete non-existent section with ID: {SectionId}", id);
+            return NotFound();
+        }
+        dbContext.Sections.Remove(section);
+        await dbContext.SaveChangesAsync();
+
+        logger.LogInformation("Successfully deleted section '{SectionName}' with ID: {SectionId}", section.Name, id);
+        return NoContent();
+    }
+
 }

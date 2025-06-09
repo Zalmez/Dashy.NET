@@ -1,0 +1,22 @@
+﻿@using Dashy.Net.Web.Services
+
+<label class="theme-toggle-switch" title="Toggle Theme">
+    <input type="checkbox" @onchange="HandleToggleAsync" checked="@IsLightMode" />
+    <span class="slider">
+        <span class="icon-sun"><i class="fas fa-sun"></i></span>
+        <span class="icon-moon"><i class="fas fa-moon"></i></span>
+    </span>
+</label>
+
+@code {
+    [Parameter]
+    public bool IsLightMode { get; set; }
+
+    [Parameter]
+    public EventCallback OnToggle { get; set; }
+
+    private async Task HandleToggleAsync(ChangeEventArgs e)
+    {
+        await OnToggle.InvokeAsync();
+    }
+}

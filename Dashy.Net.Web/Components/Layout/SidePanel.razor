@@ -1,0 +1,28 @@
+﻿@using Dashy.Net.Shared.Models
+@using Dashy.Net.Shared.ViewModels
+
+<aside class="side-panel @(IsCollapsed ? "collapsed" : "")">
+    <div class="side-panel-content">
+        @if (Sections is not null && Sections.Any())
+        {
+            <h4>Sections</h4>
+            <ul>
+                
+                @foreach (var navSection in Sections)
+                {
+                    <li>
+                        <a href="@($"#section-{navSection.Id}")">@navSection.Name</a>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</aside>
+
+@code {
+    [Parameter]
+    public List<SectionVm>? Sections { get; set; }
+
+    [Parameter]
+    public bool IsCollapsed { get; set; }
+}
