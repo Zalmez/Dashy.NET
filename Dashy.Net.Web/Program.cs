@@ -2,6 +2,7 @@ using Dashy.Net.Web;
 using Dashy.Net.Web.Clients;
 using Dashy.Net.Web.Components;
 using Dashy.Net.Web.Services;
+using BlazorSortable;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,7 +15,7 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddOutputCache();
 
-// Dashy.Net services
+#region Dashy.Net required services
 builder.Services.AddHttpClient<DashboardClient>(opts =>
 {
     opts.BaseAddress = new("https+http://apiservice");
@@ -22,6 +23,9 @@ builder.Services.AddHttpClient<DashboardClient>(opts =>
 
 builder.Services.AddSingleton<ThemeService>();
 builder.Services.AddSingleton<ViewOptionsService>();
+builder.Services.AddSortableServices();
+builder.Services.AddSingleton<DashboardStateService>();
+#endregion
 
 var app = builder.Build();
 

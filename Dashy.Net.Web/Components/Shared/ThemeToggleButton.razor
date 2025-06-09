@@ -1,11 +1,7 @@
 ﻿@using Dashy.Net.Web.Services
-@using Dashy.Net.Web.ViewModels
-@inject ThemeService ThemeService
-@inject IJSRuntime JSRuntime
-@implements IDisposable
 
 <label class="theme-toggle-switch" title="Toggle Theme">
-    <input type="checkbox" @onchange="ToggleTheme" checked="@IsLightMode" />
+    <input type="checkbox" @onchange="HandleToggleAsync" checked="@IsLightMode" />
     <span class="slider">
         <span class="icon-sun"><i class="fas fa-sun"></i></span>
         <span class="icon-moon"><i class="fas fa-moon"></i></span>
@@ -13,22 +9,14 @@
 </label>
 
 @code {
-    private bool IsLightMode => ThemeService.CurrentTheme.CssClass == "theme-light";
+    [Parameter]
+    public bool IsLightMode { get; set; }
 
-    protected override void OnInitialized()
-    {
-        ThemeService.OnThemeChanged += StateHasChanged;
-    }
+    [Parameter]
+    public EventCallback OnToggle { get; set; }
 
-    private async Task ToggleTheme(ChangeEventArgs e)
+    private async Task HandleToggleAsync(ChangeEventArgs e)
     {
-        var newThemeClass = (bool)(e.Value ?? false) ? "theme-light" : "theme-dark";
-        await JSRuntime.InvokeVoidAsync("saveToLocalStorage", "dashy-theme", newThemeClass);
-        ThemeService.SetTheme(newThemeClass);
-    }
-
-    public void Dispose()
-    {
-        ThemeService.OnThemeChanged -= StateHasChanged;
+        await OnToggle.InvokeAsync();
     }
 }

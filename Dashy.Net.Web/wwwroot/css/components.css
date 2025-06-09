@@ -301,3 +301,19 @@
 .theme-toggle-switch input:checked + .slider::before {
     transform: translateX(26px);
 }
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.section-edit-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.sortable-item {
+    cursor: grab;
+}

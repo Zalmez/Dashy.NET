@@ -16,7 +16,7 @@ public class ThemeService
 
     public ThemeService()
     {
-        CurrentTheme = AvailableThemes.First(t => t.CssClass == "theme-dark");
+        CurrentTheme = AvailableThemes.First();
     }
 
     public void SetTheme(string themeClass)
@@ -27,5 +27,10 @@ public class ThemeService
             CurrentTheme = newTheme;
             OnThemeChanged?.Invoke();
         }
+    }
+
+    public void SetCurrentThemeWithoutNotification(string themeClass)
+    {
+        CurrentTheme = AvailableThemes.FirstOrDefault(t => t.CssClass == themeClass) ?? CurrentTheme;
     }
 }

@@ -19,11 +19,11 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
     public async Task<IActionResult> GetConfig()
     {
         var sectionsFromDb = await dbContext.Sections
-            .Include(s => s.Items)
+            .OrderBy(s => s.Position)
+            .Include(s => s.Items.OrderBy(i => i.Position))
             .AsNoTracking()
             .ToListAsync();
 
-        // Map the Database Entities to the ViewModels the frontend expects
         var configVm = new DashboardConfigVm(
             "Database-Driven Dashboard",
             sectionsFromDb.Select(dbSection => new SectionVm(
