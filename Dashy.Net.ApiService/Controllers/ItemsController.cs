@@ -63,7 +63,7 @@ public class ItemsController(AppDbContext dbContext, ILogger<ItemsController> lo
         // Map the entity to the clean ViewModel before returning.
         var itemVm = new ItemVm(
             item.Id,
-            item.Title,
+            item.Title!,
             item.Description,
             item.Url,
             item.Icon,

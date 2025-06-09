@@ -49,7 +49,7 @@ public class SectionsController(AppDbContext dbContext, ILogger<SectionsControll
             section.Name,
             section.Items.Select(dbItem => new ItemVm(
                 dbItem.Id,
-                dbItem.Title,
+                dbItem.Title!,
                 dbItem.Description,
                 dbItem.Url,
                 dbItem.Icon,

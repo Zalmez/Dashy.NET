@@ -31,7 +31,7 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
                 dbSection.Name,
                 dbSection.Items.Select(dbItem => new ItemVm(
                     dbItem.Id,
-                    dbItem.Title,
+                    dbItem.Title!,
                     dbItem.Description,
                     dbItem.Url,
                     dbItem.Icon,

@@ -8,7 +8,6 @@ public class DashboardClient
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<DashboardClient> _logger;
-    private readonly JsonSerializerOptions _jsonSerializerOptions;
 
     // Public properties for the fluent API
     public ItemsClient Items { get; }
