@@ -1,5 +1,6 @@
 using Dashy.Net.Shared.Data;
 using Scalar.AspNetCore;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 

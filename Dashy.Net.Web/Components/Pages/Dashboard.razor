@@ -1,18 +1,16 @@
 ﻿@page "/"
-@using Dashy.Net.Web.Clients
+@using Dashy.Net.Shared.Models
 @using Dashy.Net.Shared.ViewModels
-@using Dashy.Net.Web.Services 
+@using Dashy.Net.Web.Clients
+@using Dashy.Net.Web.Services
 @using Dashy.Net.Web.Components.Widgets
 @using Dashy.Net.Web.Components.Widgets.StaticLink
 @using Dashy.Net.Web.Components.Widgets.Clock
 @using Dashy.Net.Web.Components.Shared
-@using Dashy.Net.Shared.DTOs
-@using Dashy.Net.Web
-@using System.Text.Json
 @inject ILogger<Dashboard> Logger
 @inject DashboardClient DashboardClient
-@inject ViewOptionsService ViewOptions 
-@implements IDisposable 
+@inject ViewOptionsService ViewOptions
+@implements IDisposable
 
 <PageTitle>@_config?.Title</PageTitle>
 
@@ -23,6 +21,15 @@
 else
 {
     <h1>Welcome to @_config.Title</h1>
+
+    @if (ViewOptions.IsEditMode)
+    {
+        <div class="add-section-container" style="margin-bottom: 2rem;">
+            <button class="btn btn-primary" @onclick="OpenAddSectionModal">
+                <i class="fas fa-plus"></i> Add New Section
+            </button>
+        </div>
+    }
 
     @foreach (var currentSection in _config.Sections)
     {
@@ -46,95 +53,138 @@ else
                             break;
                     }
                 }
+                @if (ViewOptions.IsEditMode)
+                {
+                    <AddItemButton OnClick="() => OpenCreateModal(currentSection.Id)" />
+                }
             </div>
         </div>
     }
 }
 
-<Modal Title="@_modalTitle" IsOpen="@_isModalOpen" OnClose="CloseModal">
+<Modal Title="@_itemModalTitle" IsOpen="@_isItemModalOpen" OnClose="CloseItemModal">
     @if (_currentItemToEdit is not null)
     {
-        <ItemEditor ItemToEdit="_currentItemToEdit" OnSave="HandleSaveItem" OnCancel="CloseModal" />
+        <ItemEditor EditModel="_currentItemToEdit" OnSave="HandleSaveItem" OnCancel="CloseItemModal" />
     }
+</Modal>
+
+<Modal Title="Add New Section" IsOpen="@_isSectionModalOpen" OnClose="CloseSectionModal">
+    <SectionEditor EditModel="_newSection" OnSave="HandleSaveSection" OnCancel="CloseSectionModal" />
 </Modal>
 
 
 @code {
     private DashboardConfigVm? _config;
-    private bool _isModalOpen = false;
-    private string _modalTitle = "";
-    private ItemVm? _currentItemToEdit;
+
+    // State for Item editor modal
+    private bool _isItemModalOpen = false;
+    private string _itemModalTitle = "";
+    private ItemEditModel? _currentItemToEdit;
+
+    // State for Section editor modal
+    private bool _isSectionModalOpen = false;
+    private CreateSectionDto? _newSection;
 
     protected override async Task OnInitializedAsync()
     {
-        ViewOptions.OnEditModeChanged += OnEditModeToggled;
-        _config = await DashboardClient.GetDashboardConfigAsync();
+        ViewOptions.OnEditModeChanged += StateHasChanged;
+        _config = await DashboardClient.GetConfigAsync();
     }
 
-    private void OnEditModeToggled()
+    private void OpenCreateModal(int sectionId)
     {
-        Logger.LogInformation("Edit mode toggled! The Dashboard page received the event.");
-        InvokeAsync(StateHasChanged);
+        _itemModalTitle = "Add New Item";
+        _currentItemToEdit = new ItemEditModel { SectionId = sectionId, Widget = "static-link" };
+        _isItemModalOpen = true;
     }
 
     private void OpenEditModal(ItemVm item)
     {
-        _modalTitle = $"Edit '{item.Title}'";
-        _currentItemToEdit = item with { };
-        _isModalOpen = true;
-        StateHasChanged();
-    }
-
-    private void CloseModal()
-    {
-        _isModalOpen = false;
-        _currentItemToEdit = null;
-        StateHasChanged();
-    }
-
-    private async Task HandleSaveItem(ItemVm itemToSave)
-    {
-        Logger.LogInformation("Attempting to save item ID: {ItemId}", itemToSave.Id);
-
-        var updateDto = new UpdateItemDto(
-            itemToSave.Title,
-            itemToSave.Description,
-            itemToSave.Url,
-            itemToSave.Icon,
-            itemToSave.Widget ?? "static-link",
-            itemToSave.SectionId,
-            itemToSave.Options
-        );
-
-        var success = await DashboardClient.UpdateItemAsync(itemToSave.Id, updateDto);
-
-        if (!success)
+        _itemModalTitle = $"Edit '{item.Title}'";
+        _currentItemToEdit = new ItemEditModel
         {
-            // TODO: Add error handling here. Message to the user
-            Logger.LogError("Failed to update item with ID: {ItemId}", itemToSave.Id);
+            Id = item.Id,
+            Title = item.Title,
+            Description = item.Description,
+            Url = item.Url,
+            Icon = item.Icon,
+            Widget = item.Widget ?? "static-link",
+            SectionId = item.SectionId,
+            Options = item.Options
+        };
+        _isItemModalOpen = true;
+    }
+
+    private void CloseItemModal()
+    {
+        _isItemModalOpen = false;
+        _currentItemToEdit = null;
+    }
+
+    private async Task HandleSaveItem(ItemEditModel itemToSave)
+    {
+        bool success;
+        if (itemToSave.Id > 0)
+        {
+            var updateDto = new UpdateItemDto(itemToSave.Title, itemToSave.Description, itemToSave.Url, itemToSave.Icon, itemToSave.Widget, itemToSave.SectionId, itemToSave.Options);
+            success = await DashboardClient.Items.UpdateAsync(itemToSave.Id, updateDto);
         }
-        _config = await DashboardClient.GetDashboardConfigAsync();
-        CloseModal();
-        StateHasChanged();
+        else
+        {
+            var createDto = new CreateItemDto(itemToSave.Title, itemToSave.Description, itemToSave.Url, itemToSave.Icon, itemToSave.Widget, itemToSave.SectionId, itemToSave.Options);
+            success = await DashboardClient.Items.CreateAsync(createDto);
+        }
+
+        if (success)
+        {
+            _config = await DashboardClient.GetConfigAsync();
+        }
+        
+        CloseItemModal();
     }
 
     private async Task HandleItemDeleted(ItemVm itemToDelete)
     {
-        var success = await DashboardClient.DeleteItemAsync(itemToDelete.Id);
-
-        if (!success)
-            // TODO: Add error handling here. Message to the user
-            Logger.LogError("Failed to delete item with ID: {ItemId}", itemToDelete.Id);
-
-        var section = _config?.Sections.FirstOrDefault(s => s.Items.Contains(itemToDelete));
+        var success = await DashboardClient.Items.DeleteAsync(itemToDelete.Id);
+        if (success)
+        {
+            // For an instant UI update, we remove the item from the local list.
+            var section = _config?.Sections.FirstOrDefault(s => s.Items.Any(i => i.Id == itemToDelete.Id));
             if (section is not null)
             {
-                section.Items.Remove(itemToDelete);
+                var item = section.Items.FirstOrDefault(i => i.Id == itemToDelete.Id);
+                if(item is not null) section.Items.Remove(item);
             }
+        }
     }
-    
-    public void Dispose() 
+
+    private void OpenAddSectionModal()
     {
-        ViewOptions.OnEditModeChanged -= OnEditModeToggled;
+        _newSection = new CreateSectionDto("");
+        _isSectionModalOpen = true;
+        StateHasChanged();
+    }
+
+    private void CloseSectionModal()
+    {
+        _isSectionModalOpen = false;
+        _newSection = null;
+    }
+
+    private async Task HandleSaveSection(CreateSectionDto sectionToSave)
+    {
+        var success = await DashboardClient.Sections.CreateAsync(sectionToSave);
+        if (success)
+        {
+            _config = await DashboardClient.GetConfigAsync();
+        }
+        
+        CloseSectionModal();
+    }
+
+    public void Dispose()
+    {
+        ViewOptions.OnEditModeChanged -= StateHasChanged;
     }
 }

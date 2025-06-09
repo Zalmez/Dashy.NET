@@ -1,63 +1,37 @@
-﻿using Dashy.Net.Shared.DTOs;
-using Dashy.Net.Shared.ViewModels;
+﻿using Dashy.Net.Shared.ViewModels;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Dashy.Net.Web.Clients;
 
-public class DashboardClient(HttpClient httpClient, ILogger<DashboardClient> logger)
+public class DashboardClient
 {
-    public async Task<DashboardConfigVm?> GetDashboardConfigAsync()
+    private readonly HttpClient _httpClient;
+    private readonly ILogger<DashboardClient> _logger;
+    private readonly JsonSerializerOptions _jsonSerializerOptions;
+
+    // Public properties for the fluent API
+    public ItemsClient Items { get; }
+    public SectionsClient Sections { get; }
+
+    public DashboardClient(HttpClient httpClient, ILoggerFactory loggerFactory)
+    {
+        _httpClient = httpClient;
+        _logger = loggerFactory.CreateLogger<DashboardClient>();
+
+        Items = new ItemsClient(httpClient, loggerFactory.CreateLogger<ItemsClient>());
+        Sections = new SectionsClient(httpClient, loggerFactory.CreateLogger<SectionsClient>());
+    }
+    public async Task<DashboardConfigVm?> GetConfigAsync()
     {
         try
         {
-            return await httpClient.GetFromJsonAsync<DashboardConfigVm>("api/dashboard/config");
+            return await _httpClient.GetFromJsonAsync<DashboardConfigVm>("api/dashboard/config");
         }
         catch (HttpRequestException ex)
         {
-            logger.LogError(ex, "Failed to fetch dashboard config from the API.");
+            _logger.LogError(ex, "Failed to fetch dashboard config from the API.");
             return new DashboardConfigVm("Error: Cannot connect to API!", new List<SectionVm>());
         }
     }
-
-    public async Task<bool> DeleteItemAsync(int itemId)
-    {
-        try
-        {
-            var response = await httpClient.DeleteAsync($"api/dashboard/items/{itemId}");
-            if (!response.IsSuccessStatusCode)
-            {
-                logger.LogError("Failed to delete item {ItemId}. Status: {StatusCode}", itemId, response.StatusCode);
-                return false;
-            }
-            logger.LogInformation("Successfully deleted item {ItemId}", itemId);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Exception while deleting item {ItemId}", itemId);
-            return false;
-        }
-    }
-    public async Task<bool> UpdateItemAsync(int itemId, UpdateItemDto dto)
-    {
-        try
-        {
-            var response = await httpClient.PutAsJsonAsync($"api/dashboard/items/{itemId}", dto);
-            if (!response.IsSuccessStatusCode)
-            {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                logger.LogError("Failed to update item {ItemId}. Status: {StatusCode}, Reason: {Reason}",
-                    itemId, response.StatusCode, errorContent);
-                return false;
-            }
-            logger.LogInformation("Successfully updated item {ItemId}", itemId);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Exception while updating item {ItemId}", itemId);
-            return false;
-        }
-    }
-
 }
-

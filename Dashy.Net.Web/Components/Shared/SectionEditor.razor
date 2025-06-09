@@ -1,0 +1,48 @@
+﻿@using System.ComponentModel.DataAnnotations
+@using Dashy.Net.Shared.Models
+
+@* Bind the form to our new, mutable _editModel *@
+<EditForm Model="@_editModel" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+
+    <div class="form-group">
+        <label for="name">Section Name</label>
+        <InputText id="name" class="form-control" @bind-Value="_editModel.Name" />
+        <ValidationMessage For="@(() => _editModel.Name)" />
+    </div>
+
+    <div class="form-actions">
+        <button type="button" class="btn btn-secondary" @onclick="OnCancel">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Section</button>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter, EditorRequired]
+    public CreateSectionDto EditModel { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<CreateSectionDto> OnSave { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    private SectionEditModel _editModel = new();
+
+    public class SectionEditModel
+    {
+        [Required]
+        public string Name { get; set; } = "";
+    }
+
+    protected override void OnParametersSet()
+    {
+        _editModel.Name = EditModel.Name;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        var dtoToSave = new CreateSectionDto(_editModel.Name);
+        await OnSave.InvokeAsync(dtoToSave);
+    }
+}

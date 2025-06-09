@@ -1,0 +1,8 @@
+﻿<button class="add-item-btn" @onclick="OnClick" title="Add New Item">
+    <i class="fas fa-plus"></i>
+</button>
+
+@code {
+    [Parameter]
+    public EventCallback OnClick { get; set; }
+}

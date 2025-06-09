@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Dashy.Net.Shared.Models;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Dashy.Net.Shared.DTOs;
+namespace Dashy.Net.Shared.Models;
 
 public record CreateItemDto(
     [Required] string Title,
@@ -27,3 +23,4 @@ public record UpdateItemDto(
     Dictionary<string, object>? Options
 );
 
+public record CreateSectionDto([Required] string Name);

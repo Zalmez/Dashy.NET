@@ -220,3 +220,22 @@
     background-color: var(--card-hover-background-color);
     color: var(--text-color);
 }
+
+
+.add-item-btn {
+    background: transparent;
+    color: var(--subtle-text-color);
+    border: 1px dashed var(--subtle-text-color);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    height: 100%;
+    min-height: 80px; /* Give it some default height */
+    font-size: 2rem;
+    transition: all 0.2s ease-in-out;
+}
+
+.add-item-btn:hover {
+    background: var(--card-background-color);
+    color: var(--accent-color);
+    border-color: var(--accent-color);
+}

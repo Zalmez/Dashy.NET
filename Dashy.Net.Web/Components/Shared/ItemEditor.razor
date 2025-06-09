@@ -1,28 +1,28 @@
-﻿@using Dashy.Net.Shared.ViewModels
+﻿@using Dashy.Net.Shared.Models
 @using System.ComponentModel.DataAnnotations
 
-<EditForm Model="@_editModel" OnValidSubmit="HandleValidSubmit">
+<EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit">
     <DataAnnotationsValidator />
 
     <div class="form-group">
         <label for="title">Title</label>
-        <InputText id="title" class="form-control" @bind-Value="_editModel.Title" />
-        <ValidationMessage For="@(() => _editModel.Title)" />
+        <InputText id="title" class="form-control" @bind-Value="EditModel.Title" />
+        <ValidationMessage For="@(() => EditModel.Title)" />
     </div>
 
     <div class="form-group">
         <label for="url">URL</label>
-        <InputText id="url" class="form-control" @bind-Value="_editModel.Url" />
+        <InputText id="url" class="form-control" @bind-Value="EditModel.Url" />
     </div>
 
     <div class="form-group">
         <label for="description">Description</label>
-        <InputText id="description" class="form-control" @bind-Value="_editModel.Description" />
+        <InputText id="description" class="form-control" @bind-Value="EditModel.Description" />
     </div>
 
     <div class="form-group">
         <label for="icon">Icon</label>
-        <InputText id="icon" class="form-control" @bind-Value="_editModel.Icon" />
+        <InputText id="icon" class="form-control" @bind-Value="EditModel.Icon" />
     </div>
 
     <div class="form-actions">
@@ -33,43 +33,17 @@
 
 @code {
     [Parameter, EditorRequired]
-    public ItemVm ItemToEdit { get; set; } = default!;
+    public ItemEditModel EditModel { get; set; } = default!;
 
     [Parameter]
-    public EventCallback<ItemVm> OnSave { get; set; }
+    public EventCallback<ItemEditModel> OnSave { get; set; }
 
     [Parameter]
     public EventCallback OnCancel { get; set; }
 
-    private EditModel _editModel = new();
-
-    public class EditModel
-    {
-        [Required]
-        public string Title { get; set; } = "";
-        public string? Description { get; set; }
-        public string? Url { get; set; }
-        public string? Icon { get; set; }
-    }
-
-    protected override void OnParametersSet()
-    {
-        _editModel.Title = ItemToEdit.Title;
-        _editModel.Description = ItemToEdit.Description;
-        _editModel.Url = ItemToEdit.Url;
-        _editModel.Icon = ItemToEdit.Icon;
-    }
-
     private async Task HandleValidSubmit()
     {
-        var updatedItem = ItemToEdit with
-        {
-            Title = _editModel.Title,
-            Description = _editModel.Description,
-            Url = _editModel.Url,
-            Icon = _editModel.Icon
-        };
-        await OnSave.InvokeAsync(updatedItem);
+        await OnSave.InvokeAsync(EditModel);
     }
 
     private async Task Cancel()
