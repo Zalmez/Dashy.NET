@@ -2,7 +2,6 @@
 
 namespace Dashy.Net.Web.Services;
 
-
 public class ThemeService
 {
     public List<Theme> AvailableThemes { get; } =
@@ -15,16 +14,18 @@ public class ThemeService
 
     public event Action? OnThemeChanged;
 
-    // The constructor must look exactly like this, with NO parameters inside the parentheses.
     public ThemeService()
     {
         CurrentTheme = AvailableThemes.First(t => t.CssClass == "theme-dark");
     }
 
-    public void SetTheme(Theme theme)
+    public void SetTheme(string themeClass)
     {
-        CurrentTheme = theme;
-        OnThemeChanged?.Invoke();
+        var newTheme = AvailableThemes.FirstOrDefault(t => t.CssClass == themeClass) ?? CurrentTheme;
+        if (CurrentTheme.CssClass != newTheme.CssClass)
+        {
+            CurrentTheme = newTheme;
+            OnThemeChanged?.Invoke();
+        }
     }
 }
-

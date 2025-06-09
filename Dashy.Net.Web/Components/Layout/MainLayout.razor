@@ -2,13 +2,17 @@
 @using Dashy.Net.Web.Services
 @inherits LayoutComponentBase
 @inject ThemeService ThemeService
+@inject IJSRuntime JSRuntime
 @implements IDisposable
 
-<div class="page @ThemeService.CurrentTheme.CssClass">
+
+<div class="page">
     <header class="main-header">
-        <h1>Dashy.net</h1>
-        <ThemeSelector />
-        <EditModeToggle />
+        <h1>Dashy.Net</h1>
+        <div class="header-controls">
+            <ThemeToggleButton />
+            <EditModeToggle />
+        </div>
     </header>
 
     <main class="content">
@@ -17,13 +21,41 @@
 </div>
 
 @code {
-    protected override void OnInitialized()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        ThemeService.OnThemeChanged += StateHasChanged;
+        if (firstRender)
+        {
+            // Get the saved theme from local storage.
+            var savedThemeClass = await JSRuntime.InvokeAsync<string?>("getFromLocalStorage", "dashy-theme");
+
+            // Tell the service to set the initial theme.
+            // If a theme was saved, use it; otherwise, the service's default will be used.
+            if (!string.IsNullOrEmpty(savedThemeClass))
+            {
+                ThemeService.SetTheme(savedThemeClass);
+            }
+            else
+            {
+                // If no theme is saved, explicitly apply the default one.
+                await JSRuntime.InvokeVoidAsync("setBodyClass", ThemeService.CurrentTheme.CssClass);
+            }
+
+            // Subscribe the layout to future changes.
+            ThemeService.OnThemeChanged += OnThemeChangedHandler;
+        }
+    }
+
+    private void OnThemeChangedHandler()
+    {
+        // When the theme changes, just call JS to update the body class.
+        InvokeAsync(async () =>
+        {
+            await JSRuntime.InvokeVoidAsync("setBodyClass", ThemeService.CurrentTheme.CssClass);
+        });
     }
 
     public void Dispose()
     {
-        ThemeService.OnThemeChanged -= StateHasChanged;
+        ThemeService.OnThemeChanged -= OnThemeChangedHandler;
     }
 }
