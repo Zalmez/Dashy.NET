@@ -2,6 +2,7 @@
 using Dashy.Net.Shared.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -10,9 +11,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Dashy.Net.Shared.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250609211300_AddIconToSections")]
+    partial class AddIconToSections
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -20,26 +23,6 @@ namespace Dashy.Net.Shared.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("Dashy.Net.Shared.Models.Dashboard", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Subtitle")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Dashboards");
-                });
 
             modelBuilder.Entity("Dashy.Net.Shared.Models.DashboardItem", b =>
                 {
@@ -90,9 +73,6 @@ namespace Dashy.Net.Shared.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("DashboardId")
-                        .HasColumnType("integer");
-
                     b.Property<string>("Icon")
                         .HasColumnType("text");
 
@@ -104,8 +84,6 @@ namespace Dashy.Net.Shared.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("DashboardId");
 
                     b.ToTable("Sections");
                 });
@@ -119,22 +97,6 @@ namespace Dashy.Net.Shared.Migrations
                         .IsRequired();
 
                     b.Navigation("Section");
-                });
-
-            modelBuilder.Entity("Dashy.Net.Shared.Models.DashboardSection", b =>
-                {
-                    b.HasOne("Dashy.Net.Shared.Models.Dashboard", "Dashboard")
-                        .WithMany("Sections")
-                        .HasForeignKey("DashboardId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Dashboard");
-                });
-
-            modelBuilder.Entity("Dashy.Net.Shared.Models.Dashboard", b =>
-                {
-                    b.Navigation("Sections");
                 });
 
             modelBuilder.Entity("Dashy.Net.Shared.Models.DashboardSection", b =>

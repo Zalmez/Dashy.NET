@@ -1,13 +1,23 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-var postgres = builder.AddPostgres("postgresdb").WithLifetime(ContainerLifetime.Persistent).WithDataVolume("dashydb").WithPgAdmin();
+var postgres = builder.AddPostgres("postgresdb")
+    .WithLifetime(ContainerLifetime.Persistent)
+    .WithDataVolume("dashydb")
+    .WithPgAdmin();
+
 var db = postgres.AddDatabase("dashy");
 
-var migrationService = builder.AddProject<Projects.Dashy_Net_MigrationService>("migrationservice").WaitFor(db)
-    .WithReference(db).WithParentRelationship(db);
-    
+// Ensure migrationService waits for both the Postgres container and the database to be created
+var migrationService = builder.AddProject<Projects.Dashy_Net_MigrationService>("migrationservice")
+    .WaitFor(postgres)
+    .WaitFor(db)
+    .WithReference(db)
+    .WithParentRelationship(db);
 
-var apiService = builder.AddProject<Projects.Dashy_Net_ApiService>("apiservice").WithReference(db).WaitFor(db).WaitFor(migrationService)
+var apiService = builder.AddProject<Projects.Dashy_Net_ApiService>("apiservice")
+    .WithReference(db)
+    .WaitFor(db)
+    .WaitFor(migrationService)
     .WithHttpHealthCheck("/health");
 
 builder.AddProject<Projects.Dashy_Net_Web>("webfrontend")

@@ -29,7 +29,13 @@ public class DashboardClient
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "Failed to fetch dashboard config from the API.");
-            return new DashboardConfigVm("Error: Cannot connect to API!", new List<SectionVm>());
+            return new DashboardConfigVm
+            (
+                Id: 0,
+                Title: "Error: Cannot connect to API!",
+                Subtitle: null,
+                Sections: new List<SectionVm>()
+            );
         }
     }
 }

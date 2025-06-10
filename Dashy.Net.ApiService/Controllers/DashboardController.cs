@@ -18,17 +18,28 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
     [HttpGet("config")]
     public async Task<IActionResult> GetConfig()
     {
-        var sectionsFromDb = await dbContext.Sections
-            .OrderBy(s => s.Position)
-            .Include(s => s.Items.OrderBy(i => i.Position))
+
+        var dashboard = await dbContext.Dashboards
+            .Include(d => d.Sections.OrderBy(s => s.Position))
+            .ThenInclude(s => s.Items.OrderBy(i => i.Position))
             .AsNoTracking()
-            .ToListAsync();
+            .FirstOrDefaultAsync();
+
+        if (dashboard is null)
+        {
+            // If no dashboards exist, return an empty one.
+            return Ok(new DashboardConfigVm(0,"No Dashboard Found","N/A",new List<SectionVm>()));
+        }
 
         var configVm = new DashboardConfigVm(
-            "Database-Driven Dashboard",
-            sectionsFromDb.Select(dbSection => new SectionVm(
+            dashboard.Id,
+            dashboard.Title,
+            dashboard.Subtitle,
+            dashboard.Sections.Select(dbSection => new SectionVm(
                 dbSection.Id,
                 dbSection.Name,
+                dbSection.Icon,
+                dbSection.DashboardId,
                 dbSection.Items.Select(dbItem => new ItemVm(
                     dbItem.Id,
                     dbItem.Title!,
@@ -53,26 +64,59 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
     {
         try
         {
-            if (await dbContext.Sections.AnyAsync())
+            // The check is now on the top-level Dashboards table.
+            if (await dbContext.Dashboards.AnyAsync())
             {
                 return Ok("Database already has data.");
             }
 
-            var section = new DashboardSection
+            logger.LogInformation("No data found. Seeding new sample dashboard...");
+
+            // Create the top-level Dashboard object
+            var dashboard = new Dashboard
             {
-                Name = "From The Database",
-                Items =
+                Title = "Dashy.Net Home Lab",
+                Subtitle = "Your new dashboard, ready to go!",
+                Sections =
                 [
-                    new DashboardItem { Title = "Test Item 1", Widget = "static-link", Url = "#", Icon = "fas fa-database" },
-                    new DashboardItem { Title = "Test Item 2", Widget = "static-link", Url = "#", Icon = "fas fa-server" }
+                    // Create the first section
+                    new DashboardSection
+                    {
+                        Name = "Networking",
+                        Icon = "fas fa-network-wired",
+                        Position = 0,
+                        Dashboard = new Dashboard{
+                            Title = "Dashy.Net Home Lab",
+                            Subtitle = "Your new dashboard, ready to go!"
+                        },
+                        Items =
+                        [
+                            new DashboardItem { Title = "Router", Widget = "static-link", Url = "#", Icon = "fas fa-road-bridge", Position = 0 },
+                            new DashboardItem { Title = "Pi-hole", Widget = "static-link", Url = "#", Icon = "fas fa-shield-alt", Position = 1 }
+                        ]
+                    },
+                    new DashboardSection
+                    {
+                        Name = "Networking",
+                        Icon = "fas fa-network-wired",
+                        Position = 1,
+                        Dashboard = new Dashboard{
+                            Title = "Dashy.Net Home Lab",
+                            Subtitle = "Your new dashboard, ready to go!"
+                        },
+                        Items =
+                        [
+                            new DashboardItem { Title = "Router", Widget = "static-link", Url = "#", Icon = "fas fa-road-bridge", Position = 0 },
+                            new DashboardItem { Title = "Pi-hole", Widget = "static-link", Url = "#", Icon = "fas fa-shield-alt", Position = 1 }
+                        ]
+                    },
                 ]
             };
-
-            dbContext.Sections.Add(section);
+            dbContext.Dashboards.Add(dashboard);
             await dbContext.SaveChangesAsync();
 
-            logger.LogInformation("Database was seeded with sample data successfully.");
-            return Ok("Database seeded with sample data.");
+            logger.LogInformation("Database was successfully seeded with a sample dashboard.");
+            return Ok("Database seeded with sample dashboard.");
         }
         catch (Exception ex)
         {

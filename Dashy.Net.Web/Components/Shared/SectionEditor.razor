@@ -33,6 +33,8 @@
     {
         [Required]
         public string Name { get; set; } = "";
+        public string Icon { get; set; } = "fas fa-folder";
+        public int dashboardId { get; set; }
     }
 
     protected override void OnParametersSet()
@@ -42,7 +44,7 @@
 
     private async Task HandleValidSubmit()
     {
-        var dtoToSave = new CreateSectionDto(_editModel.Name);
+        var dtoToSave = new CreateSectionDto(_editModel.Name, _editModel.Icon, _editModel.dashboardId);
         await OnSave.InvokeAsync(dtoToSave);
     }
 }
