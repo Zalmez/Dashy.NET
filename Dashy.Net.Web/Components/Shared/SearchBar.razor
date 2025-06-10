@@ -1,0 +1,19 @@
+﻿@using Dashy.Net.Web.Services
+@inject ViewOptionsService ViewOptions
+
+<div class="search-bar-wrapper">
+    <i class="fas fa-search search-icon"></i>
+    <input type="text"
+           class="search-input"
+           placeholder="Start typing to filter"
+           value="@ViewOptions.SearchTerm"
+           @oninput="OnSearchInput" />
+</div>
+
+@code {
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        var searchTerm = e.Value?.ToString() ?? string.Empty;
+        ViewOptions.SetSearchTerm(searchTerm);
+    }
+}

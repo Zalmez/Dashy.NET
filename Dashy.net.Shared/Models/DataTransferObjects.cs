@@ -25,6 +25,6 @@ public record UpdateItemDto(
 
 public record ReorderItemsDto(List<int> OrderedItemIds);
 
-public record CreateSectionDto([Required] string Name);
-public record UpdateSectionDto([Required] string Name);
+public record CreateSectionDto([Required] string Name, string? Icon, int DashboardId);
+public record UpdateSectionDto([Required] string Name, string? Icon);
 public record ReorderSectionsDto(List<int> OrderedSectionIds);

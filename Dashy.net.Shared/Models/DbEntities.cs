@@ -27,4 +27,15 @@ public class DashboardSection
     public string? Icon { get; set; }
     public List<DashboardItem> Items { get; set; } = [];
     public int Position { get; set; } = 0;
+    public int DashboardId { get; set; }
+    public required Dashboard Dashboard { get; set; } = null!;
+}
+
+public class Dashboard
+{
+    public int Id { get; set; }
+    [Required]
+    public required string Title { get; set; } = "My Dashboard";
+    public string? Subtitle { get; set; }
+    public List<DashboardSection> Sections { get; set; } = [];
 }

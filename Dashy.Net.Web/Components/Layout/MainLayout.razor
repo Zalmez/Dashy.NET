@@ -1,20 +1,53 @@
 ﻿@using Dashy.Net.Web.Components.Shared
 @using Dashy.Net.Web.Services
+@using Dashy.Net.Shared.Models
 @inherits LayoutComponentBase
 @inject ThemeService ThemeService
 @inject IJSRuntime JSRuntime
+@inject DashboardStateService DashboardState
+@inject ViewOptionsService ViewOptions
 @implements IDisposable
 
-@* This is the simplified layout without the side panel *@
 <div>
     <header class="main-header">
-        @* We no longer need the header-left container or the toggle button *@
-        <h1>Dashy.Net</h1>
+        <div class="header-title-section">
+            <h1>@DashboardState.Config?.Title</h1>
+            @if (!string.IsNullOrWhiteSpace(DashboardState.Config?.Subtitle))
+            {
+                <p class="header-subtitle">@DashboardState.Config.Subtitle</p>
+            }
+        </div>
         <div class="header-controls">
+            <a href="https://github.com/Lissy93/dashy" target="_blank" class="btn btn-secondary">GitHub</a>
+            <a href="https://dashy.to/docs" target="_blank" class="btn btn-secondary">Documentation</a>
+        </div>
+    </header>
+
+    <div class="toolbar">
+        <div class="toolbar-left">
+            <SearchBar />
+        </div>
+        <div class="toolbar-right">
+            <HeaderButtonGroup Label="Layout">
+                <button class="@(IsLayout(LayoutOrientation.Horizontal) ? "active" : "")" @onclick="() => SetLayout(LayoutOrientation.Horizontal)" title="Horizontal">
+                    <i class="fas fa-grip-horizontal"></i>
+                </button>
+                <button class="@(IsLayout(LayoutOrientation.Vertical) ? "active" : "")" @onclick="() => SetLayout(LayoutOrientation.Vertical)" title="Vertical">
+                    <i class="fas fa-grip-lines"></i>
+                </button>
+                <button class="@(IsLayout(LayoutOrientation.Auto) ? "active" : "")" @onclick="() => SetLayout(LayoutOrientation.Auto)" title="Auto">
+                    <i class="fas fa-th"></i>
+                </button>
+            </HeaderButtonGroup>
+            <HeaderButtonGroup Label="Item Size">
+                <button class="@(IsItemSize(ItemSize.Small) ? "active" : "")" @onclick="() => SetItemSize(ItemSize.Small)"><i class="fas fa-compress"></i></button>
+                <button class="@(IsItemSize(ItemSize.Medium) ? "active" : "")" @onclick="() => SetItemSize(ItemSize.Medium)"><i class="fas fa-grip-horizontal"></i></button>
+                <button class="@(IsItemSize(ItemSize.Large) ? "active" : "")" @onclick="() => SetItemSize(ItemSize.Large)"><i class="fas fa-expand"></i></button>
+            </HeaderButtonGroup>
             <ThemeToggleButton IsLightMode="isLightMode" OnToggle="HandleThemeToggle" />
             <EditModeToggle />
         </div>
-    </header>
+    </div>
 
     <main class="content">
         @Body
@@ -24,8 +57,11 @@
 @code {
     private bool isLightMode = false;
 
-    // The C# code for handling themes remains the same.
-    // We are only removing the 'isSidePanelCollapsed' field and 'ToggleSidePanel' method.
+    protected override void OnInitialized()
+    {
+        ThemeService.OnThemeChanged += OnThemeChangedHandler;
+        DashboardState.OnConfigLoaded += StateHasChanged;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -33,11 +69,15 @@
         {
             var savedThemeClass = await JSRuntime.InvokeAsync<string?>("getFromLocalStorage", "dashy-theme");
             var initialThemeClass = savedThemeClass ?? ThemeService.CurrentTheme.CssClass;
+
             ThemeService.SetCurrentThemeWithoutNotification(initialThemeClass);
+
             OnThemeChangedHandler();
-            ThemeService.OnThemeChanged += OnThemeChangedHandler;
         }
     }
+
+    private bool IsLayout(LayoutOrientation layout) => ViewOptions.CurrentLayout == layout;
+    private void SetLayout(LayoutOrientation layout) => ViewOptions.SetLayout(layout);
 
     private async Task HandleThemeToggle()
     {
@@ -48,16 +88,23 @@
 
     private void OnThemeChangedHandler()
     {
-        InvokeAsync(async () =>
+        InvokeAsync(() =>
         {
             isLightMode = ThemeService.CurrentTheme.CssClass == "theme-light";
-            await JSRuntime.InvokeVoidAsync("setBodyClass", ThemeService.CurrentTheme.CssClass);
+
+            JSRuntime.InvokeVoidAsync("setBodyClass", ThemeService.CurrentTheme.CssClass);
+
             StateHasChanged();
         });
     }
 
+    private bool IsItemSize(ItemSize size) => ViewOptions.CurrentItemSize == size;
+
+    private void SetItemSize(ItemSize size) => ViewOptions.SetItemSize(size);
+
     public void Dispose()
     {
         ThemeService.OnThemeChanged -= OnThemeChangedHandler;
+        DashboardState.OnConfigLoaded -= StateHasChanged;
     }
 }

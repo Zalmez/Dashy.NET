@@ -14,23 +14,30 @@ public class SectionsController(AppDbContext dbContext, ILogger<SectionsControll
     [HttpPost]
     public async Task<IActionResult> CreateSection([FromBody] CreateSectionDto sectionDto)
     {
+        var dashboard = await dbContext.Dashboards.FindAsync(sectionDto.DashboardId);
+        if (dashboard is null)
+        {
+            return BadRequest(new { message = $"Cannot create section in non-existent Dashboard ID {sectionDto.DashboardId}." });
+        }
+
         var newSection = new DashboardSection
         {
+            Dashboard = dashboard,
             Name = sectionDto.Name,
-            Items = new List<DashboardItem>()
+            Icon = sectionDto.Icon,
+            DashboardId = sectionDto.DashboardId,
+            Position = await dbContext.Sections.CountAsync(s => s.DashboardId == sectionDto.DashboardId)
         };
 
         dbContext.Sections.Add(newSection);
         await dbContext.SaveChangesAsync();
 
-        logger.LogInformation("Created new section '{SectionName}' with ID {SectionId}", newSection.Name, newSection.Id);
+        logger.LogInformation("Created new section '{SectionName}' in Dashboard {DashboardId}", newSection.Name, newSection.DashboardId);
 
-        // Map to a clean ViewModel for the response. An empty section has an empty list of items.
-        var sectionVm = new SectionVm(newSection.Id, newSection.Name, newSection.Icon, new List<ItemVm>());
+        var sectionVm = new SectionVm(newSection.Id, newSection.Name, newSection.Icon, newSection.DashboardId, new List<ItemVm>());
 
         return CreatedAtAction(nameof(GetSection), new { id = newSection.Id }, sectionVm);
     }
-
     [HttpGet("{id}")]
     public async Task<IActionResult> GetSection(int id)
     {
@@ -42,25 +49,7 @@ public class SectionsController(AppDbContext dbContext, ILogger<SectionsControll
         {
             return NotFound();
         }
-
-        // Map the entity and its children to clean ViewModels
-        var sectionVm = new SectionVm(
-            section.Id,
-            section.Name,
-            section.Icon,
-            section.Items.Select(dbItem => new ItemVm(
-                dbItem.Id,
-                dbItem.Title!,
-                dbItem.Description,
-                dbItem.Url,
-                dbItem.Icon,
-                dbItem.Widget,
-                dbItem.SectionId,
-                string.IsNullOrWhiteSpace(dbItem.OptionsJson) ? null : JsonSerializer.Deserialize<Dictionary<string, object>>(dbItem.OptionsJson)
-            )).ToList()
-        );
-
-        return Ok(sectionVm);
+        return Ok(section);
     }
 
     [HttpPut("{id}")]

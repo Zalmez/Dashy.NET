@@ -1,0 +1,14 @@
+﻿<div class="header-btn-group">
+    <span class="group-label">@Label</span>
+    <div class="buttons">
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string Label { get; set; } = "";
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}
