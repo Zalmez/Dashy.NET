@@ -11,6 +11,7 @@ public class DashboardClient
 
     public ItemsClient Items { get; }
     public SectionsClient Sections { get; }
+    public HeaderButtonsClient HeaderButtons { get; }
 
     public DashboardClient(HttpClient httpClient, ILoggerFactory loggerFactory)
     {
@@ -19,6 +20,7 @@ public class DashboardClient
 
         Items = new ItemsClient(httpClient, loggerFactory.CreateLogger<ItemsClient>());
         Sections = new SectionsClient(httpClient, loggerFactory.CreateLogger<SectionsClient>());
+        HeaderButtons = new HeaderButtonsClient(httpClient, loggerFactory.CreateLogger<HeaderButtonsClient>());
     }
     public async Task<DashboardConfigVm?> GetConfigAsync()
     {
@@ -34,7 +36,8 @@ public class DashboardClient
                 Id: 0,
                 Title: "Error: Cannot connect to API!",
                 Subtitle: null,
-                Sections: new List<SectionVm>()
+                Sections: new (),
+                HeaderButtons: new ()
             );
         }
     }

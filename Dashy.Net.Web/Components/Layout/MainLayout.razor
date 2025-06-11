@@ -1,4 +1,6 @@
-﻿@using Dashy.Net.Web.Components.Shared
+﻿@using Dashy.Net.Shared.ViewModels
+@using Dashy.Net.Web.Clients
+@using Dashy.Net.Web.Components.Shared
 @using Dashy.Net.Web.Services
 @using Dashy.Net.Shared.Models
 @inherits LayoutComponentBase
@@ -6,6 +8,7 @@
 @inject IJSRuntime JSRuntime
 @inject DashboardStateService DashboardState
 @inject ViewOptionsService ViewOptions
+@inject DashboardClient DashboardClient
 @implements IDisposable
 
 <div>
@@ -18,8 +21,19 @@
             }
         </div>
         <div class="header-controls">
-            <a href="https://github.com/Lissy93/dashy" target="_blank" class="btn btn-secondary">GitHub</a>
-            <a href="https://dashy.to/docs" target="_blank" class="btn btn-secondary">Documentation</a>
+            @if (DashboardState.Config?.HeaderButtons is not null)
+            {
+                @foreach (var button in DashboardState.Config.HeaderButtons)
+                {
+                    <a href="@button.Url" target="_blank" class="btn btn-secondary">
+                        @if (!string.IsNullOrWhiteSpace(button.Icon))
+                        {
+                            <i class="@button.Icon" style="margin-right: 0.5rem;"></i>
+                        }
+                        @button.Text
+                    </a>
+                }
+            }
         </div>
     </header>
 
@@ -52,10 +66,33 @@
     <main class="content">
         @Body
     </main>
+    <Modal Title="Manage Header Buttons" IsOpen="@_isButtonManagerOpen" OnClose="CloseButtonManagerModal">
+        @if (DashboardState.Config is not null)
+        {
+            <HeaderButtonManager Buttons="DashboardState.Config.HeaderButtons"
+                                 OnAdd="OpenAddButtonEditorModal"
+                                 OnEdit="OpenEditButtonEditorModal"
+                                 OnDelete="HandleDeleteButton"
+                                 OnReorder="HandleReorderButtons" />
+        }
+    </Modal>
+
+    <Modal Title="@_buttonEditorTitle" IsOpen="@_isButtonEditorOpen" OnClose="CloseButtonEditorModal">
+        @if (_buttonToEdit is not null)
+        {
+            <HeaderButtonEditor EditModel="_buttonToEdit" OnSave="HandleSaveButton" OnCancel="CloseButtonEditorModal" />
+        }
+    </Modal>
 </div>
 
 @code {
     private bool isLightMode = false;
+
+    private bool _isButtonManagerOpen = false;
+    private bool _isButtonEditorOpen = false;
+    private string _buttonEditorTitle = "";
+    private HeaderButtonEditor.ButtonEditModel? _buttonToEdit;
+    private int _editingButtonId = 0;
 
     protected override void OnInitialized()
     {
@@ -84,6 +121,76 @@
         var newThemeClass = ThemeService.CurrentTheme.CssClass == "theme-dark" ? "theme-light" : "theme-dark";
         await JSRuntime.InvokeVoidAsync("saveToLocalStorage", "dashy-theme", newThemeClass);
         ThemeService.SetTheme(newThemeClass);
+    }
+
+    private void OpenButtonManagerModal() => _isButtonManagerOpen = true;
+    private void CloseButtonManagerModal() => _isButtonManagerOpen = false;
+
+    private void OpenAddButtonEditorModal()
+    {
+        _editingButtonId = 0;
+        _buttonEditorTitle = "Add New Header Button";
+        _buttonToEdit = new();
+        _isButtonEditorOpen = true;
+    }
+
+    private void OpenEditButtonEditorModal(HeaderButtonVm button)
+    {
+        _editingButtonId = button.Id;
+        _buttonEditorTitle = $"Edit '{button.Text}'";
+        _buttonToEdit = new() { Text = button.Text, Url = button.Url, Icon = button.Icon };
+        _isButtonEditorOpen = true;
+    }
+
+    private void CloseButtonEditorModal()
+    {
+        _isButtonEditorOpen = false;
+        _buttonToEdit = null;
+        _editingButtonId = 0;
+    }
+
+    private async Task HandleSaveButton(HeaderButtonEditor.ButtonEditModel model)
+    {
+        bool success = false;
+        if (_editingButtonId > 0)
+        {
+            var dto = new UpdateHeaderButtonDto(model.Text, model.Url, model.Icon);
+            success = await DashboardClient.HeaderButtons.UpdateAsync(_editingButtonId, dto);
+        }
+        else if (DashboardState.Config is not null)
+        {
+            var dto = new CreateHeaderButtonDto(model.Text, model.Url, model.Icon, DashboardState.Config.Id);
+            success = await DashboardClient.HeaderButtons.CreateAsync(dto);
+        }
+
+        if (success)
+        {
+            await ReloadDashboard();
+        }
+        CloseButtonEditorModal();
+    }
+
+    private async Task HandleDeleteButton(HeaderButtonVm button)
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete the '{button.Text}' button?");
+        if (confirmed)
+        {
+            var success = await DashboardClient.HeaderButtons.DeleteAsync(button.Id);
+            if (success) await ReloadDashboard();
+        }
+    }
+
+    private async Task HandleReorderButtons(List<int> orderedIds)
+    {
+        var dto = new ReorderHeaderButtonsDto(orderedIds);
+        var success = await DashboardClient.HeaderButtons.ReorderAsync(dto);
+        if (!success) await ReloadDashboard();
+    }
+
+    private async Task ReloadDashboard()
+    {
+        var config = await DashboardClient.GetConfigAsync();
+        DashboardState.SetConfig(config);
     }
 
     private void OnThemeChangedHandler()
