@@ -1,7 +1,10 @@
 ﻿@using Dashy.Net.Shared.Models
+@using Dashy.Net.Web.Services
 @using System.ComponentModel.DataAnnotations
+@inject FileStorageService FileStorage
+@inject ILogger<ItemEditor> Logger
 
-<EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit">
+<EditForm Model="EditModel" OnValidSubmit="HandleValidSubmit">
     <DataAnnotationsValidator />
 
     <div class="form-group">
@@ -21,13 +24,34 @@
     </div>
 
     <div class="form-group">
-        <label for="icon">Icon</label>
+        <label for="icon">Icon URL or FontAwesome Class</label>
         <InputText id="icon" class="form-control" @bind-Value="EditModel.Icon" />
+    </div>
+
+    <div class="form-group">
+        <label>Or Upload New Icon</label>
+        <InputFile OnChange="HandleFileSelected" class="form-control" disabled="@_isUploading" />
+        @if (!string.IsNullOrEmpty(_uploadStatus))
+        {
+            <small class="form-text" style="color: @(_uploadSuccess ? "var(--accent-color)" : "var(--danger-color)"); margin-top: 0.5rem; display: block;">
+                @_uploadStatus
+            </small>
+        }
     </div>
 
     <div class="form-actions">
         <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
-        <button type="submit" class="btn btn-primary">Save</button>
+        <button type="submit" class="btn btn-primary" disabled="@_isUploading">
+            @if (_isUploading)
+            {
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                <span>Uploading...</span>
+            }
+            else
+            {
+                <span>Save</span>
+            }
+        </button>
     </div>
 </EditForm>
 
@@ -40,6 +64,66 @@
 
     [Parameter]
     public EventCallback OnCancel { get; set; }
+
+    private bool _isUploading = false;
+    private string? _uploadStatus;
+    private bool _uploadSuccess = false;
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file is null) return;
+
+        // Basic client-side check
+        if (!file.ContentType.StartsWith("image"))
+        {
+            _uploadStatus = "Error: Please select an image file.";
+            _uploadSuccess = false;
+            return;
+        }
+
+        const long maxFileSize = 5 * 1024 * 1024; // 5MB limit
+        if (file.Size > maxFileSize)
+        {
+            _uploadStatus = $"Error: File size exceeds the limit of {maxFileSize / 1024 / 1024}MB.";
+            _uploadSuccess = false;
+            return;
+        }
+
+        _isUploading = true;
+        _uploadStatus = "Uploading...";
+        _uploadSuccess = false;
+        StateHasChanged(); // Update UI to show loading state
+
+        try
+        {
+            // Directly call our new service.
+            var newUrl = await FileStorage.SaveImageAsync(file);
+
+            if (!string.IsNullOrEmpty(newUrl))
+            {
+                EditModel.Icon = newUrl;
+                _uploadStatus = "Upload successful!";
+                _uploadSuccess = true;
+            }
+            else
+            {
+                _uploadStatus = "Error: Upload failed. See logs for details.";
+                _uploadSuccess = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _uploadStatus = "Error: An exception occurred.";
+            _uploadSuccess = false;
+            Logger.LogError(ex, "Exception during file selection handling.");
+        }
+        finally
+        {
+            _isUploading = false;
+            StateHasChanged(); // Update UI to show result
+        }
+    }
 
     private async Task HandleValidSubmit()
     {
