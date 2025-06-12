@@ -1,5 +1,6 @@
 ﻿@page "/"
 @using BlazorSortable
+@using Dashy.Net.Shared
 @using Dashy.Net.Shared.Models
 @using Dashy.Net.Shared.ViewModels
 @using Dashy.Net.Web.Clients
@@ -104,6 +105,9 @@ else
     }
 </Modal>
 
+<Modal Title="Choose a Widget Type" IsOpen="@_isWidgetChooserOpen" OnClose="CloseWidgetChooser">
+    <WidgetChooser OnWidgetSelected="OnWidgetTypeSelected" />
+</Modal>
 
 @code {
     private bool _isItemModalOpen = false;
@@ -114,6 +118,9 @@ else
     private SectionVm? _sectionToEdit;
     private CreateSectionDto? _newSection;
     private HashSet<int> _collapsedSections = new();
+
+    private bool _isWidgetChooserOpen = false;
+    private int _targetSectionIdForNewItem = 0;
 
     private IEnumerable<SectionVm> FilteredSections =>
         DashboardState.Config?.Sections.Where(section =>
@@ -151,8 +158,26 @@ else
 
     private void OpenCreateModal(int sectionId)
     {
-        _itemModalTitle = "Add New Item";
-        _currentItemToEdit = new ItemEditModel { SectionId = sectionId, Widget = "static-link" };
+        _targetSectionIdForNewItem = sectionId;
+        _isWidgetChooserOpen = true;
+    }
+
+    private void CloseWidgetChooser()
+    {
+        _isWidgetChooserOpen = false;
+    }
+
+    private void OnWidgetTypeSelected(IWidgetDescriptor descriptor)
+    {
+        _isWidgetChooserOpen = false;
+
+        _itemModalTitle = $"Add New '{descriptor.DisplayName}'";
+        _currentItemToEdit = new ItemEditModel
+        {
+            SectionId = _targetSectionIdForNewItem,
+            Widget = descriptor.TypeIdentifier,
+            Icon = descriptor.Icon
+        };
         _isItemModalOpen = true;
     }
 

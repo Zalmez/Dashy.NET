@@ -759,3 +759,37 @@ h1, h2, h3, h4, h5, h6 {
     align-items: center;
     gap: 1rem;
 }
+
+.widget-chooser {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.widget-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1.5rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+    .widget-option:hover {
+        border-color: var(--accent-color);
+        background-color: var(--card-hover-background-color);
+        transform: translateY(-4px);
+    }
+
+.widget-option-icon {
+    font-size: 2.5rem;
+    color: var(--accent-color);
+}
+
+.widget-option-name {
+    font-weight: 600;
+}

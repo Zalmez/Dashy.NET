@@ -1,0 +1,25 @@
+﻿@using Dashy.Net.Shared
+@using Dashy.Net.Web.Services
+@inject WidgetRegistryService WidgetRegistry
+
+<div class="widget-chooser">
+    @foreach (var widget in WidgetRegistry.AvailableWidgets)
+    {
+        <div class="widget-option" @onclick="() => SelectWidget(widget)">
+            <div class="widget-option-icon">
+                <i class="@widget.Icon"></i>
+            </div>
+            <div class="widget-option-name">@widget.DisplayName</div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback<IWidgetDescriptor> OnWidgetSelected { get; set; }
+
+    private async Task SelectWidget(IWidgetDescriptor descriptor)
+    {
+        await OnWidgetSelected.InvokeAsync(descriptor);
+    }
+}

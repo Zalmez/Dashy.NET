@@ -26,6 +26,7 @@ builder.Services.AddSingleton<ViewOptionsService>();
 builder.Services.AddSortableServices();
 builder.Services.AddSingleton<DashboardStateService>();
 builder.Services.AddScoped<FileStorageService>();
+builder.Services.AddSingleton<WidgetRegistryService>();
 #endregion
 
 var app = builder.Build();
