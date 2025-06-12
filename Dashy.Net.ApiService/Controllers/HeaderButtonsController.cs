@@ -28,7 +28,7 @@ public class HeaderButtonsController(AppDbContext dbContext, ILogger<HeaderButto
             Icon = buttonDto.Icon,
             Position = position,
             DashboardId = buttonDto.DashboardId,
-            Dashboard = null
+            Dashboard = dashboard
         };
 
         dbContext.HeaderButtons.Add(newButton);
