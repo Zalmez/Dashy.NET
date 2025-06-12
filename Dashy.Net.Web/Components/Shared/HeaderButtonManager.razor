@@ -45,7 +45,15 @@
 
     private async Task HandleReorder((int oldIndex, int newIndex) args)
     {
+        // Reorder the Buttons list based on the drag-and-drop indices
+        var buttonToMove = Buttons[args.oldIndex];
+        Buttons.RemoveAt(args.oldIndex);
+        Buttons.Insert(args.newIndex, buttonToMove);
+
+        // Generate the ordered IDs from the updated Buttons list
         var orderedIds = Buttons.Select(b => b.Id).ToList();
+
+        // Invoke the OnReorder callback with the updated order
         await OnReorder.InvokeAsync(orderedIds);
     }
 }
