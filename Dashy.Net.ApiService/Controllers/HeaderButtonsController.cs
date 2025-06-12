@@ -1,5 +1,6 @@
 ﻿using Dashy.Net.Shared.Data;
 using Dashy.Net.Shared.Models;
+using Dashy.Net.Shared.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -34,8 +35,14 @@ public class HeaderButtonsController(AppDbContext dbContext, ILogger<HeaderButto
         await dbContext.SaveChangesAsync();
 
         logger.LogInformation("Created new header button '{ButtonText}'", newButton.Text);
+        var buttonVm = new HeaderButtonVm(
+            newButton.Id,
+            newButton.Text,
+            newButton.Url,
+            newButton.Icon
+        );
 
-        return Ok(newButton); // Returning the full new object
+        return StatusCode(201, buttonVm);
     }
 
     [HttpPut("{id}")]

@@ -29,7 +29,6 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
 
         if (dashboard is null)
         {
-            // If no dashboards exist, return an empty one.
             return Ok(new DashboardConfigVm(0,"No Dashboard Found","N/A",new(),new()));
         }
 
@@ -72,7 +71,6 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
     {
         try
         {
-            // The check is now on the top-level Dashboards table.
             if (await dbContext.Dashboards.AnyAsync())
             {
                 return Ok("Database already has data.");
@@ -103,7 +101,6 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
                 ],
                 Sections =
                 [
-                    // Create the first section
                     new DashboardSection
                     {
                         Name = "Networking",

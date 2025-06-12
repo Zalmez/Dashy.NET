@@ -74,7 +74,6 @@
         var file = e.File;
         if (file is null) return;
 
-        // Basic client-side check
         if (!file.ContentType.StartsWith("image"))
         {
             _uploadStatus = "Error: Please select an image file.";
@@ -93,11 +92,10 @@
         _isUploading = true;
         _uploadStatus = "Uploading...";
         _uploadSuccess = false;
-        StateHasChanged(); // Update UI to show loading state
+        StateHasChanged();
 
         try
         {
-            // Directly call our new service.
             var newUrl = await FileStorage.SaveImageAsync(file);
 
             if (!string.IsNullOrEmpty(newUrl))
@@ -121,7 +119,7 @@
         finally
         {
             _isUploading = false;
-            StateHasChanged(); // Update UI to show result
+            StateHasChanged();
         }
     }
 

@@ -36,7 +36,6 @@ public class ItemsController(AppDbContext dbContext, ILogger<ItemsController> lo
 
         logger.LogInformation("Created new item '{ItemTitle}' with ID {ItemId} in section {SectionId}", newItem.Title, newItem.Id, newItem.SectionId);
 
-        // Map the new entity to the clean ViewModel for the response.
         var itemVm = new ItemVm(
             newItem.Id,
             newItem.Title,
@@ -60,7 +59,6 @@ public class ItemsController(AppDbContext dbContext, ILogger<ItemsController> lo
             return NotFound();
         }
 
-        // Map the entity to the clean ViewModel before returning.
         var itemVm = new ItemVm(
             item.Id,
             item.Title!,
