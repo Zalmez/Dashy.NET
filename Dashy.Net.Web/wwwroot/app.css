@@ -385,20 +385,18 @@ h1, h2, h3, h4, h5, h6 {
 
     .header-btn-group .buttons button,
     .header-btn-group .buttons a {
-        background: transparent;
+        background: var(--card-background-color);
         border: none;
         border-left: 1px solid var(--border-color);
         margin-left: 20px;
         color: var(--subtle-text-color);
         padding: 0.4rem 1rem;
         cursor: pointer;
-        text-decoration: none; /* Add this to remove underlines from links */
-        display: inline-flex; /* Add this to align icon and text */
+        text-decoration: none;
+        display: inline-flex;
         align-items: center;
-        gap: 0.5rem; /* Add this to space icon and text */
+        gap: 0.5rem;
     }
-
-        /* We also need to update the :first-child and :hover rules */
 
         .header-btn-group .buttons button:first-child,
         .header-btn-group .buttons a:first-child {
@@ -754,4 +752,10 @@ h1, h2, h3, h4, h5, h6 {
 
 .fab-menu-item:disabled i {
     color: var(--border-color);
+}
+
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
 }
