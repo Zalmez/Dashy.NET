@@ -38,4 +38,18 @@ public class Dashboard
     public required string Title { get; set; } = "My Dashboard";
     public string? Subtitle { get; set; }
     public List<DashboardSection> Sections { get; set; } = [];
+    public List<HeaderButton> HeaderButtons { get; set; } = [];
+}
+
+public class HeaderButton
+{
+    public int Id { get; set; }
+    [Required]
+    public required string Text { get; set; }
+    public string? Url { get; set; }
+    public string? Icon { get; set; }
+    public int Position { get; set; }
+
+    public int DashboardId { get; set; }
+    public required Dashboard Dashboard { get; set; } = null!;
 }

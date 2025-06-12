@@ -60,7 +60,7 @@ else
                         </div>
                         <div class="item-grid @GetItemSizeClass() @(_collapsedSections.Contains(currentSection.Id) ? "collapsed" : "")">
                             <SortableList Items="currentSection.Items"
-                                          OnUpdate=" async (args) => OnItemOrderChanged(currentSection, (args.oldIndex, args.newIndex))"
+                                          OnUpdate=" async (args) => await OnItemOrderChanged(currentSection, (args.oldIndex, args.newIndex))"
                                           Sort="ViewOptions.IsEditMode"
                                           Context="item">
                                 <div class="sortable-item" @key="item">

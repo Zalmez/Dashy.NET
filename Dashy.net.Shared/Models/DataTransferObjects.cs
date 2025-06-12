@@ -28,3 +28,18 @@ public record ReorderItemsDto(List<int> OrderedItemIds);
 public record CreateSectionDto([Required] string Name, string? Icon, int DashboardId);
 public record UpdateSectionDto([Required] string Name, string? Icon);
 public record ReorderSectionsDto(List<int> OrderedSectionIds);
+
+public record CreateHeaderButtonDto(
+    [Required] string Text,
+    string? Url,
+    string? Icon,
+    [Required] int DashboardId
+);
+
+public record UpdateHeaderButtonDto(
+    [Required] string Text,
+    string? Url,
+    string? Icon
+);
+
+public record ReorderHeaderButtonsDto(List<int> OrderedButtonIds);

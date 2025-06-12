@@ -25,3 +25,4 @@ artifacts/
 # Visual Studio Code
 .vscode/
 .history/
+Dashy.Net.Web/wwwroot/uploads

@@ -1,4 +1,6 @@
-﻿@using Dashy.Net.Web.Components.Shared
+﻿@using Dashy.Net.Shared.ViewModels
+@using Dashy.Net.Web.Clients
+@using Dashy.Net.Web.Components.Shared
 @using Dashy.Net.Web.Services
 @using Dashy.Net.Shared.Models
 @inherits LayoutComponentBase
@@ -6,6 +8,7 @@
 @inject IJSRuntime JSRuntime
 @inject DashboardStateService DashboardState
 @inject ViewOptionsService ViewOptions
+@inject DashboardClient DashboardClient
 @implements IDisposable
 
 <div>
@@ -18,8 +21,23 @@
             }
         </div>
         <div class="header-controls">
-            <a href="https://github.com/Lissy93/dashy" target="_blank" class="btn btn-secondary">GitHub</a>
-            <a href="https://dashy.to/docs" target="_blank" class="btn btn-secondary">Documentation</a>
+            @if (DashboardState.Config?.HeaderButtons is not null && DashboardState.Config.HeaderButtons.Any())
+            {
+                <div class="header-btn-group">
+                    <div class="buttons">
+                        @foreach (var button in DashboardState.Config.HeaderButtons)
+                        {
+                            <a href="@button.Url" target="_blank" class="btn">
+                                @if (!string.IsNullOrWhiteSpace(button.Icon))
+                                {
+                                    <i class="@button.Icon" style="margin-right: 0.5rem;"></i>
+                                }
+                                <span>@button.Text</span>
+                            </a>
+                        }
+                    </div>
+                </div>
+            }
         </div>
     </header>
 
@@ -28,39 +46,84 @@
             <SearchBar />
         </div>
         <div class="toolbar-right">
-            <HeaderButtonGroup Label="Layout">
-                <button class="@(IsLayout(LayoutOrientation.Horizontal) ? "active" : "")" @onclick="() => SetLayout(LayoutOrientation.Horizontal)" title="Horizontal">
-                    <i class="fas fa-grip-horizontal"></i>
-                </button>
-                <button class="@(IsLayout(LayoutOrientation.Vertical) ? "active" : "")" @onclick="() => SetLayout(LayoutOrientation.Vertical)" title="Vertical">
-                    <i class="fas fa-grip-lines"></i>
-                </button>
-                <button class="@(IsLayout(LayoutOrientation.Auto) ? "active" : "")" @onclick="() => SetLayout(LayoutOrientation.Auto)" title="Auto">
-                    <i class="fas fa-th"></i>
-                </button>
-            </HeaderButtonGroup>
-            <HeaderButtonGroup Label="Item Size">
-                <button class="@(IsItemSize(ItemSize.Small) ? "active" : "")" @onclick="() => SetItemSize(ItemSize.Small)"><i class="fas fa-compress"></i></button>
-                <button class="@(IsItemSize(ItemSize.Medium) ? "active" : "")" @onclick="() => SetItemSize(ItemSize.Medium)"><i class="fas fa-grip-horizontal"></i></button>
-                <button class="@(IsItemSize(ItemSize.Large) ? "active" : "")" @onclick="() => SetItemSize(ItemSize.Large)"><i class="fas fa-expand"></i></button>
-            </HeaderButtonGroup>
+            @if (ViewOptions.IsEditMode)
+            {
+                <HeaderButtonGroup Label="Layout">
+                    <button class="@(IsLayout(LayoutOrientation.Horizontal) ? "active" : "")" @onclick="() => SetLayout(LayoutOrientation.Horizontal)" title="Horizontal"><i class="fas fa-grip-horizontal"></i></button>
+                    <button class="@(IsLayout(LayoutOrientation.Vertical) ? "active" : "")" @onclick="() => SetLayout(LayoutOrientation.Vertical)" title="Vertical"><i class="fas fa-grip-lines"></i></button>
+                    <button class="@(IsLayout(LayoutOrientation.Auto) ? "active" : "")" @onclick="() => SetLayout(LayoutOrientation.Auto)" title="Auto"><i class="fas fa-th"></i></button>
+                </HeaderButtonGroup>
+                <HeaderButtonGroup Label="Item Size">
+                    <button class="@(IsItemSize(ItemSize.Small) ? "active" : "")" @onclick="() => SetItemSize(ItemSize.Small)"><i class="fas fa-compress"></i></button>
+                    <button class="@(IsItemSize(ItemSize.Medium) ? "active" : "")" @onclick="() => SetItemSize(ItemSize.Medium)"><i class="fas fa-grip-horizontal"></i></button>
+                    <button class="@(IsItemSize(ItemSize.Large) ? "active" : "")" @onclick="() => SetItemSize(ItemSize.Large)"><i class="fas fa-expand"></i></button>
+                </HeaderButtonGroup>
+                <HeaderButtonGroup Label="Config">
+                    <button @onclick="OpenButtonManagerModal" title="Configure Header Buttons"><i class="fas fa-cog"></i></button>
+                </HeaderButtonGroup>
+            }
             <ThemeToggleButton IsLightMode="isLightMode" OnToggle="HandleThemeToggle" />
-            <EditModeToggle />
         </div>
     </div>
 
     <main class="content">
         @Body
     </main>
+
+    <Modal Title="Manage Header Buttons" IsOpen="@_isButtonManagerOpen" OnClose="CloseButtonManagerModal">
+        @if (DashboardState.Config is not null)
+        {
+            <HeaderButtonManager Buttons="DashboardState.Config.HeaderButtons"
+                                 OnAdd="OpenAddButtonEditorModal"
+                                 OnEdit="@OpenEditButtonEditorModal"
+                                 OnDelete="HandleDeleteButton"
+                                 OnReorder="HandleReorderButtons" />
+        }
+    </Modal>
+    <Modal Title="@_buttonEditorTitle" IsOpen="@_isButtonEditorOpen" OnClose="CloseButtonEditorModal">
+        @if (_buttonToEdit is not null)
+        {
+            <HeaderButtonEditor EditModel="_buttonToEdit" OnSave="HandleSaveButton" OnCancel="CloseButtonEditorModal" />
+        }
+    </Modal>
+
+    <div class="fab-container @(_isFabMenuOpen ? "open" : "")">
+        <div class="fab-menu">
+            <button class="fab-menu-item" disabled>
+                <i class="fas fa-user-cog"></i>
+                <span class="fab-menu-item-label">User Settings</span>
+            </button>
+            <button class="fab-menu-item" disabled>
+                <i class="fas fa-palette"></i>
+                <span class="fab-menu-item-label">App Settings</span>
+            </button>
+            <button class="fab-menu-item" @onclick="ToggleEditMode">
+                <i class="fas fa-pencil-alt"></i>
+                <span class="fab-menu-item-label">Toggle Edit Mode</span>
+            </button>
+        </div>
+        <button class="fab-main-button" @onclick="ToggleFabMenu" title="Open Settings">
+            <i class="fas @(_isFabMenuOpen ? "fa-times" : "fa-cog")"></i>
+        </button>
+    </div>
 </div>
 
 @code {
     private bool isLightMode = false;
 
+    private bool _isButtonManagerOpen = false;
+    private bool _isButtonEditorOpen = false;
+    private string _buttonEditorTitle = "";
+    private HeaderButtonEditor.ButtonEditModel? _buttonToEdit;
+    private int _editingButtonId = 0;
+
+    private bool _isFabMenuOpen = false;
+
     protected override void OnInitialized()
     {
         ThemeService.OnThemeChanged += OnThemeChangedHandler;
         DashboardState.OnConfigLoaded += StateHasChanged;
+        ViewOptions.OnEditModeChanged += StateHasChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -69,15 +132,81 @@
         {
             var savedThemeClass = await JSRuntime.InvokeAsync<string?>("getFromLocalStorage", "dashy-theme");
             var initialThemeClass = savedThemeClass ?? ThemeService.CurrentTheme.CssClass;
-
             ThemeService.SetCurrentThemeWithoutNotification(initialThemeClass);
-
             OnThemeChangedHandler();
         }
     }
 
-    private bool IsLayout(LayoutOrientation layout) => ViewOptions.CurrentLayout == layout;
-    private void SetLayout(LayoutOrientation layout) => ViewOptions.SetLayout(layout);
+    private async Task ReloadDashboard()
+    {
+        var config = await DashboardClient.GetConfigAsync();
+        DashboardState.SetConfig(config);
+    }
+
+    private void OpenButtonManagerModal() => _isButtonManagerOpen = true;
+    private void CloseButtonManagerModal() => _isButtonManagerOpen = false;
+
+    private void OpenAddButtonEditorModal()
+    {
+        _editingButtonId = 0;
+        _buttonEditorTitle = "Add New Header Button";
+        _buttonToEdit = new();
+        _isButtonEditorOpen = true;
+    }
+
+    private void OpenEditButtonEditorModal(HeaderButtonVm button)
+    {
+        _editingButtonId = button.Id;
+        _buttonEditorTitle = $"Edit '{button.Text}'";
+        _buttonToEdit = new() { Text = button.Text, Url = button.Url, Icon = button.Icon };
+        _isButtonEditorOpen = true;
+    }
+
+    private void CloseButtonEditorModal()
+    {
+        _isButtonEditorOpen = false;
+        _buttonToEdit = null;
+        _editingButtonId = 0;
+    }
+
+    private async Task HandleSaveButton(HeaderButtonEditor.ButtonEditModel model)
+    {
+        bool success;
+        if (_editingButtonId > 0)
+        {
+            var dto = new UpdateHeaderButtonDto(model.Text, model.Url, model.Icon);
+            success = await DashboardClient.HeaderButtons.UpdateAsync(_editingButtonId, dto);
+        }
+        else if (DashboardState.Config is not null)
+        {
+            var dto = new CreateHeaderButtonDto(model.Text, model.Url, model.Icon, DashboardState.Config.Id);
+            success = await DashboardClient.HeaderButtons.CreateAsync(dto);
+        }
+        else { success = false; }
+
+        if (success)
+        {
+            await ReloadDashboard();
+        }
+        CloseButtonEditorModal();
+    }
+
+    private async Task HandleDeleteButton(HeaderButtonVm button)
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete the '{button.Text}' button?");
+        if (confirmed)
+        {
+            var success = await DashboardClient.HeaderButtons.DeleteAsync(button.Id);
+            if (success) await ReloadDashboard();
+        }
+    }
+
+    private async Task HandleReorderButtons(List<int> orderedIds)
+    {
+        var dto = new ReorderHeaderButtonsDto(orderedIds);
+        var success = await DashboardClient.HeaderButtons.ReorderAsync(dto);
+        if (!success) await ReloadDashboard();
+    }
 
     private async Task HandleThemeToggle()
     {
@@ -88,23 +217,34 @@
 
     private void OnThemeChangedHandler()
     {
-        InvokeAsync(() =>
+        InvokeAsync(async () =>
         {
             isLightMode = ThemeService.CurrentTheme.CssClass == "theme-light";
 
-            JSRuntime.InvokeVoidAsync("setBodyClass", ThemeService.CurrentTheme.CssClass);
-
+            await JSRuntime.InvokeVoidAsync("setBodyClass", ThemeService.CurrentTheme.CssClass);
             StateHasChanged();
         });
     }
 
+    private bool IsLayout(LayoutOrientation layout) => ViewOptions.CurrentLayout == layout;
+    private void SetLayout(LayoutOrientation layout) => ViewOptions.SetLayout(layout);
     private bool IsItemSize(ItemSize size) => ViewOptions.CurrentItemSize == size;
-
     private void SetItemSize(ItemSize size) => ViewOptions.SetItemSize(size);
+
+    private void ToggleFabMenu()
+    {
+        _isFabMenuOpen = !_isFabMenuOpen;
+    }
+
+    private void ToggleEditMode()
+    {
+        ViewOptions.ToggleEditMode();
+    }
 
     public void Dispose()
     {
         ThemeService.OnThemeChanged -= OnThemeChangedHandler;
         DashboardState.OnConfigLoaded -= StateHasChanged;
+        ViewOptions.OnEditModeChanged -= StateHasChanged;
     }
 }

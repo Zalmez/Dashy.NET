@@ -7,6 +7,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 {
     public DbSet<Dashboard> Dashboards { get; set; }
     public DbSet<DashboardSection> Sections { get; set; } = null!;
+    public DbSet<HeaderButton> HeaderButtons { get; set; }
     public DbSet<DashboardItem> Items { get; set; } = null!;
     
 }

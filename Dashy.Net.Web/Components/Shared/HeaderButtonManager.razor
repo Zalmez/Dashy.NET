@@ -1,0 +1,59 @@
+﻿@using Dashy.Net.Shared.Models
+@using BlazorSortable
+@using Dashy.Net.Shared.ViewModels
+
+<div class="button-manager">
+    <p>Drag and drop to reorder header buttons.</p>
+    <SortableList Items="Buttons" OnUpdate="args => HandleReorder((args.oldIndex, args.newIndex))" Context="button">
+        <div class="managed-button-item" @key="button">
+            <span>
+                @if (!string.IsNullOrWhiteSpace(button.Icon))
+                {
+                    <i class="@button.Icon"></i>
+                }
+                @button.Text
+            </span>
+            <div class="item-controls">
+                <button class="edit-btn" @onclick="() => OnEdit.InvokeAsync(button)"><i class="fas fa-pencil-alt"></i></button>
+                <button class="delete-btn" @onclick="() => OnDelete.InvokeAsync(button)"><i class="fas fa-trash-alt"></i></button>
+            </div>
+        </div>
+    </SortableList>
+
+    <div class="form-actions mt-3">
+        <button class="btn btn-primary" @onclick="OnAdd">
+            <i class="fas fa-plus"></i> Add New Button
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public List<HeaderButtonVm> Buttons { get; set; } = new();
+
+    [Parameter]
+    public EventCallback OnAdd { get; set; }
+
+    [Parameter]
+    public EventCallback<HeaderButtonVm> OnEdit { get; set; }
+
+    [Parameter]
+    public EventCallback<HeaderButtonVm> OnDelete { get; set; }
+
+    [Parameter]
+    public EventCallback<List<int>> OnReorder { get; set; }
+
+    private async Task HandleReorder((int oldIndex, int newIndex) args)
+    {
+        // Reorder the Buttons list based on the drag-and-drop indices
+        var buttonToMove = Buttons[args.oldIndex];
+        Buttons.RemoveAt(args.oldIndex);
+        Buttons.Insert(args.newIndex, buttonToMove);
+
+        // Generate the ordered IDs from the updated Buttons list
+        var orderedIds = Buttons.Select(b => b.Id).ToList();
+
+        // Invoke the OnReorder callback with the updated order
+        await OnReorder.InvokeAsync(orderedIds);
+    }
+}

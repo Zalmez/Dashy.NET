@@ -3,6 +3,7 @@ using Dashy.Net.Shared.Models;
 using Dashy.Net.Shared.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 using System.Text.Json;
 
 namespace Dashy.Net.ApiService.Controllers;
@@ -22,13 +23,13 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
         var dashboard = await dbContext.Dashboards
             .Include(d => d.Sections.OrderBy(s => s.Position))
             .ThenInclude(s => s.Items.OrderBy(i => i.Position))
+            .Include(d => d.HeaderButtons.OrderBy(b => b.Position))
             .AsNoTracking()
             .FirstOrDefaultAsync();
 
         if (dashboard is null)
         {
-            // If no dashboards exist, return an empty one.
-            return Ok(new DashboardConfigVm(0,"No Dashboard Found","N/A",new List<SectionVm>()));
+            return Ok(new DashboardConfigVm(0,"No Dashboard Found","N/A",new(),new()));
         }
 
         var configVm = new DashboardConfigVm(
@@ -50,6 +51,12 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
                     dbItem.SectionId,
                     string.IsNullOrWhiteSpace(dbItem.OptionsJson) ? null : JsonSerializer.Deserialize<Dictionary<string, object>>(dbItem.OptionsJson)
                 )).ToList()
+            )).ToList(),
+            dashboard.HeaderButtons.Select(dbButton => new HeaderButtonVm(
+                dbButton.Id,
+                dbButton.Text,
+                dbButton.Url,
+                dbButton.Icon
             )).ToList()
         );
 
@@ -64,7 +71,6 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
     {
         try
         {
-            // The check is now on the top-level Dashboards table.
             if (await dbContext.Dashboards.AnyAsync())
             {
                 return Ok("Database already has data.");
@@ -72,14 +78,29 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
 
             logger.LogInformation("No data found. Seeding new sample dashboard...");
 
-            // Create the top-level Dashboard object
             var dashboard = new Dashboard
             {
                 Title = "Dashy.Net Home Lab",
                 Subtitle = "Your new dashboard, ready to go!",
+                HeaderButtons =
+                [
+                    new HeaderButton 
+                    { 
+                        Text = "GitHub", 
+                        Url = "https://github.com/Lissy93/dashy", 
+                        Position = 0,
+                        Dashboard = null
+                    },
+                    new HeaderButton 
+                    { 
+                        Text = "Documentation", 
+                        Url = "https://dashy.to/docs", 
+                        Position = 1, 
+                        Dashboard = null
+                    }
+                ],
                 Sections =
                 [
-                    // Create the first section
                     new DashboardSection
                     {
                         Name = "Networking",

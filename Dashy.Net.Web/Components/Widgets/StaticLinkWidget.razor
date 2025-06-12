@@ -1,3 +1,4 @@
+@using Dashy.Net.Shared.Models
 @using Dashy.Net.Shared.ViewModels
 @using Dashy.Net.Web.Services
 @inject ViewOptionsService ViewOptions
@@ -13,11 +14,19 @@
             <button class="delete-btn" title="Delete Item" @onclick="OnDeleteClick"><i class="fas fa-trash-alt"></i></button>
         </div>
     }
+
     <div class="item-card" @onclick="NavigateToUrl">
         <div class="item-icon">
             @if (!string.IsNullOrWhiteSpace(Item.Icon))
             {
-                <i class="@Item.Icon"></i>
+                @if (Item.Icon.StartsWith("/") || Item.Icon.StartsWith("http"))
+                {
+                    <img src="@Item.Icon" alt="@Item.Title" class="item-img-icon" />
+                }
+                else
+                {
+                    <i class="@Item.Icon"></i>
+                }
             }
         </div>
         <div class="item-details">
