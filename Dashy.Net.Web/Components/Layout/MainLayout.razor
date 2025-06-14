@@ -46,10 +46,10 @@
         </div>
         <div class="toolbar-right">
             <HeaderButtonGroup Label="Layout">
-                <button class="btn @(ViewOptions.CurrentLayout == LayoutOrientation.Auto ? "btn-primary" : "btn-secondary")" @onclick="() => ViewOptions.SetLayout(LayoutOrientation.Auto)">
+                <button class="btn btn-secondary @(ViewOptions.CurrentLayout == LayoutOrientation.Auto ? "active" : "")" @onclick="() => ViewOptions.SetLayout(LayoutOrientation.Auto)">
                     <i class="fas fa-th-large"></i> Auto
                 </button>
-                <button class="btn @(ViewOptions.CurrentLayout == LayoutOrientation.Vertical ? "btn-primary" : "btn-secondary")" @onclick="() => ViewOptions.SetLayout(LayoutOrientation.Vertical)">
+                <button class="btn btn-secondary @(ViewOptions.CurrentLayout == LayoutOrientation.Vertical ? "active" : "")" @onclick="() => ViewOptions.SetLayout(LayoutOrientation.Vertical)">
                     <i class="fas fa-bars"></i> Vertical
                 </button>
             </HeaderButtonGroup>

@@ -4,6 +4,7 @@
 @inject IJSRuntime JSRuntime
 @inject ILogger<StaticLinkWidget> Logger
 @inject NavigationManager NavManager
+@implements IDisposable
 
 <div class="item-card-wrapper">
     @if (ViewOptions.IsEditMode)
@@ -14,7 +15,7 @@
         </div>
     }
 
-    <div class="item-card" @onclick="NavigateToUrl">
+    <div class="item-card @GetItemSizeClass()" @onclick="NavigateToUrl">
         <div class="item-icon">
             @if (!string.IsNullOrWhiteSpace(Item.Icon))
             {
@@ -31,7 +32,7 @@
         <div class="item-details">
             <div class="item-title">@Item.Title</div>
 
-            @if (!string.IsNullOrWhiteSpace(Description))
+            @if (ViewOptions.CurrentItemSize == ItemSize.Large && !string.IsNullOrWhiteSpace(Description))
             {
                 <div class="item-description">@Description</div>
             }
@@ -52,6 +53,17 @@
     private string? Url => Item.Options?.GetValueOrDefault("Url")?.ToString();
     private string? Description => Item.Options?.GetValueOrDefault("Description")?.ToString();
 
+    protected override void OnInitialized()
+    {
+        ViewOptions.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        ViewOptions.OnChange -= StateHasChanged;
+    }
+
+    private string GetItemSizeClass() => "item-size-" + ViewOptions.CurrentItemSize.ToString().ToLower();
 
     private async Task OnDeleteClick()
     {
@@ -72,6 +84,10 @@
         if (!ViewOptions.IsEditMode && !string.IsNullOrWhiteSpace(Url))
         {
             NavManager.NavigateTo(Url, forceLoad: true);
+        }
+        else
+        {
+            Logger.LogWarning("There's no URI connected to the given StaticLinkWidget");
         }
     }
 }

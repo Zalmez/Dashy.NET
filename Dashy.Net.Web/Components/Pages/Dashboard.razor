@@ -30,44 +30,80 @@ else
     }
 
     <div class="dashboard-container @(ViewOptions.CurrentLayout.ToString().ToLower())">
-        <SortableList Items="FilteredSections.ToList()"
-                      Sort="ViewOptions.IsEditMode"
-                      OnUpdate="async args => await OnSectionOrderChanged(args.oldIndex, args.newIndex)"
-                      Context="currentSection"
-                      class="sections-wrapper">
-            <div class="section-item" @key="currentSection">
-                <div class="section-container" id="section-@currentSection.Id">
-                    <div class="section-header" @onclick="() => ToggleSectionCollapse(currentSection.Id)">
-                    </div>
-                    <div class="items-wrapper @GetItemsContainerClass(currentSection.Id)">
-                        <SortableList Items="currentSection.Items"
-                                      OnUpdate="(args) => OnItemOrderChanged(currentSection, (args.oldIndex, args.newIndex))"
-                                      Sort="ViewOptions.IsEditMode"
-                                      Context="item"
-                                      Class="item-list">
-                            <div class="item" @key="item">
-                                @switch (item.Widget?.ToLower() ?? "static-link")
-                                {
-                                    case "static-link":
-                                        <StaticLinkWidget Item="item" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(item)" />
-                                        break;
-                                    case "clock":
-                                        <ClockWidget Item="item" />
-                                        break;
-                                    default:
-                                        <UnknownWidget Widget="@item.Widget" />
-                                        break;
-                                }
-                            </div>
-                        </SortableList>
-                        @if (ViewOptions.IsEditMode && !_collapsedSections.Contains(currentSection.Id))
-                        {
-                            <AddItemButton OnClick="() => OpenCreateModal(currentSection.Id)" />
-                        }
+        @if(ViewOptions.IsEditMode)
+        {
+            <SortableList Items="FilteredSections.ToList()"
+                          OnUpdate="async args => await OnSectionOrderChanged(args.oldIndex, args.newIndex)"
+                          Context="currentSection"
+                          class="sections-wrapper">
+                <div class="section-item" @key="currentSection">
+                    <div class="section-container" id="section-@currentSection.Id">
+                        <div class="section-header" @onclick="() => ToggleSectionCollapse(currentSection.Id)">
+                        </div>
+                        <div class="items-wrapper @GetItemsContainerClass(currentSection.Id)">
+                            <SortableList Items="currentSection.Items"
+                                          OnUpdate="(args) => OnItemOrderChanged(currentSection, (args.oldIndex, args.newIndex))"
+                                          Context="item"
+                                          Class="item-list">
+                                <div class="item" @key="item">
+                                    @switch (item.Widget?.ToLower() ?? "static-link")
+                                    {
+                                        case "static-link":
+                                            <StaticLinkWidget Item="item" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(item)" />
+                                            break;
+                                        case "clock":
+                                            <ClockWidget Item="item" />
+                                            break;
+                                        default:
+                                            <UnknownWidget Widget="@item.Widget" />
+                                            break;
+                                    }
+                                </div>
+                            </SortableList>
+                            @if (ViewOptions.IsEditMode && !_collapsedSections.Contains(currentSection.Id))
+                            {
+                                <AddItemButton OnClick="() => OpenCreateModal(currentSection.Id)" />
+                            }
+                        </div>
                     </div>
                 </div>
+            </SortableList>
+        }
+        else
+        {
+            <div class="sections-wrapper">
+                @foreach (var currentSection in DashboardState.Config.Sections)
+                {
+                    <div class="section-item" @key="currentSection">
+                        <div class="section-container" id="section-@currentSection.Id">
+                            <div class="section-header" @onclick="() => ToggleSectionCollapse(currentSection.Id)">
+                            </div>
+                            <div class="items-wrapper @GetItemsContainerClass(currentSection.Id)">
+                                 <div class="item-list">
+                                    @foreach (var item in currentSection.Items)
+                                    {
+                                        <div class="item" @key="item">
+                                            @switch (item.Widget?.ToLower() ?? "static-link")
+                                            {
+                                                case "static-link":
+                                                    <StaticLinkWidget Item="item" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(item)" />
+                                                    break;
+                                                case "clock":
+                                                    <ClockWidget Item="item" />
+                                                    break;
+                                                default:
+                                                    <UnknownWidget Widget="@item.Widget" />
+                                                    break;
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>                    
+                }
             </div>
-        </SortableList>
+        }
     </div>
 }
 
