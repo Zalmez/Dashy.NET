@@ -33,10 +33,10 @@ else
         @if(ViewOptions.IsEditMode)
         {
             <SortableList Items="FilteredSections.ToList()"
-                          OnUpdate="async args => await OnSectionOrderChanged(args.oldIndex, args.newIndex)"
-                          Context="currentSection"
-                          class="sections-wrapper">
-                <div class="section-item" @key="currentSection">
+                      OnUpdate="@((args) => { _ = OnSectionOrderChanged(args.oldIndex, args.newIndex); })"
+                      Context="currentSection"
+                      class="sections-wrapper">
+            <div class="section-item" @key="currentSection">
                     <div class="section-container" id="section-@currentSection.Id">
                         <div class="section-header" @onclick="() => ToggleSectionCollapse(currentSection.Id)">
                         </div>
@@ -83,18 +83,18 @@ else
                                     @foreach (var item in currentSection.Items)
                                     {
                                         <div class="item" @key="item">
-                                            @switch (item.Widget?.ToLower() ?? "static-link")
-                                            {
-                                                case "static-link":
-                                                    <StaticLinkWidget Item="item" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(item)" />
-                                                    break;
-                                                case "clock":
-                                                    <ClockWidget Item="item" />
-                                                    break;
-                                                default:
-                                                    <UnknownWidget Widget="@item.Widget" />
-                                                    break;
-                                            }
+                                                                                @switch (item.Widget?.ToLower() ?? "static-link")
+                                    {
+                                        case "static-link":
+                                            <StaticLinkWidget Item="item" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(item)" />
+                                            break;
+                                        case "clock":
+                                            <ClockWidget Item="item" />
+                                            break;
+                                        default:
+                                            <UnknownWidget Widget="@item.Widget" />
+                                            break;
+                                    }
                                         </div>
                                     }
                                 </div>
@@ -107,7 +107,20 @@ else
     </div>
 }
 
-@* Modals and @code block remain unchanged *@
+
+<Modal Title="@_itemModalTitle" IsOpen="@_isItemModalOpen" OnClose="CloseItemModal">
+    @if (_currentItemToEdit is not null)
+    {
+        <ItemEditor EditModel="_currentItemToEdit" OnSave="HandleSaveItem" OnCancel="CloseItemModal" />
+    }
+</Modal>
+<Modal Title="@(_sectionToEdit is null ? "Add New Section" : "Edit Section")" IsOpen="@_isSectionModalOpen" OnClose="CloseSectionModal">
+    @if (_isSectionModalOpen)
+    {
+        <SectionEditor EditModel="@(_sectionToEdit is null ? _newSection! : new CreateSectionDto(_sectionToEdit.Name, _sectionToEdit.Icon, _sectionToEdit.DashboardId))" OnSave="HandleSaveSection" OnCancel="CloseSectionModal" />
+    }
+</Modal>
+
 @code {
     private bool _isItemModalOpen = false;
     private string _itemModalTitle = "";
@@ -127,6 +140,7 @@ else
 
     private string GetItemSizeClass() => "item-size-" + ViewOptions.CurrentItemSize.ToString().ToLower();
 
+    private string GetLayoutClass() => "layout-" + ViewOptions.CurrentLayout.ToString().ToLower();
 
     protected override void OnInitialized()
     {
@@ -274,7 +288,7 @@ else
             var newConfig = await DashboardClient.GetConfigAsync();
             DashboardState.SetConfig(newConfig);
         }
-        
+
         CloseItemModal();
     }
 
@@ -291,17 +305,6 @@ else
                 var item = section.Items.FirstOrDefault(i => i.Id == itemToDelete.Id);
                 if (item is not null) section.Items.Remove(item);
             }
-        }
-    }
-
-    private async Task HandleSectionDeleted(SectionVm sectionToDelete)
-    {
-        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete the entire '{sectionToDelete.Name}' section and all of its items?");
-        if (!confirmed) return;
-        var success = await DashboardClient.Sections.DeleteAsync(sectionToDelete.Id);
-        if (success)
-        {
-            DashboardState.Config?.Sections.Remove(sectionToDelete);
         }
     }
 
@@ -326,9 +329,20 @@ else
         };
     }
 
+    private async Task HandleSectionDeleted(SectionVm sectionToDelete)
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete the entire '{sectionToDelete.Name}' section and all of its items?");
+        if (!confirmed) return;
+        var success = await DashboardClient.Sections.DeleteAsync(sectionToDelete.Id);
+        if (success)
+        {
+            DashboardState.Config?.Sections.Remove(sectionToDelete);
+        }
+    }
+
     public void Dispose()
     {
-        ViewOptions.OnChange -= StateHasChanged;
         DashboardState.OnConfigLoaded -= OnConfigLoadedHandler;
+        ViewOptions.OnChange -= StateHasChanged;
     }
 }

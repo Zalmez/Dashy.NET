@@ -2,6 +2,8 @@
 @using Dashy.Net.Web.Services
 @using System.ComponentModel.DataAnnotations
 @inject WidgetRegistryService WidgetRegistry
+@inject FileStorageService FileStorageService
+
 
 <EditForm Model="EditModel" OnValidSubmit="HandleValidSubmit">
     <DataAnnotationsValidator />
@@ -12,21 +14,59 @@
         <ValidationMessage For="@(() => EditModel.Title)" />
     </div>
 
-    <hr />
+    <div class="form-group">
+        <label for="icon">Icon URL or FontAwesome Class</label>
+        <InputText id="icon" class="form-control" @bind-Value="EditModel.Icon" />
+    </div>
 
-    @if (_editorComponentType is not null)
+    <div class="form-group">
+        <label>Or Upload New Icon</label>
+        <InputFile OnChange="HandleFileSelected" class="form-control" disabled="@_isUploading" />
+        @if (!string.IsNullOrEmpty(_uploadStatus))
+        {
+            <small class="form-text" style="color: @(_uploadSuccess ? "var(--accent-color)" : "var(--danger-color)"); margin-top: 0.5rem; display: block;">
+                @_uploadStatus
+            </small>
+        }
+    </div>
+
+    <hr />
+    <p class="subtle-text" style="margin-bottom: 1rem;">Widget-Specific Options:</p>
+
+    @switch (EditModel.Widget)
     {
-        <p class="subtle-text" style="margin-bottom: 1rem;">Widget-Specific Options:</p>
-        <DynamicComponent Type="_editorComponentType" Parameters="_editorParameters" />
-    }
-    else
-    {
-        <p class="subtle-text">This widget type has no specific options to configure.</p>
+        case "static-link":
+            <div class="form-group">
+                <label for="url">URL</label>
+                <InputText id="url" class="form-control" @bind-Value="EditModel.Url" />
+            </div>
+            <div class="form-group">
+                <label for="description">Description</label>
+                <InputTextArea id="description" class="form-control" @bind-Value="EditModel.Description" />
+            </div>
+            break;
+
+        case "clock":
+            <p class="subtle-text">This widget has no specific options to configure.</p>
+            break;
+
+        default:
+            <p class="subtle-text">Unknown widget type. No specific options available.</p>
+            break;
     }
 
     <div class="form-actions">
         <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
-        <button type="submit" class="btn btn-primary">Save</button>
+        <button type="submit" class="btn btn-primary" disabled="@_isUploading">
+            @if (_isUploading)
+            {
+                <span>Uploading...</span>
+            }
+            else
+            {
+                <span>Save</span>
+            }
+        </button>
     </div>
 </EditForm>
 
@@ -42,6 +82,11 @@
 
     private Type? _editorComponentType;
     private Dictionary<string, object> _editorParameters = new();
+
+    private bool _isUploading = false;
+    private string? _uploadStatus;
+    private bool _uploadSuccess = false;
+
 
     protected override void OnParametersSet()
     {
@@ -66,4 +111,58 @@
     {
         await OnCancel.InvokeAsync();
     }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file is null) return;
+
+        if (!file.ContentType.StartsWith("image"))
+        {
+            _uploadStatus = "Error: Please select an image file.";
+            _uploadSuccess = false;
+            return;
+        }
+
+        const long maxFileSize = 5 * 1024 * 1024; // 5MB limit
+        if (file.Size > maxFileSize)
+        {
+            _uploadStatus = $"Error: File size exceeds the limit of {maxFileSize / 1024 / 1024}MB.";
+            _uploadSuccess = false;
+            return;
+        }
+
+        _isUploading = true;
+        _uploadStatus = "Uploading...";
+        _uploadSuccess = false;
+        StateHasChanged();
+
+        try
+        {
+            var newUrl = await FileStorageService.SaveImageAsync(file);
+
+            if (!string.IsNullOrEmpty(newUrl))
+            {
+                EditModel.Icon = newUrl;
+                _uploadStatus = "Upload successful!";
+                _uploadSuccess = true;
+            }
+            else
+            {
+                _uploadStatus = "Error: Upload failed. See logs for details.";
+                _uploadSuccess = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _uploadStatus = "Error: An exception occurred.";
+            _uploadSuccess = false;
+        }
+        finally
+        {
+            _isUploading = false;
+            StateHasChanged();
+        }
+    }
+
 }
