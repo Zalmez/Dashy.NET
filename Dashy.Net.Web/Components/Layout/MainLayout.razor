@@ -179,12 +179,23 @@
         bool success;
         if (_editingButtonId > 0)
         {
-            var dto = new UpdateHeaderButtonDto(model.Text, model.Url, model.Icon);
+            var dto = new UpdateHeaderButtonDto
+            {
+                Text = model.Text,
+                Url = model.Url,
+                Icon = model.Icon
+            };
             success = await DashboardClient.HeaderButtons.UpdateAsync(_editingButtonId, dto);
         }
         else if (DashboardState.Config is not null)
         {
-            var dto = new CreateHeaderButtonDto(model.Text, model.Url, model.Icon, DashboardState.Config.Id);
+            var dto = new CreateHeaderButtonDto
+            {
+                Text = model.Text,
+                Url = model.Url,
+                Icon = model.Icon,
+                DashboardId = DashboardState.Config.Id
+            };
             success = await DashboardClient.HeaderButtons.CreateAsync(dto);
         }
         else { success = false; }

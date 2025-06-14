@@ -29,22 +29,41 @@ else
         </div>
     }
 
-    <div class="dashboard-container @(ViewOptions.CurrentLayout.ToString().ToLower())">
-        @if(ViewOptions.IsEditMode)
-        {
+    <div class="dashboard-container">
+        <div class="sections-wrapper">
             <SortableList Items="FilteredSections.ToList()"
-                      OnUpdate="@((args) => { _ = OnSectionOrderChanged(args.oldIndex, args.newIndex); })"
-                      Context="currentSection"
-                      class="sections-wrapper">
-            <div class="section-item" @key="currentSection">
+                          OnUpdate="async args => await OnSectionOrderChanged(args.oldIndex, args.newIndex)"
+                          Context="currentSection"
+                          class="sections-wrapper-inner"
+                          Sort="ViewOptions.IsEditMode">
+                @* Control sorting here *@
+                <div class="section-item" @key="currentSection">
                     <div class="section-container" id="section-@currentSection.Id">
                         <div class="section-header" @onclick="() => ToggleSectionCollapse(currentSection.Id)">
+                            <div class="section-header-left">
+                                <i class="fas fa-chevron-down section-chevron @(_collapsedSections.Contains(currentSection.Id) ? "collapsed" : "")"></i>
+                                @if (!string.IsNullOrWhiteSpace(currentSection.Icon))
+                                {
+                                    <i class="@currentSection.Icon section-icon"></i>
+                                }
+                                <h2>@currentSection.Name</h2>
+                            </div>
+                            @if (ViewOptions.IsEditMode)
+                            {
+                                <div class="section-edit-controls" @onclick:stopPropagation="true">
+                                    <button class="edit-btn" title="Edit Section" @onclick="() => OpenEditSectionModal(currentSection)"><i class="fas fa-pencil-alt"></i></button>
+                                    <button class="delete-btn" title="Delete Section" @onclick="() => HandleSectionDeleted(currentSection)">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                            }
                         </div>
                         <div class="items-wrapper @GetItemsContainerClass(currentSection.Id)">
                             <SortableList Items="currentSection.Items"
-                                          OnUpdate="(args) => OnItemOrderChanged(currentSection, (args.oldIndex, args.newIndex))"
+                                          OnUpdate="async args => await OnItemOrderChanged(currentSection, (args.oldIndex, args.newIndex))"
                                           Context="item"
-                                          Class="item-list">
+                                          Class="item-list"
+                                          Sort="ViewOptions.IsEditMode">
                                 <div class="item" @key="item">
                                     @switch (item.Widget?.ToLower() ?? "static-link")
                                     {
@@ -68,58 +87,38 @@ else
                     </div>
                 </div>
             </SortableList>
-        }
-        else
-        {
-            <div class="sections-wrapper">
-                @foreach (var currentSection in DashboardState.Config.Sections)
-                {
-                    <div class="section-item" @key="currentSection">
-                        <div class="section-container" id="section-@currentSection.Id">
-                            <div class="section-header" @onclick="() => ToggleSectionCollapse(currentSection.Id)">
-                            </div>
-                            <div class="items-wrapper @GetItemsContainerClass(currentSection.Id)">
-                                 <div class="item-list">
-                                    @foreach (var item in currentSection.Items)
-                                    {
-                                        <div class="item" @key="item">
-                                                                                @switch (item.Widget?.ToLower() ?? "static-link")
-                                    {
-                                        case "static-link":
-                                            <StaticLinkWidget Item="item" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(item)" />
-                                            break;
-                                        case "clock":
-                                            <ClockWidget Item="item" />
-                                            break;
-                                        default:
-                                            <UnknownWidget Widget="@item.Widget" />
-                                            break;
-                                    }
-                                        </div>
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                    </div>                    
-                }
-            </div>
-        }
+        </div>
     </div>
+
+    <Modal Title="@_itemModalTitle" IsOpen="@_isItemModalOpen" OnClose="CloseItemModal">
+        @if (_currentItemToEdit is not null)
+        {
+            <ItemEditor EditModel="_currentItemToEdit" OnSave="HandleSaveItem" OnCancel="CloseItemModal" />
+        }
+    </Modal>
+    <Modal Title="@(_sectionToEdit is null ? "Add New Section" : $"Edit '{_sectionToEdit?.Name}'")" IsOpen="@_isSectionModalOpen" OnClose="CloseSectionModal">
+        @if (_sectionModel is not null)
+        {
+            <EditForm Model="_sectionModel" OnValidSubmit="() => HandleSaveSection(_sectionModel)">
+                <DataAnnotationsValidator />
+                <div class="form-group">
+                    <label for="section-name">Section Name</label>
+                    <InputText id="section-name" class="form-control" @bind-Value="_sectionModel.Name" />
+                    <ValidationMessage For="@(() => _sectionModel.Name)" />
+                </div>
+                <div class="form-group">
+                    <label for="section-icon">Icon (e.g., "fas fa-tools")</label>
+                    <InputText id="section-icon" class="form-control" @bind-Value="_sectionModel.Icon" />
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseSectionModal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Section</button>
+                </div>
+            </EditForm>
+        }
+    </Modal>
 }
 
-
-<Modal Title="@_itemModalTitle" IsOpen="@_isItemModalOpen" OnClose="CloseItemModal">
-    @if (_currentItemToEdit is not null)
-    {
-        <ItemEditor EditModel="_currentItemToEdit" OnSave="HandleSaveItem" OnCancel="CloseItemModal" />
-    }
-</Modal>
-<Modal Title="@(_sectionToEdit is null ? "Add New Section" : "Edit Section")" IsOpen="@_isSectionModalOpen" OnClose="CloseSectionModal">
-    @if (_isSectionModalOpen)
-    {
-        <SectionEditor EditModel="@(_sectionToEdit is null ? _newSection! : new CreateSectionDto(_sectionToEdit.Name, _sectionToEdit.Icon, _sectionToEdit.DashboardId))" OnSave="HandleSaveSection" OnCancel="CloseSectionModal" />
-    }
-</Modal>
 
 @code {
     private bool _isItemModalOpen = false;
@@ -128,8 +127,10 @@ else
 
     private bool _isSectionModalOpen = false;
     private SectionVm? _sectionToEdit;
-    private CreateSectionDto? _newSection;
+    private CreateSectionDto? _sectionModel;
     private HashSet<int> _collapsedSections = new();
+
+    private bool _isDisposed = false;
 
     private IEnumerable<SectionVm> FilteredSections =>
         DashboardState.Config?.Sections.Where(section =>
@@ -137,10 +138,6 @@ else
             section.Name.Contains(ViewOptions.SearchTerm, StringComparison.OrdinalIgnoreCase) ||
             section.Items.Any(item => item.Title.Contains(ViewOptions.SearchTerm, StringComparison.OrdinalIgnoreCase))
         ) ?? Enumerable.Empty<SectionVm>();
-
-    private string GetItemSizeClass() => "item-size-" + ViewOptions.CurrentItemSize.ToString().ToLower();
-
-    private string GetLayoutClass() => "layout-" + ViewOptions.CurrentLayout.ToString().ToLower();
 
     protected override void OnInitialized()
     {
@@ -153,11 +150,22 @@ else
         if (firstRender)
         {
             var config = await DashboardClient.GetConfigAsync();
+            if (_isDisposed)
+            {
+                return;
+            }
             DashboardState.SetConfig(config);
         }
     }
 
-    private void OnConfigLoadedHandler() => InvokeAsync(StateHasChanged);
+    private void OnConfigLoadedHandler()
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+        InvokeAsync(StateHasChanged);
+    }
 
     private void OpenCreateModal(int sectionId)
     {
@@ -185,22 +193,27 @@ else
     {
         if (DashboardState.Config is null) return;
         _sectionToEdit = null;
-        _newSection = new CreateSectionDto("", null, DashboardState.Config.Id);
+        _sectionModel = new CreateSectionDto { DashboardId = DashboardState.Config.Id };
         _isSectionModalOpen = true;
     }
 
     private void OpenEditSectionModal(SectionVm section)
     {
-        _newSection = null;
         _sectionToEdit = section;
+        _sectionModel = new CreateSectionDto
+        {
+            Name = section.Name,
+            Icon = section.Icon,
+            DashboardId = section.DashboardId
+        };
         _isSectionModalOpen = true;
     }
 
     private void CloseSectionModal()
     {
         _isSectionModalOpen = false;
-        _newSection = null;
         _sectionToEdit = null;
+        _sectionModel = null;
     }
 
     private void ToggleSectionCollapse(int sectionId)
@@ -232,8 +245,7 @@ else
         }
         else
         {
-            var sectionToCreate = new CreateSectionDto(sectionToSave.Name, sectionToSave.Icon ?? "fa-solid fa-folder", DashboardState.Config!.Id);
-            success = await DashboardClient.Sections.CreateAsync(sectionToCreate);
+            success = await DashboardClient.Sections.CreateAsync(sectionToSave);
         }
 
         if (success)
@@ -246,7 +258,12 @@ else
 
     private async Task OnItemOrderChanged(SectionVm section, (int oldIndex, int newIndex) args)
     {
-        var orderedIds = section.Items.Select(i => i.Id).ToList();
+        var items = section.Items.ToList();
+        var movedItem = items[args.oldIndex];
+        items.RemoveAt(args.oldIndex);
+        items.Insert(args.newIndex, movedItem);
+
+        var orderedIds = items.Select(i => i.Id).ToList();
         var dto = new ReorderItemsDto(orderedIds);
         var success = await DashboardClient.Items.ReorderAsync(dto);
         if (!success)
@@ -259,7 +276,13 @@ else
     private async Task OnSectionOrderChanged(int oldIndex, int newIndex)
     {
         if (DashboardState.Config is null) return;
-        var orderedIds = DashboardState.Config.Sections.Select(s => s.Id).ToList();
+        
+        var sections = FilteredSections.ToList();
+        var movedSection = sections[oldIndex];
+        sections.RemoveAt(oldIndex);
+        sections.Insert(newIndex, movedSection);
+
+        var orderedIds = sections.Select(s => s.Id).ToList();
         var dto = new ReorderSectionsDto(orderedIds);
         var success = await DashboardClient.Sections.ReorderAsync(dto);
         if (!success)
@@ -274,12 +297,26 @@ else
         bool success;
         if (itemToSave.Id > 0)
         {
-            var updateDto = new UpdateItemDto(itemToSave.Title, itemToSave.Icon, itemToSave.Widget, itemToSave.SectionId, itemToSave.Options);
+            var updateDto = new UpdateItemDto
+            {
+                Title = itemToSave.Title,
+                Icon = itemToSave.Icon,
+                Widget = itemToSave.Widget,
+                SectionId = itemToSave.SectionId,
+                Options = itemToSave.Options ?? new Dictionary<string, object>()
+            };
             success = await DashboardClient.Items.UpdateAsync(itemToSave.Id, updateDto);
         }
         else
         {
-            var createDto = new CreateItemDto(itemToSave.Title, itemToSave.Icon, itemToSave.Widget, itemToSave.SectionId, itemToSave.Options);
+            var createDto = new CreateItemDto
+            {
+                Title = itemToSave.Title,
+                Icon = itemToSave.Icon,
+                Widget = itemToSave.Widget,
+                SectionId = itemToSave.SectionId,
+                Options = itemToSave.Options ?? new Dictionary<string, object>()
+            };
             success = await DashboardClient.Items.CreateAsync(createDto);
         }
 
@@ -291,7 +328,6 @@ else
 
         CloseItemModal();
     }
-
     private async Task HandleItemDeleted(ItemVm itemToDelete)
     {
         var success = await DashboardClient.Items.DeleteAsync(itemToDelete.Id);
@@ -308,27 +344,6 @@ else
         }
     }
 
-    private string GetItemsContainerClass(int sectionId)
-    {
-        if (_collapsedSections.Contains(sectionId))
-            return "collapsed";
-
-        return ViewOptions.CurrentLayout switch
-        {
-            LayoutOrientation.Vertical => "layout-vertical",
-            _ => "layout-auto"
-        };
-    }
-    private string GetItemWrapperClass()
-    {
-        return ViewOptions.CurrentLayout switch
-        {
-            LayoutOrientation.Vertical => "sortable-item",
-            LayoutOrientation.Auto => "col-auto sortable-item",
-            _ => "col-auto sortable-item"
-        };
-    }
-
     private async Task HandleSectionDeleted(SectionVm sectionToDelete)
     {
         var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete the entire '{sectionToDelete.Name}' section and all of its items?");
@@ -340,9 +355,18 @@ else
         }
     }
 
+    private string GetItemsContainerClass(int sectionId)
+    {
+        if (_collapsedSections.Contains(sectionId))
+            return "collapsed";
+
+        return "layout-" + ViewOptions.CurrentLayout.ToString().ToLower();
+    }
+
     public void Dispose()
     {
-        DashboardState.OnConfigLoaded -= OnConfigLoadedHandler;
+
         ViewOptions.OnChange -= StateHasChanged;
+        DashboardState.OnConfigLoaded -= OnConfigLoadedHandler;
     }
 }

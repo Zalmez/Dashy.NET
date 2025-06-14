@@ -1,19 +1,30 @@
-﻿@using System.ComponentModel.DataAnnotations
-@using Dashy.Net.Shared.Models
+﻿@using Dashy.Net.Shared.Models
 
-@* Bind the form to our new, mutable _editModel *@
-<EditForm Model="@_editModel" OnValidSubmit="HandleValidSubmit">
+<EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit">
     <DataAnnotationsValidator />
 
     <div class="form-group">
-        <label for="name">Section Name</label>
-        <InputText id="name" class="form-control" @bind-Value="_editModel.Name" />
-        <ValidationMessage For="@(() => _editModel.Name)" />
+        <label for="section-name">Section Name</label>
+        <InputText
+            id="section-name"
+            class="form-control"
+            Value="@EditModel.Name"
+            ValueChanged="@((string newValue) => EditModel.Name = newValue)" />
+        <ValidationMessage For="@(() => EditModel.Name)" />
+    </div>
+
+    <div class="form-group">
+        <label for="section-icon">Icon (e.g., "fas fa-tools")</label>
+        <InputText
+            id="section-icon"
+            class="form-control"
+            Value="@EditModel.Icon"
+            ValueChanged="@((string newValue) => EditModel.Icon = newValue)" />
     </div>
 
     <div class="form-actions">
-        <button type="button" class="btn btn-secondary" @onclick="OnCancel">Cancel</button>
-        <button type="submit" class="btn btn-primary">Create Section</button>
+        <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Section</button>
     </div>
 </EditForm>
 
@@ -27,24 +38,13 @@
     [Parameter]
     public EventCallback OnCancel { get; set; }
 
-    private SectionEditModel _editModel = new();
-
-    public class SectionEditModel
-    {
-        [Required]
-        public string Name { get; set; } = "";
-        public string Icon { get; set; } = "fas fa-folder";
-        public int dashboardId { get; set; }
-    }
-
-    protected override void OnParametersSet()
-    {
-        _editModel.Name = EditModel.Name;
-    }
-
     private async Task HandleValidSubmit()
     {
-        var dtoToSave = new CreateSectionDto(_editModel.Name, _editModel.Icon, _editModel.dashboardId);
-        await OnSave.InvokeAsync(dtoToSave);
+        await OnSave.InvokeAsync(EditModel);
+    }
+
+    private async Task Cancel()
+    {
+        await OnCancel.InvokeAsync();
     }
 }
