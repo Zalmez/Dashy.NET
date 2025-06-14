@@ -1,10 +1,10 @@
 @using Dashy.Net.Shared.Models
-@using Dashy.Net.Shared.ViewModels
 @using Dashy.Net.Web.Services
 @inject ViewOptionsService ViewOptions
 @inject IJSRuntime JSRuntime
 @inject ILogger<StaticLinkWidget> Logger
 @inject NavigationManager NavManager
+@implements IDisposable
 
 <div class="item-card-wrapper">
     @if (ViewOptions.IsEditMode)
@@ -15,7 +15,7 @@
         </div>
     }
 
-    <div class="item-card" @onclick="NavigateToUrl">
+    <div class="item-card @GetItemSizeClass()" @onclick="NavigateToUrl">
         <div class="item-icon">
             @if (!string.IsNullOrWhiteSpace(Item.Icon))
             {
@@ -31,9 +31,10 @@
         </div>
         <div class="item-details">
             <div class="item-title">@Item.Title</div>
-            @if (!string.IsNullOrWhiteSpace(Item.Description))
+
+            @if (ViewOptions.CurrentItemSize == ItemSize.Large && !string.IsNullOrWhiteSpace(Description))
             {
-                <div class="item-description">@Item.Description</div>
+                <div class="item-description">@Description</div>
             }
         </div>
     </div>
@@ -48,6 +49,21 @@
 
     [Parameter]
     public EventCallback OnItemEdited { get; set; }
+
+    private string? Url => Item.Options?.GetValueOrDefault("Url")?.ToString();
+    private string? Description => Item.Options?.GetValueOrDefault("Description")?.ToString();
+
+    protected override void OnInitialized()
+    {
+        ViewOptions.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        ViewOptions.OnChange -= StateHasChanged;
+    }
+
+    private string GetItemSizeClass() => "item-size-" + ViewOptions.CurrentItemSize.ToString().ToLower();
 
     private async Task OnDeleteClick()
     {
@@ -65,9 +81,13 @@
 
     private void NavigateToUrl()
     {
-        if (!ViewOptions.IsEditMode && !string.IsNullOrWhiteSpace(Item.Url))
+        if (!ViewOptions.IsEditMode && !string.IsNullOrWhiteSpace(Url))
         {
-            NavManager.NavigateTo(Item.Url, forceLoad: true);
+            NavManager.NavigateTo(Url, forceLoad: true);
+        }
+        else
+        {
+            Logger.LogWarning("There's no URI connected to the given StaticLinkWidget");
         }
     }
 }

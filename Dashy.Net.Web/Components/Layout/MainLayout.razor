@@ -1,5 +1,4 @@
-﻿@using Dashy.Net.Shared.ViewModels
-@using Dashy.Net.Web.Clients
+﻿@using Dashy.Net.Web.Clients
 @using Dashy.Net.Web.Components.Shared
 @using Dashy.Net.Web.Services
 @using Dashy.Net.Shared.Models
@@ -46,18 +45,22 @@
             <SearchBar />
         </div>
         <div class="toolbar-right">
+            <HeaderButtonGroup Label="Layout">
+                <button class="btn btn-secondary @(ViewOptions.CurrentLayout == LayoutOrientation.Auto ? "active" : "")" @onclick="() => ViewOptions.SetLayout(LayoutOrientation.Auto)">
+                    <i class="fas fa-th-large"></i> Auto
+                </button>
+                <button class="btn btn-secondary @(ViewOptions.CurrentLayout == LayoutOrientation.Vertical ? "active" : "")" @onclick="() => ViewOptions.SetLayout(LayoutOrientation.Vertical)">
+                    <i class="fas fa-bars"></i> Vertical
+                </button>
+            </HeaderButtonGroup>
+            <HeaderButtonGroup Label="Item Size">
+                <button class="@(IsItemSize(ItemSize.Small) ? "active" : "")" @onclick="() => SetItemSize(ItemSize.Small)"><i class="fas fa-compress"></i></button>
+                <button class="@(IsItemSize(ItemSize.Medium) ? "active" : "")" @onclick="() => SetItemSize(ItemSize.Medium)"><i class="fas fa-grip-horizontal"></i></button>
+                <button class="@(IsItemSize(ItemSize.Large) ? "active" : "")" @onclick="() => SetItemSize(ItemSize.Large)"><i class="fas fa-expand"></i></button>
+            </HeaderButtonGroup>
+
             @if (ViewOptions.IsEditMode)
             {
-                <HeaderButtonGroup Label="Layout">
-                    <button class="@(IsLayout(LayoutOrientation.Horizontal) ? "active" : "")" @onclick="() => SetLayout(LayoutOrientation.Horizontal)" title="Horizontal"><i class="fas fa-grip-horizontal"></i></button>
-                    <button class="@(IsLayout(LayoutOrientation.Vertical) ? "active" : "")" @onclick="() => SetLayout(LayoutOrientation.Vertical)" title="Vertical"><i class="fas fa-grip-lines"></i></button>
-                    <button class="@(IsLayout(LayoutOrientation.Auto) ? "active" : "")" @onclick="() => SetLayout(LayoutOrientation.Auto)" title="Auto"><i class="fas fa-th"></i></button>
-                </HeaderButtonGroup>
-                <HeaderButtonGroup Label="Item Size">
-                    <button class="@(IsItemSize(ItemSize.Small) ? "active" : "")" @onclick="() => SetItemSize(ItemSize.Small)"><i class="fas fa-compress"></i></button>
-                    <button class="@(IsItemSize(ItemSize.Medium) ? "active" : "")" @onclick="() => SetItemSize(ItemSize.Medium)"><i class="fas fa-grip-horizontal"></i></button>
-                    <button class="@(IsItemSize(ItemSize.Large) ? "active" : "")" @onclick="() => SetItemSize(ItemSize.Large)"><i class="fas fa-expand"></i></button>
-                </HeaderButtonGroup>
                 <HeaderButtonGroup Label="Config">
                     <button @onclick="OpenButtonManagerModal" title="Configure Header Buttons"><i class="fas fa-cog"></i></button>
                 </HeaderButtonGroup>
@@ -75,11 +78,12 @@
         {
             <HeaderButtonManager Buttons="DashboardState.Config.HeaderButtons"
                                  OnAdd="OpenAddButtonEditorModal"
-                                 OnEdit="@OpenEditButtonEditorModal"
+                                 OnEdit="OpenEditButtonEditorModal"
                                  OnDelete="HandleDeleteButton"
                                  OnReorder="HandleReorderButtons" />
         }
     </Modal>
+
     <Modal Title="@_buttonEditorTitle" IsOpen="@_isButtonEditorOpen" OnClose="CloseButtonEditorModal">
         @if (_buttonToEdit is not null)
         {
@@ -87,6 +91,7 @@
         }
     </Modal>
 
+    @* --- Floating Action Button Menu --- *@
     <div class="fab-container @(_isFabMenuOpen ? "open" : "")">
         <div class="fab-menu">
             <button class="fab-menu-item" disabled>
@@ -123,7 +128,7 @@
     {
         ThemeService.OnThemeChanged += OnThemeChangedHandler;
         DashboardState.OnConfigLoaded += StateHasChanged;
-        ViewOptions.OnEditModeChanged += StateHasChanged;
+        ViewOptions.OnChange += StateHasChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -239,12 +244,13 @@
     private void ToggleEditMode()
     {
         ViewOptions.ToggleEditMode();
+        _isFabMenuOpen = false;
     }
 
     public void Dispose()
     {
         ThemeService.OnThemeChanged -= OnThemeChangedHandler;
         DashboardState.OnConfigLoaded -= StateHasChanged;
-        ViewOptions.OnEditModeChanged -= StateHasChanged;
+        ViewOptions.OnChange -= StateHasChanged;
     }
 }

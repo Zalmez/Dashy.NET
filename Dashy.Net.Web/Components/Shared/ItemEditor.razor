@@ -1,8 +1,9 @@
 ﻿@using Dashy.Net.Shared.Models
 @using Dashy.Net.Web.Services
 @using System.ComponentModel.DataAnnotations
-@inject FileStorageService FileStorage
-@inject ILogger<ItemEditor> Logger
+@inject WidgetRegistryService WidgetRegistry
+@inject FileStorageService FileStorageService
+
 
 <EditForm Model="EditModel" OnValidSubmit="HandleValidSubmit">
     <DataAnnotationsValidator />
@@ -11,16 +12,6 @@
         <label for="title">Title</label>
         <InputText id="title" class="form-control" @bind-Value="EditModel.Title" />
         <ValidationMessage For="@(() => EditModel.Title)" />
-    </div>
-
-    <div class="form-group">
-        <label for="url">URL</label>
-        <InputText id="url" class="form-control" @bind-Value="EditModel.Url" />
-    </div>
-
-    <div class="form-group">
-        <label for="description">Description</label>
-        <InputText id="description" class="form-control" @bind-Value="EditModel.Description" />
     </div>
 
     <div class="form-group">
@@ -39,12 +30,36 @@
         }
     </div>
 
+    <hr />
+    <p class="subtle-text" style="margin-bottom: 1rem;">Widget-Specific Options:</p>
+
+    @switch (EditModel.Widget)
+    {
+        case "static-link":
+            <div class="form-group">
+                <label for="url">URL</label>
+                <InputText id="url" class="form-control" @bind-Value="EditModel.Url" />
+            </div>
+            <div class="form-group">
+                <label for="description">Description</label>
+                <InputTextArea id="description" class="form-control" @bind-Value="EditModel.Description" />
+            </div>
+            break;
+
+        case "clock":
+            <p class="subtle-text">This widget has no specific options to configure.</p>
+            break;
+
+        default:
+            <p class="subtle-text">Unknown widget type. No specific options available.</p>
+            break;
+    }
+
     <div class="form-actions">
         <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
         <button type="submit" class="btn btn-primary" disabled="@_isUploading">
             @if (_isUploading)
             {
-                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                 <span>Uploading...</span>
             }
             else
@@ -65,9 +80,37 @@
     [Parameter]
     public EventCallback OnCancel { get; set; }
 
+    private Type? _editorComponentType;
+    private Dictionary<string, object> _editorParameters = new();
+
     private bool _isUploading = false;
     private string? _uploadStatus;
     private bool _uploadSuccess = false;
+
+
+    protected override void OnParametersSet()
+    {
+        var descriptor = WidgetRegistry.GetDescriptor(EditModel.Widget);
+        _editorComponentType = descriptor?.OptionsEditorComponent;
+
+        if (_editorComponentType is not null)
+        {
+            _editorParameters = new Dictionary<string, object>
+            {
+                { "EditModel", EditModel }
+            };
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        await OnSave.InvokeAsync(EditModel);
+    }
+
+    private async Task Cancel()
+    {
+        await OnCancel.InvokeAsync();
+    }
 
     private async Task HandleFileSelected(InputFileChangeEventArgs e)
     {
@@ -96,7 +139,7 @@
 
         try
         {
-            var newUrl = await FileStorage.SaveImageAsync(file);
+            var newUrl = await FileStorageService.SaveImageAsync(file);
 
             if (!string.IsNullOrEmpty(newUrl))
             {
@@ -114,7 +157,6 @@
         {
             _uploadStatus = "Error: An exception occurred.";
             _uploadSuccess = false;
-            Logger.LogError(ex, "Exception during file selection handling.");
         }
         finally
         {
@@ -123,13 +165,4 @@
         }
     }
 
-    private async Task HandleValidSubmit()
-    {
-        await OnSave.InvokeAsync(EditModel);
-    }
-
-    private async Task Cancel()
-    {
-        await OnCancel.InvokeAsync();
-    }
 }

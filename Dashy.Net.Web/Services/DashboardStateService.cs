@@ -1,5 +1,4 @@
 ﻿using Dashy.Net.Shared.Models;
-using Dashy.Net.Shared.ViewModels;
 
 namespace Dashy.Net.Web.Services;
 

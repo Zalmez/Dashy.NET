@@ -28,7 +28,7 @@ public class DashboardSection
     public List<DashboardItem> Items { get; set; } = [];
     public int Position { get; set; } = 0;
     public int DashboardId { get; set; }
-    public required Dashboard Dashboard { get; set; } = null!;
+    public Dashboard Dashboard { get; set; } = null!;
 }
 
 public class Dashboard
@@ -51,5 +51,5 @@ public class HeaderButton
     public int Position { get; set; }
 
     public int DashboardId { get; set; }
-    public required Dashboard Dashboard { get; set; } = null!;
+    public Dashboard Dashboard { get; set; } = null!;
 }

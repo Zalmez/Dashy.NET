@@ -1,11 +1,10 @@
 ﻿@page "/"
 @using BlazorSortable
 @using Dashy.Net.Shared.Models
-@using Dashy.Net.Shared.ViewModels
 @using Dashy.Net.Web.Clients
 @using Dashy.Net.Web.Services
 @using Dashy.Net.Web.Components.Shared
-@using Dashy.Net.Web.Components.Widgets
+@using Dashy.Net.Web.Components.Shared.Widgets
 @inject ILogger<Dashboard> Logger
 @inject IJSRuntime JSRuntime
 @inject DashboardClient DashboardClient
@@ -30,40 +29,23 @@ else
         </div>
     }
 
-    <div class="content-container">
-        <div class="sections-wrapper @GetLayoutClass()">
-            <SortableList Class="@(GetLayoutClass() is null ? "sections-list-container" : $"sections-list-container {GetLayoutClass()}")" 
-                          Items="FilteredSections.ToList()"
-                          OnUpdate="async args => await OnSectionOrderChanged(args.oldIndex, args.newIndex)"
-                          Sort="ViewOptions.IsEditMode"
-                          Context="currentSection">
-                <div class="sortable-item" @key="currentSection">
+    <div class="dashboard-container @(ViewOptions.CurrentLayout.ToString().ToLower())">
+        @if(ViewOptions.IsEditMode)
+        {
+            <SortableList Items="FilteredSections.ToList()"
+                      OnUpdate="@((args) => { _ = OnSectionOrderChanged(args.oldIndex, args.newIndex); })"
+                      Context="currentSection"
+                      class="sections-wrapper">
+            <div class="section-item" @key="currentSection">
                     <div class="section-container" id="section-@currentSection.Id">
                         <div class="section-header" @onclick="() => ToggleSectionCollapse(currentSection.Id)">
-                            <div class="section-header-left">
-                                <i class="fas fa-chevron-down section-chevron @(_collapsedSections.Contains(currentSection.Id) ? "collapsed" : "")"></i>
-                                @if (!string.IsNullOrWhiteSpace(currentSection.Icon))
-                                {
-                                    <i class="@currentSection.Icon section-icon"></i>
-                                }
-                                <h2>@currentSection.Name</h2>
-                            </div>
-                            @if (ViewOptions.IsEditMode)
-                            {
-                                <div class="section-edit-controls" @onclick:stopPropagation="true">
-                                    <button class="edit-btn" title="Edit Section" @onclick="() => OpenEditSectionModal(currentSection)"><i class="fas fa-pencil-alt"></i></button>
-                                    <button class="delete-btn" title="Delete Section" @onclick="() => HandleSectionDeleted(currentSection)">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
-                                </div>
-                            }
                         </div>
-                        <div class="item-grid @GetItemSizeClass() @(_collapsedSections.Contains(currentSection.Id) ? "collapsed" : "")">
+                        <div class="items-wrapper @GetItemsContainerClass(currentSection.Id)">
                             <SortableList Items="currentSection.Items"
-                                          OnUpdate=" async (args) => await OnItemOrderChanged(currentSection, (args.oldIndex, args.newIndex))"
-                                          Sort="ViewOptions.IsEditMode"
-                                          Context="item">
-                                <div class="sortable-item" @key="item">
+                                          OnUpdate="(args) => OnItemOrderChanged(currentSection, (args.oldIndex, args.newIndex))"
+                                          Context="item"
+                                          Class="item-list">
+                                <div class="item" @key="item">
                                     @switch (item.Widget?.ToLower() ?? "static-link")
                                     {
                                         case "static-link":
@@ -86,10 +68,45 @@ else
                     </div>
                 </div>
             </SortableList>
-        </div>
+        }
+        else
+        {
+            <div class="sections-wrapper">
+                @foreach (var currentSection in DashboardState.Config.Sections)
+                {
+                    <div class="section-item" @key="currentSection">
+                        <div class="section-container" id="section-@currentSection.Id">
+                            <div class="section-header" @onclick="() => ToggleSectionCollapse(currentSection.Id)">
+                            </div>
+                            <div class="items-wrapper @GetItemsContainerClass(currentSection.Id)">
+                                 <div class="item-list">
+                                    @foreach (var item in currentSection.Items)
+                                    {
+                                        <div class="item" @key="item">
+                                                                                @switch (item.Widget?.ToLower() ?? "static-link")
+                                    {
+                                        case "static-link":
+                                            <StaticLinkWidget Item="item" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(item)" />
+                                            break;
+                                        case "clock":
+                                            <ClockWidget Item="item" />
+                                            break;
+                                        default:
+                                            <UnknownWidget Widget="@item.Widget" />
+                                            break;
+                                    }
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>                    
+                }
+            </div>
+        }
     </div>
-
 }
+
 
 <Modal Title="@_itemModalTitle" IsOpen="@_isItemModalOpen" OnClose="CloseItemModal">
     @if (_currentItemToEdit is not null)
@@ -100,10 +117,9 @@ else
 <Modal Title="@(_sectionToEdit is null ? "Add New Section" : "Edit Section")" IsOpen="@_isSectionModalOpen" OnClose="CloseSectionModal">
     @if (_isSectionModalOpen)
     {
-        <SectionEditor EditModel="@(_sectionToEdit is null ? _newSection! : new CreateSectionDto(_sectionToEdit.Name, _sectionToEdit.Icon, DashboardState.Config.Id))" OnSave="HandleSaveSection" OnCancel="CloseSectionModal" />
+        <SectionEditor EditModel="@(_sectionToEdit is null ? _newSection! : new CreateSectionDto(_sectionToEdit.Name, _sectionToEdit.Icon, _sectionToEdit.DashboardId))" OnSave="HandleSaveSection" OnCancel="CloseSectionModal" />
     }
 </Modal>
-
 
 @code {
     private bool _isItemModalOpen = false;
@@ -124,18 +140,12 @@ else
 
     private string GetItemSizeClass() => "item-size-" + ViewOptions.CurrentItemSize.ToString().ToLower();
 
-    private string GetLayoutClass()
-    {
-        return "layout-" + ViewOptions.CurrentLayout.ToString().ToLower();
-    }
+    private string GetLayoutClass() => "layout-" + ViewOptions.CurrentLayout.ToString().ToLower();
 
     protected override void OnInitialized()
     {
-        ViewOptions.OnEditModeChanged += StateHasChanged;
+        ViewOptions.OnChange += StateHasChanged;
         DashboardState.OnConfigLoaded += OnConfigLoadedHandler;
-        ViewOptions.OnSearchTermChanged += StateHasChanged;
-        ViewOptions.OnItemSizeChanged += StateHasChanged;
-        ViewOptions.OnLayoutChanged += StateHasChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -163,8 +173,6 @@ else
         {
             Id = item.Id,
             Title = item.Title,
-            Description = item.Description,
-            Url = item.Url,
             Icon = item.Icon,
             Widget = item.Widget ?? "static-link",
             SectionId = item.SectionId,
@@ -217,7 +225,6 @@ else
     private async Task HandleSaveSection(CreateSectionDto sectionToSave)
     {
         bool success;
-        //sectionToSave.DashboardId = DashboardState.Config.Id
         if (_sectionToEdit is not null)
         {
             var updateDto = new UpdateSectionDto(sectionToSave.Name, sectionToSave.Icon);
@@ -225,7 +232,7 @@ else
         }
         else
         {
-            var sectionToCreate = new CreateSectionDto(sectionToSave.Name, sectionToSave.Icon ?? "fa-solid fa-folder", DashboardState.Config.Id);
+            var sectionToCreate = new CreateSectionDto(sectionToSave.Name, sectionToSave.Icon ?? "fa-solid fa-folder", DashboardState.Config!.Id);
             success = await DashboardClient.Sections.CreateAsync(sectionToCreate);
         }
 
@@ -234,7 +241,6 @@ else
             var newConfig = await DashboardClient.GetConfigAsync();
             DashboardState.SetConfig(newConfig);
         }
-
         CloseSectionModal();
     }
 
@@ -243,7 +249,6 @@ else
         var orderedIds = section.Items.Select(i => i.Id).ToList();
         var dto = new ReorderItemsDto(orderedIds);
         var success = await DashboardClient.Items.ReorderAsync(dto);
-
         if (!success)
         {
             var newConfig = await DashboardClient.GetConfigAsync();
@@ -254,12 +259,9 @@ else
     private async Task OnSectionOrderChanged(int oldIndex, int newIndex)
     {
         if (DashboardState.Config is null) return;
-
         var orderedIds = DashboardState.Config.Sections.Select(s => s.Id).ToList();
         var dto = new ReorderSectionsDto(orderedIds);
-
         var success = await DashboardClient.Sections.ReorderAsync(dto);
-
         if (!success)
         {
             var newConfig = await DashboardClient.GetConfigAsync();
@@ -272,12 +274,12 @@ else
         bool success;
         if (itemToSave.Id > 0)
         {
-            var updateDto = new UpdateItemDto(itemToSave.Title, itemToSave.Description, itemToSave.Url, itemToSave.Icon, itemToSave.Widget, itemToSave.SectionId, itemToSave.Options);
+            var updateDto = new UpdateItemDto(itemToSave.Title, itemToSave.Icon, itemToSave.Widget, itemToSave.SectionId, itemToSave.Options);
             success = await DashboardClient.Items.UpdateAsync(itemToSave.Id, updateDto);
         }
         else
         {
-            var createDto = new CreateItemDto(itemToSave.Title, itemToSave.Description, itemToSave.Url, itemToSave.Icon, itemToSave.Widget, itemToSave.SectionId, itemToSave.Options);
+            var createDto = new CreateItemDto(itemToSave.Title, itemToSave.Icon, itemToSave.Widget, itemToSave.SectionId, itemToSave.Options);
             success = await DashboardClient.Items.CreateAsync(createDto);
         }
 
@@ -306,17 +308,32 @@ else
         }
     }
 
+    private string GetItemsContainerClass(int sectionId)
+    {
+        if (_collapsedSections.Contains(sectionId))
+            return "collapsed";
+
+        return ViewOptions.CurrentLayout switch
+        {
+            LayoutOrientation.Vertical => "layout-vertical",
+            _ => "layout-auto"
+        };
+    }
+    private string GetItemWrapperClass()
+    {
+        return ViewOptions.CurrentLayout switch
+        {
+            LayoutOrientation.Vertical => "sortable-item",
+            LayoutOrientation.Auto => "col-auto sortable-item",
+            _ => "col-auto sortable-item"
+        };
+    }
+
     private async Task HandleSectionDeleted(SectionVm sectionToDelete)
     {
         var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete the entire '{sectionToDelete.Name}' section and all of its items?");
-
-        if (!confirmed)
-        {
-            return;
-        }
-
+        if (!confirmed) return;
         var success = await DashboardClient.Sections.DeleteAsync(sectionToDelete.Id);
-
         if (success)
         {
             DashboardState.Config?.Sections.Remove(sectionToDelete);
@@ -325,10 +342,7 @@ else
 
     public void Dispose()
     {
-        ViewOptions.OnEditModeChanged -= StateHasChanged;
         DashboardState.OnConfigLoaded -= OnConfigLoadedHandler;
-        ViewOptions.OnSearchTermChanged -= StateHasChanged;
-        ViewOptions.OnItemSizeChanged -= StateHasChanged;
-        ViewOptions.OnLayoutChanged -= StateHasChanged;
+        ViewOptions.OnChange -= StateHasChanged;
     }
 }
