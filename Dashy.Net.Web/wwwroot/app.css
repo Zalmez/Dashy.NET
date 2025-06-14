@@ -48,7 +48,6 @@ h1, h2, h3, h4, h5, h6 {
 /*==============================================================
   2. CORE LAYOUT
 ==============================================================*/
-
 .main-header {
     display: flex;
     justify-content: space-between;
@@ -93,67 +92,38 @@ h1, h2, h3, h4, h5, h6 {
   3. PAGE-SPECIFIC LAYOUTS
 ==============================================================*/
 
+
+
 .add-section-container {
     margin-bottom: 2rem;
+    max-width: 1800px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
-.sections-list-container {
+/* The main wrapper for all sections. Using CSS Grid is the most robust solution. */
+.sections-wrapper {
     display: grid;
     gap: 1.5rem;
+    width: 100%;
+    max-width: 1800px;
+    margin: 0 auto; /* This centers the whole block */
 }
 
-    .sections-list-container.layout-auto {
+    /* --- Layout Direction Modifiers --- */
+
+    /* Auto layout (Grid) creates a responsive grid that wraps automatically. */
+    .sections-wrapper.layout-auto {
         grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
     }
 
-    .sections-list-container.layout-vertical {
-        grid-template-columns: 1fr;
-    }
-    .sections-list-container.layout-horizontal {
-        display: flex; /* Flexbox is best for the single-row scroll */
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        padding-bottom: 1rem;
-    }
-
-        .sections-list-container.layout-horizontal > .sortable-item {
-            flex: 0 0 450px;
-        }
-.sections-wrapper {
-}
-
-    .sections-wrapper > .sortable-list {
-        display: grid;
-        gap: 1.5rem;
-    }
-
-
-    .sections-wrapper.layout-auto > .sortable-list {
-        grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
-    }
-
-    .sections-wrapper.layout-vertical > .sortable-list {
+    /* Vertical layout forces a single column. */
+    .sections-wrapper.layout-vertical {
         grid-template-columns: 1fr;
     }
 
-    .sections-wrapper.layout-horizontal {
-        display: flex;
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        padding-bottom: 1rem;
-        gap: 1.5rem;
-    }
 
-        .sections-wrapper.layout-horizontal > .sortable-list {
-            display: flex; 
-            gap: 1.5rem;
-        }
-
-
-        .sections-wrapper.layout-horizontal .sortable-item {
-            flex: 0 0 450px; 
-        }
-
+/* --- Section Container --- */
 .section-container {
     background-color: var(--card-background-color);
     border: 1px solid var(--border-color);
@@ -181,44 +151,42 @@ h1, h2, h3, h4, h5, h6 {
     gap: 0.75rem;
 }
 
+/* --- Item Grid & Sizing --- */
 .item-grid {
     display: grid;
     gap: 1rem;
     padding-top: 1rem;
     max-height: 2000px;
-    transition: max-height 0.4s ease-in-out, padding-top 0.4s ease-in-out;
     overflow: hidden;
+    transition: max-height 0.4s ease-in-out, padding-top 0.4s ease-in-out;
+    flex-grow: 1;
+    justify-content: center; /* This centers the items as a group */
 }
 
     .item-grid.collapsed {
         max-height: 0;
         padding-top: 0;
-        margin-bottom: -1rem; 
+        margin-bottom: -1rem;
     }
 
+    /* These sizing classes are now fully independent and will work correctly. */
     .item-grid.item-size-small {
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     }
 
     .item-grid.item-size-medium {
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     }
 
     .item-grid.item-size-large {
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     }
 
-.content-container {
-    width: 100%;
-    max-width: 1600px;
-    margin-left: auto;
-    margin-right: auto;
-}
+
 /*==============================================================
   4. COMPONENT STYLES
 ==============================================================*/
 
-/* --- Section Header Icons --- */
 .section-icon {
     font-size: 1.1rem;
     color: var(--subtle-text-color);
@@ -232,7 +200,6 @@ h1, h2, h3, h4, h5, h6 {
         transform: rotate(-90deg);
     }
 
-/* --- Item Card --- */
 .item-card-wrapper {
     position: relative;
     height: 100%;
@@ -267,6 +234,13 @@ h1, h2, h3, h4, h5, h6 {
     color: var(--accent-color);
 }
 
+.item-img-icon {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
 .item-details {
     display: flex;
     flex-direction: column;
@@ -282,13 +256,10 @@ h1, h2, h3, h4, h5, h6 {
     color: var(--subtle-text-color);
 }
 
-/* --- Sortable Item Wrapper --- */
 .sortable-item {
     cursor: grab;
-    height: 100%;
 }
 
-/* --- Edit Controls on Cards/Sections --- */
 .section-edit-controls,
 .item-edit-controls {
     display: flex;
@@ -330,7 +301,6 @@ h1, h2, h3, h4, h5, h6 {
         color: white;
     }
 
-/* --- Add Item Button --- */
 .add-item-btn {
     background: transparent;
     color: var(--subtle-text-color);
@@ -349,14 +319,13 @@ h1, h2, h3, h4, h5, h6 {
         border-color: var(--accent-color);
     }
 
-/* --- General & Header Buttons --- */
 .btn {
     padding: 0.5rem 1rem;
     border: none;
     border-radius: 0.25rem;
     cursor: pointer;
     font-weight: 600;
-    text-decoration: none; /* For <a> tags styled as buttons */
+    text-decoration: none;
     display: inline-flex;
     align-items: center;
 }
@@ -383,37 +352,39 @@ h1, h2, h3, h4, h5, h6 {
         color: var(--subtle-text-color);
     }
 
-    .header-btn-group .buttons button,
-    .header-btn-group .buttons a {
-        background: var(--card-background-color);
-        border: none;
-        border-left: 1px solid var(--border-color);
-        margin-left: 20px;
-        color: var(--subtle-text-color);
-        padding: 0.4rem 1rem;
-        cursor: pointer;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
+    .header-btn-group .buttons {
+        display: flex;
+        background-color: var(--border-color);
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        overflow: hidden;
+        gap: 1px;
     }
 
-        .header-btn-group .buttons button:first-child,
-        .header-btn-group .buttons a:first-child {
-            border-left: none;
+        .header-btn-group .buttons button,
+        .header-btn-group .buttons a {
+            background: var(--card-background-color);
+            border: none;
+            color: var(--subtle-text-color);
+            padding: 0.4rem 0.6rem;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .header-btn-group .buttons button:hover,
-        .header-btn-group .buttons a:hover {
-            color: var(--text-color);
-        }
+            .header-btn-group .buttons button:hover,
+            .header-btn-group .buttons a:hover {
+                color: var(--text-color);
+                background-color: var(--card-hover-background-color);
+            }
 
-        .header-btn-group .buttons button.active {
-            background-color: var(--accent-color);
-            color: white;
-        }
+            .header-btn-group .buttons button.active {
+                background-color: var(--accent-color);
+                color: white;
+            }
 
-/* --- Search Bar --- */
 .search-bar-wrapper {
     position: relative;
     width: 100%;
@@ -437,8 +408,6 @@ h1, h2, h3, h4, h5, h6 {
     color: var(--subtle-text-color);
 }
 
-
-/* --- Modal Dialog --- */
 .modal-backdrop {
     position: fixed;
     top: 0;
@@ -480,7 +449,6 @@ h1, h2, h3, h4, h5, h6 {
     line-height: 1;
 }
 
-/* --- Forms --- */
 .form-group {
     margin-bottom: 1rem;
 }
@@ -508,7 +476,6 @@ h1, h2, h3, h4, h5, h6 {
     margin-top: 1.5rem;
 }
 
-/* --- Theme Toggle Button --- */
 .theme-toggle-switch {
     position: relative;
     display: inline-block;
@@ -571,72 +538,6 @@ h1, h2, h3, h4, h5, h6 {
         transform: translateX(26px);
     }
 
-
-.edit-mode-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background-color: var(--card-background-color);
-    color: var(--subtle-text-color);
-    border: 1px solid var(--border-color);
-    border-radius: 0.5rem;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-    font-size: 0.9rem;
-}
-
-    .edit-mode-button:hover {
-        border-color: var(--accent-color);
-        color: var(--accent-color);
-    }
-
-    .edit-mode-button.active {
-        background-color: var(--accent-color);
-        color: white;
-        border-color: var(--accent-color);
-    }
-
-.item-img-icon {
-    width: 40px;
-    height: 40px;
-    object-fit: contain;
-    border-radius: 4px;
-}
-
-.button-manager {
-}
-
-.managed-button-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.75rem;
-    border: 1px solid var(--border-color);
-    border-radius: 0.5rem;
-    margin-bottom: 0.5rem;
-    background-color: var(--background-color);
-}
-
-    .managed-button-item span {
-        font-weight: 500;
-    }
-
-        .managed-button-item span i {
-            margin-right: 0.75rem;
-            color: var(--subtle-text-color);
-        }
-
-    .managed-button-item .item-controls {
-        display: flex;
-        gap: 0.5rem;
-    }
-
-.button-manager .form-actions.mt-3 {
-    margin-top: 1.5rem;
-}
-
-
 .fab-container {
     position: fixed;
     bottom: 2rem;
@@ -666,14 +567,13 @@ h1, h2, h3, h4, h5, h6 {
 
 .fab-container.open .fab-main-button {
     transform: rotate(90deg);
-    margin-bottom: 0.9rem;
 }
 
 .fab-menu {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    margin-bottom: 0.2rem;
+    margin-bottom: 1.5rem;
     visibility: hidden;
     opacity: 0;
 }
@@ -717,7 +617,6 @@ h1, h2, h3, h4, h5, h6 {
         transition-delay: 0s;
     }
 
-
 .fab-menu-item:hover {
     background-color: var(--accent-color);
     color: white;
@@ -754,42 +653,29 @@ h1, h2, h3, h4, h5, h6 {
     color: var(--border-color);
 }
 
-.header-controls {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
 
-.widget-chooser {
+.dashboard-container .sections-wrapper {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1.5rem;
+}
+
+.dashboard-container.auto .sections-wrapper {
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+}
+
+.dashboard-container.vertical .sections-wrapper {
+    grid-template-columns: 1fr;
+}
+
+.items-wrapper .item-list {
+    display: flex;
     gap: 1rem;
 }
 
-.widget-option {
-    display: flex;
+.items-wrapper.layout-auto .item-list {
+    flex-wrap: wrap;
+}
+
+.items-wrapper.layout-vertical .item-list {
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-    padding: 1.5rem 1rem;
-    border: 1px solid var(--border-color);
-    border-radius: 0.5rem;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-}
-
-    .widget-option:hover {
-        border-color: var(--accent-color);
-        background-color: var(--card-hover-background-color);
-        transform: translateY(-4px);
-    }
-
-.widget-option-icon {
-    font-size: 2.5rem;
-    color: var(--accent-color);
-}
-
-.widget-option-name {
-    font-weight: 600;
 }

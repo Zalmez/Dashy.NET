@@ -1,8 +1,6 @@
 ﻿@using Dashy.Net.Shared.Models
-@using Dashy.Net.Shared.ViewModels
 @using Dashy.Net.Web.Services
 @using BlazorSortable
-@using Dashy.Net.Web.Components.Widgets
 
 @inject ViewOptionsService ViewOptions
 
@@ -27,39 +25,38 @@
         }
     </div>
 
-    <SortableList class="@(GetItemGridClass())"
-                  Items="Section.Items"
-                  OnUpdate="(args) => OnItemOrderChanged.InvokeAsync((Section, (args.oldIndex, args.newIndex)))"
-                  Sort="ViewOptions.IsEditMode"
-                  Context="item">
-        <div class="sortable-item" @key="item">
-            @switch (item.Widget?.ToLower() ?? "static-link")
-            {
-                case "static-link":
-                    <StaticLinkWidget Item="item" OnItemDeleted="item => OnItemDeleted.InvokeAsync(item)" OnItemEdited="() => OnItemEdited.InvokeAsync(item)" />
-                    break;
-                case "clock":
-                    <ClockWidget Item="item" />
-                    break;
-                default:
-                    <UnknownWidget Widget="@item.Widget" />
-                    break;
-            }
-        </div>
-    </SortableList>
+    <div class="item-grid @GetItemSizeClass() @(IsCollapsed ? "collapsed" : "")">
+        <SortableList Items="Section.Items" 
+                      OnUpdate="(args) => OnItemOrderChanged.InvokeAsync((Section, (args.oldIndex, args.newIndex)))" 
+                      Sort="ViewOptions.IsEditMode" 
+                      Context="item">
+            <div class="sortable-item" @key="item">
+                @switch (item.Widget?.ToLower() ?? "static-link")
+                {
+                    case "static-link":
+                        <StaticLinkWidget Item="item" OnItemDeleted="item => OnItemDeleted.InvokeAsync(item)" OnItemEdited="() => OnItemEdited.InvokeAsync(item)" />
+                        break;
+                    case "clock":
+                        <ClockWidget Item="item" />
+                        break;
+                    default:
+                        <UnknownWidget Widget="@item.Widget" />
+                        break;
+                }
+            </div>
+        </SortableList>
 
-    @if (ViewOptions.IsEditMode && !IsCollapsed)
-    {
-        <div class="item-grid @GetItemSizeClass()">
+        @if (ViewOptions.IsEditMode && !IsCollapsed)
+        {
             <AddItemButton OnClick="() => OnItemAdded.InvokeAsync(Section.Id)" />
-        </div>
-    }
+        }
+    </div>
 </div>
 
 @code {
     [Parameter, EditorRequired]
-    public SectionVm Section { get; set; } = default;
-
+    public SectionVm Section { get; set; } = default!;
+    
     [Parameter]
     public bool IsCollapsed { get; set; }
 
@@ -75,22 +72,17 @@
 
     protected override void OnInitialized()
     {
-        ViewOptions.OnItemSizeChanged += StateHasChanged;
+        ViewOptions.OnChange += StateHasChanged;
     }
 
     public void Dispose()
     {
-        ViewOptions.OnItemSizeChanged -= StateHasChanged;
+        ViewOptions.OnChange -= StateHasChanged;
     }
 
     private string GetItemSizeClass()
     {
         return "item-size-" + ViewOptions.CurrentItemSize.ToString().ToLower();
-    }
-
-    private string GetItemGridClass()
-    {
-        return GetItemSizeClass() + (IsCollapsed ? " collapsed" : "");
     }
 
     private async Task ToggleCollapse()

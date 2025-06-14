@@ -1,6 +1,5 @@
 ﻿using Dashy.Net.Shared.Data;
 using Dashy.Net.Shared.Models;
-using Dashy.Net.Shared.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 

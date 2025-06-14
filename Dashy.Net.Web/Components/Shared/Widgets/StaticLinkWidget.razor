@@ -1,5 +1,4 @@
 @using Dashy.Net.Shared.Models
-@using Dashy.Net.Shared.ViewModels
 @using Dashy.Net.Web.Services
 @inject ViewOptionsService ViewOptions
 @inject IJSRuntime JSRuntime
@@ -31,9 +30,10 @@
         </div>
         <div class="item-details">
             <div class="item-title">@Item.Title</div>
-            @if (!string.IsNullOrWhiteSpace(Item.Description))
+
+            @if (!string.IsNullOrWhiteSpace(Description))
             {
-                <div class="item-description">@Item.Description</div>
+                <div class="item-description">@Description</div>
             }
         </div>
     </div>
@@ -48,6 +48,10 @@
 
     [Parameter]
     public EventCallback OnItemEdited { get; set; }
+
+    private string? Url => Item.Options?.GetValueOrDefault("Url")?.ToString();
+    private string? Description => Item.Options?.GetValueOrDefault("Description")?.ToString();
+
 
     private async Task OnDeleteClick()
     {
@@ -65,9 +69,9 @@
 
     private void NavigateToUrl()
     {
-        if (!ViewOptions.IsEditMode && !string.IsNullOrWhiteSpace(Item.Url))
+        if (!ViewOptions.IsEditMode && !string.IsNullOrWhiteSpace(Url))
         {
-            NavManager.NavigateTo(Item.Url, forceLoad: true);
+            NavManager.NavigateTo(Url, forceLoad: true);
         }
     }
 }

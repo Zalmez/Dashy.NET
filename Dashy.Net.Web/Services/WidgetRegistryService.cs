@@ -9,10 +9,11 @@ public class WidgetRegistryService
 
     public WidgetRegistryService()
     {
-        AvailableWidgets = Assembly.GetAssembly(typeof(IWidgetDescriptor))!
+        AvailableWidgets = typeof(WidgetRegistryService).Assembly
             .GetTypes()
-            .Where(t => typeof(IWidgetDescriptor).IsAssignableFrom(t) && !t.IsInterface)
+            .Where(t => typeof(IWidgetDescriptor).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
             .Select(t => (IWidgetDescriptor)Activator.CreateInstance(t)!)
+            .OrderBy(d => d.DisplayName)
             .ToList();
     }
 

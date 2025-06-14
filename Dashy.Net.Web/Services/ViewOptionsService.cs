@@ -1,43 +1,43 @@
 ﻿namespace Dashy.Net.Web.Services;
 
 public enum ItemSize { Small, Medium, Large }
-public enum LayoutOrientation { Horizontal, Vertical, Auto }
+public enum LayoutOrientation { Vertical, Auto }
+
 public class ViewOptionsService
 {
-    public bool IsEditMode { get; private set; } = false;
-    public event Action? OnEditModeChanged;
-    public event Action? OnSearchTermChanged;
-    public ItemSize CurrentItemSize { get; private set; } = ItemSize.Medium;
-    public event Action? OnItemSizeChanged;
-    public string SearchTerm { get; private set; } = string.Empty;
+    public event Action? OnChange;
 
+    public bool IsEditMode { get; private set; } = false;
+    public ItemSize CurrentItemSize { get; private set; } = ItemSize.Medium;
+    public string SearchTerm { get; private set; } = string.Empty;
     public LayoutOrientation CurrentLayout { get; private set; } = LayoutOrientation.Auto;
-    public event Action? OnLayoutChanged;
 
     public void ToggleEditMode()
     {
         IsEditMode = !IsEditMode;
-        OnEditModeChanged?.Invoke();
+        NotifyStateChanged();
     }
 
     public void SetSearchTerm(string term)
     {
+        if (SearchTerm == term) return;
         SearchTerm = term;
-        OnSearchTermChanged?.Invoke();
+        NotifyStateChanged();
     }
 
     public void SetItemSize(ItemSize size)
     {
         if (CurrentItemSize == size) return;
         CurrentItemSize = size;
-        OnItemSizeChanged?.Invoke();
+        NotifyStateChanged();
     }
 
     public void SetLayout(LayoutOrientation layout)
     {
         if (CurrentLayout == layout) return;
         CurrentLayout = layout;
-        OnLayoutChanged?.Invoke();
+        NotifyStateChanged();
     }
 
+    private void NotifyStateChanged() => OnChange?.Invoke();
 }
