@@ -1,4 +1,5 @@
-﻿@using Dashy.Net.Shared.Models
+﻿@using Dashy.Net.Shared
+@using Dashy.Net.Shared.Models
 @using Dashy.Net.Web.Services
 @using System.ComponentModel.DataAnnotations
 @inject WidgetRegistryService WidgetRegistry
@@ -12,6 +13,16 @@
         <label for="title">Title</label>
         <InputText id="title" class="form-control" @bind-Value="EditModel.Title" />
         <ValidationMessage For="@(() => EditModel.Title)" />
+    </div>
+
+    <div class="form-group">
+        <label for="widget-type">Widget Type</label>
+        <InputSelect id="widget-type" class="form-control" @bind-Value="EditModel.Widget">
+            @foreach (var descriptor in _availableWidgets)
+            {
+                <option value="@descriptor.Name">@descriptor.Name</option>
+            }
+        </InputSelect>
     </div>
 
     <div class="form-group">
@@ -33,33 +44,45 @@
     <hr />
     <p class="subtle-text" style="margin-bottom: 1rem;">Widget-Specific Options:</p>
 
-    @switch (EditModel.Widget)
+    @* This switch statement will now react dynamically to the dropdown selection *@
+    @if(EditModel.Widget is null)
     {
-        case "static-link":
-            <div class="form-group">
-                <label for="url">URL</label>
-                <InputText id="url" class="form-control" @bind-Value="EditModel.Url" />
-            </div>
-            <div class="form-group">
-                <label for="description">Description</label>
-                <InputTextArea id="description" class="form-control" @bind-Value="EditModel.Description" />
-            </div>
-            break;
+        <p class="subtle-text">Please select a widget type to see options.</p>
+    }else if (_editorComponentType is not null)
+    {
+        <DynamicComponent Type="_editorComponentType" Parameters="_editorParameters" />
+    }
+    else
+    {
+        @switch (EditModel.Widget)
+        {
+            case "static-link":
+                <div class="form-group">
+                    <label for="url">URL</label>
+                    <InputText id="url" class="form-control" @bind-Value="EditModel.Url" />
+                </div>
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <InputTextArea id="description" class="form-control" @bind-Value="EditModel.Description" />
+                </div>
+                break;
 
-        case "clock":
-            <p class="subtle-text">This widget has no specific options to configure.</p>
-            break;
+            case "clock":
+                <p class="subtle-text">This widget has no specific options to configure.</p>
+                break;
 
-        default:
-            <p class="subtle-text">Unknown widget type. No specific options available.</p>
-            break;
+            default:
+                <p class="subtle-text">Unknown widget type. No specific options available.</p>
+                break;
+        }
     }
 
     <div class="form-actions">
-        <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+        <button type="button" class="btn btn-secondary" @onclick="OnCancel">Cancel</button>
         <button type="submit" class="btn btn-primary" disabled="@_isUploading">
             @if (_isUploading)
             {
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                 <span>Uploading...</span>
             }
             else
@@ -80,6 +103,8 @@
     [Parameter]
     public EventCallback OnCancel { get; set; }
 
+    private IEnumerable<IWidgetDescriptor> _availableWidgets = Enumerable.Empty<IWidgetDescriptor>();
+
     private Type? _editorComponentType;
     private Dictionary<string, object> _editorParameters = new();
 
@@ -87,6 +112,10 @@
     private string? _uploadStatus;
     private bool _uploadSuccess = false;
 
+    protected override void OnInitialized()
+    {
+        _availableWidgets = WidgetRegistry.AvailableWidgets;
+    }
 
     protected override void OnParametersSet()
     {

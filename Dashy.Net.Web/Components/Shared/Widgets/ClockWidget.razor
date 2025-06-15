@@ -1,44 +1,50 @@
 @using Dashy.Net.Shared.Models
-@implements IDisposable
+@inherits WidgetBase
 
-<div class="item-card">
-    <div class="item-icon">
-        @if (!string.IsNullOrWhiteSpace(Item.Icon))
-        {
-            <i class="@Item.Icon"></i>
-        }
-    </div>
-    <div class="item-details">
-        <div class="item-title">@Item.Title</div>
-        <div class="clock-display">@_currentTime.ToString("T")</div>
-    </div>
+<div class="clock-widget-container item-card @GetItemSizeClass()">
+    @if (string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="time-display">@_currentTime.ToString("HH:mm:ss")</div>
+        <div class="date-display">@_currentTime.ToString("dddd, MMMM d")</div>
+    }
+    else
+    {
+        <div class="error-message">@_errorMessage</div>
+    }
 </div>
 
 @code
 {
-    [Parameter, EditorRequired]
-    public ItemVm Item { get; set; } = null!;
-    
+    private System.Threading.Timer? _timer;
     private DateTime _currentTime = DateTime.Now;
-    private System.Timers.Timer? _timer;
+    private string? _errorMessage;
+
+    private string TimeFormat => GetOption("timeFormat") ?? "HH:mm:ss";
+    private string DateFormat => GetOption("dateFormat") ?? "dddd, MMMM d";
 
     protected override void OnInitialized()
     {
-        _timer = new System.Timers.Timer(1000);
-        _timer.Elapsed += OnTimerElapsed;
-        _timer.AutoReset = true;
-        _timer.Start();
+        base.OnInitialized();
+
+        _timer = new Timer(UpdateTime, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
     }
-    
+
     private async void OnTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
     {
         _currentTime = DateTime.Now;
         await InvokeAsync(StateHasChanged);
     }
-    
-    public void Dispose()
+
+    private void UpdateTime(object? state)
     {
-        _timer?.Stop();
+        if (IsDisposed) return;
+        _currentTime = DateTime.Now;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();;
         _timer?.Dispose();
     }
     

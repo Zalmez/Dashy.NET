@@ -1,10 +1,9 @@
-@using Dashy.Net.Shared.Models
-@using Dashy.Net.Web.Services
-@inject ViewOptionsService ViewOptions
+@inherits WidgetBase
 @inject IJSRuntime JSRuntime
 @inject ILogger<StaticLinkWidget> Logger
 @inject NavigationManager NavManager
 @implements IDisposable
+@inject IJSRuntime jSRuntime
 
 <div class="item-card-wrapper">
     @if (ViewOptions.IsEditMode)
@@ -41,33 +40,22 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired]
-    public ItemVm Item { get; set; } = default!;
 
-    [Parameter]
-    public EventCallback<ItemVm> OnItemDeleted { get; set; }
+    [Parameter] public EventCallback<ItemVm> OnItemDeleted { get; set; }
+    [Parameter] public EventCallback OnItemEdited { get; set; }
 
-    [Parameter]
-    public EventCallback OnItemEdited { get; set; }
-
-    private string? Url => Item.Options?.GetValueOrDefault("Url")?.ToString();
-    private string? Description => Item.Options?.GetValueOrDefault("Description")?.ToString();
+    private string? Url => GetOption("Url");
+    private string? Description => GetOption("Description");
 
     protected override void OnInitialized()
     {
         ViewOptions.OnChange += StateHasChanged;
     }
 
-    public void Dispose()
-    {
-        ViewOptions.OnChange -= StateHasChanged;
-    }
-
-    private string GetItemSizeClass() => "item-size-" + ViewOptions.CurrentItemSize.ToString().ToLower();
-
     private async Task OnDeleteClick()
     {
         var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{Item.Title}'?");
+        if (IsDisposed) return;
         if (confirmed)
         {
             await OnItemDeleted.InvokeAsync(Item);
@@ -90,4 +78,6 @@
             Logger.LogWarning("There's no URI connected to the given StaticLinkWidget");
         }
     }
+
+
 }

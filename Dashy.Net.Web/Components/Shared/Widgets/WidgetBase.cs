@@ -15,6 +15,19 @@ public abstract class WidgetBase : ComponentBase, IDisposable
     public ItemVm Item { get; set; } = default!;
 
     /// <summary>
+    /// A flag to indicate if the component has been disposed.
+    /// Any async method should check this before updating state.
+    /// </summary>
+    protected bool IsDisposed { get; private set; }
+
+    /// <summary>
+    /// Determines the CSS class name corresponding to the current item size.
+    /// </summary>
+    /// <returns>A string representing the CSS class name for the current item size.  The format is "item-size-" followed by the
+    protected string GetItemSizeClass() => "item-size-" + ViewOptions.CurrentItemSize.ToString().ToLower();
+
+
+    /// <summary>
     /// A convenience property to safely get an option from the item's dictionary.
     /// </summary>
     /// <param name="key">The option key to look for (case-insensitive).</param>
@@ -35,6 +48,7 @@ public abstract class WidgetBase : ComponentBase, IDisposable
 
     public virtual void Dispose()
     {
+        IsDisposed = true;
         ViewOptions.OnChange -= StateHasChanged;
     }
 }

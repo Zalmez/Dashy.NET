@@ -1,0 +1,79 @@
+﻿@using System
+@using System.Globalization
+@using Dashy.Net.Shared.Models
+@using Dashy.Net.Web.Components
+
+<div class="form-group">
+    <label>Location Name</label>
+    <InputText class="form-control" @bind-Value="LocationName" />
+    <small class="form-text text-muted">A friendly name for the location (e.g., "Home").</small>
+</div>
+
+<div class="form-group">
+    <label>Latitude</label>
+    <InputText class="form-control" @bind-Value="LatitudeString" />
+</div>
+
+<div class="form-group">
+    <label>Longitude</label>
+    <InputText class="form-control" @bind-Value="LongitudeString" />
+</div>
+
+<div class="form-group">
+    <label>Temperature Unit</label>
+    <InputSelect class="form-control" @bind-Value="Unit">
+        <option value="celsius">Celsius (°C)</option>
+        <option value="fahrenheit">Fahrenheit (°F)</option>
+    </InputSelect>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ItemEditModel EditModel { get; set; } = default!;
+
+    private string? LocationName
+    {
+        get => Convert.ToString(EditModel.Options?["LocationName"]) ?? string.Empty;
+        set
+        {
+            if (EditModel.Options == null) EditModel.Options = new();
+            EditModel.Options["LocationName"] = value ?? "";
+        }
+    }
+
+    private string LatitudeString
+    {
+        get => Convert.ToString(EditModel.Options?["Latitude"], CultureInfo.InvariantCulture) ?? "";
+        set
+        {
+            if (EditModel.Options == null) EditModel.Options = new();
+            if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var lat))
+                EditModel.Options["Latitude"] = lat;
+            else
+                EditModel.Options["Latitude"] = null;
+        }
+    }
+
+    private string LongitudeString
+    {
+        get => Convert.ToString(EditModel.Options?["Longitude"], CultureInfo.InvariantCulture) ?? "";
+        set
+        {
+            if (EditModel.Options == null) EditModel.Options = new();
+            if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var lon))
+                EditModel.Options["Longitude"] = lon;
+            else
+                EditModel.Options["Longitude"] = null;
+        }
+    }
+
+    private string? Unit
+    {
+        get => Convert.ToString(EditModel.Options?["Unit"]) ?? "celsius";
+        set
+        {
+            if (EditModel.Options == null) EditModel.Options = new();
+            EditModel.Options["Unit"] = value ?? "celsius";
+        }
+    }
+}

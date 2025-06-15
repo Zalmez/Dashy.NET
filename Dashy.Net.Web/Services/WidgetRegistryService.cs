@@ -13,12 +13,21 @@ public class WidgetRegistryService
             .GetTypes()
             .Where(t => typeof(IWidgetDescriptor).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
             .Select(t => (IWidgetDescriptor)Activator.CreateInstance(t)!)
-            .OrderBy(d => d.DisplayName)
+            .OrderBy(d => d.Name)
             .ToList();
     }
 
-    public IWidgetDescriptor? GetDescriptor(string typeIdentifier)
+    /// <summary>
+    /// Gets a widget descriptor by its unique name (e.g., "static-link").
+    /// </summary>
+    /// <param name="name">The unique identifier for the widget type.</param>
+    public IWidgetDescriptor? GetDescriptor(string? name)
     {
-        return AvailableWidgets.FirstOrDefault(w => w.TypeIdentifier.Equals(typeIdentifier, StringComparison.OrdinalIgnoreCase));
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return null;
+        }
+
+        return AvailableWidgets.FirstOrDefault(w => w.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
     }
 }
