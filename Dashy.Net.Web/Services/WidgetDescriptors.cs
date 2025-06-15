@@ -1,4 +1,5 @@
 ﻿using Dashy.Net.Shared;
+using Dashy.Net.Web.Components.Shared.Widgets.Options;
 
 namespace Dashy.Net.Web.Services;
 
@@ -24,7 +25,6 @@ public class WeatherWidgetDescriptor : IWidgetDescriptor
     public string TypeIdentifier => "weather";
     public string Icon => "fas fa-cloud-sun";
     public string Name => "weather";
-    public string DisplayName => "Weather";
     public string Description => "Displays the current weather for a location.";
-    public Type? OptionsEditorComponent => null;
+    public Type? OptionsEditorComponent => typeof(WeatherWidgetOptionsEditor);
 }

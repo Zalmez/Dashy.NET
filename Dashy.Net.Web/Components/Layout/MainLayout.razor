@@ -129,7 +129,12 @@
     {
         ThemeService.OnThemeChanged += OnThemeChangedHandler;
         DashboardState.OnConfigLoaded += StateHasChanged;
-        ViewOptions.OnChange += StateHasChanged;
+        ViewOptions.OnChange += HandleOptionsChanged;
+    }
+
+    private void HandleOptionsChanged()
+    {
+        InvokeAsync(StateHasChanged);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -263,6 +268,6 @@
     {
         ThemeService.OnThemeChanged -= OnThemeChangedHandler;
         DashboardState.OnConfigLoaded -= StateHasChanged;
-        ViewOptions.OnChange -= StateHasChanged;
+        ViewOptions.OnChange -= HandleOptionsChanged;
     }
 }

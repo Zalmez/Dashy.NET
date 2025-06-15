@@ -137,8 +137,13 @@ else
 
     protected override void OnInitialized()
     {
-        ViewOptions.OnChange += StateHasChanged;
+        ViewOptions.OnChange += HandleOptionsChanged;
         DashboardState.OnConfigLoaded += OnConfigLoadedHandler;
+    }
+
+    private void HandleOptionsChanged()
+    {
+        InvokeAsync(StateHasChanged);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -357,7 +362,7 @@ else
     public void Dispose()
     {
         _isDisposed = true;
-        ViewOptions.OnChange -= StateHasChanged;
+        ViewOptions.OnChange -= HandleOptionsChanged;
         DashboardState.OnConfigLoaded -= OnConfigLoadedHandler;
     }
 }

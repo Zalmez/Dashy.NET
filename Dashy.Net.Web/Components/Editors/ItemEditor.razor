@@ -1,7 +1,9 @@
 ﻿@using Dashy.Net.Shared
 @using Dashy.Net.Shared.Models
+@using Dashy.Net.Web.Components.Shared.Widgets.Options
 @using Dashy.Net.Web.Services
 @using System.ComponentModel.DataAnnotations
+@using Dashy.Net.Web.Components.Editors
 @inject WidgetRegistryService WidgetRegistry
 @inject FileStorageService FileStorageService
 
@@ -48,9 +50,6 @@
     @if(EditModel.Widget is null)
     {
         <p class="subtle-text">Please select a widget type to see options.</p>
-    }else if (_editorComponentType is not null)
-    {
-        <DynamicComponent Type="_editorComponentType" Parameters="_editorParameters" />
     }
     else
     {
@@ -70,7 +69,9 @@
             case "clock":
                 <p class="subtle-text">This widget has no specific options to configure.</p>
                 break;
-
+            case "weather":
+                <WeatherWidgetOptionsEditor @bind-EditModel="EditModel"/>
+                break;
             default:
                 <p class="subtle-text">Unknown widget type. No specific options available.</p>
                 break;
@@ -121,7 +122,6 @@
     {
         var descriptor = WidgetRegistry.GetDescriptor(EditModel.Widget);
         _editorComponentType = descriptor?.OptionsEditorComponent;
-
         if (_editorComponentType is not null)
         {
             _editorParameters = new Dictionary<string, object>
@@ -129,6 +129,7 @@
                 { "EditModel", EditModel }
             };
         }
+        StateHasChanged();
     }
 
     private async Task HandleValidSubmit()
