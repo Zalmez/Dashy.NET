@@ -10,11 +10,13 @@ html {
 body.theme-light {
     --background-color: #f7fafc;
     --text-color: #2d3748;
+    --accent-text-color: #ffffff;
     --card-background-color: #ffffff;
     --card-hover-background-color: #edf2f7;
     --border-color: #e2e8f0;
     --subtle-text-color: #718096;
     --accent-color: #3182ce;
+    --accent-color-darker: #2b6cb0;
     --danger-color: #e53e3e;
     --danger-hover-color: #c53030;
 }
@@ -22,11 +24,13 @@ body.theme-light {
 body.theme-dark {
     --background-color: #1a202c;
     --text-color: #e2e8f0;
+    --accent-text-color: #ffffff;
     --card-background-color: #2d3748;
     --card-hover-background-color: #4a5568;
     --border-color: #4a5568;
     --subtle-text-color: #a0aec0;
     --accent-color: #3182ce;
+    --accent-color-darker: #2c5282;
     --danger-color: #e53e3e;
     --danger-hover-color: #c53030;
 }
@@ -48,6 +52,7 @@ h1, h2, h3, h4, h5, h6 {
 /*==============================================================
   2. CORE LAYOUT
 ==============================================================*/
+
 .main-header {
     display: flex;
     justify-content: space-between;
@@ -92,7 +97,11 @@ h1, h2, h3, h4, h5, h6 {
   3. PAGE-SPECIFIC LAYOUTS
 ==============================================================*/
 
-
+.dashboard-container {
+    width: 100%;
+    max-width: 1800px;
+    margin: 0 auto;
+}
 
 .add-section-container {
     margin-bottom: 2rem;
@@ -101,29 +110,39 @@ h1, h2, h3, h4, h5, h6 {
     margin-right: auto;
 }
 
-/* The main wrapper for all sections. Using CSS Grid is the most robust solution. */
 .sections-wrapper {
-    display: grid;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
     gap: 1.5rem;
-    width: 100%;
-    max-width: 1800px;
-    margin: 0 auto; /* This centers the whole block */
 }
 
-    /* --- Layout Direction Modifiers --- */
+.section-item {
+    max-width: 100%;
+}
 
-    /* Auto layout (Grid) creates a responsive grid that wraps automatically. */
-    .sections-wrapper.layout-auto {
-        grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
-    }
+.sections-wrapper-inner {
+    display: contents;
+}
 
-    /* Vertical layout forces a single column. */
-    .sections-wrapper.layout-vertical {
-        grid-template-columns: 1fr;
-    }
+.items-wrapper .item-list {
+    display: flex;
+    gap: 1rem;
+}
 
+.items-wrapper.layout-auto .item-list {
+    flex-wrap: wrap;
+}
 
-/* --- Section Container --- */
+.items-wrapper.layout-vertical .item-list {
+    flex-direction: column;
+}
+
+/*==============================================================
+  4. COMPONENT STYLES
+==============================================================*/
+
+/* --- Sections & Items --- */
 .section-container {
     background-color: var(--card-background-color);
     border: 1px solid var(--border-color);
@@ -150,42 +169,6 @@ h1, h2, h3, h4, h5, h6 {
     align-items: center;
     gap: 0.75rem;
 }
-
-/* --- Item Grid & Sizing --- */
-.item-grid {
-    display: grid;
-    gap: 1rem;
-    padding-top: 1rem;
-    max-height: 2000px;
-    overflow: hidden;
-    transition: max-height 0.4s ease-in-out, padding-top 0.4s ease-in-out;
-    flex-grow: 1;
-    justify-content: center; /* This centers the items as a group */
-}
-
-    .item-grid.collapsed {
-        max-height: 0;
-        padding-top: 0;
-        margin-bottom: -1rem;
-    }
-
-    /* These sizing classes are now fully independent and will work correctly. */
-    .item-grid.item-size-small {
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    }
-
-    .item-grid.item-size-medium {
-        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    }
-
-    .item-grid.item-size-large {
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    }
-
-
-/*==============================================================
-  4. COMPONENT STYLES
-==============================================================*/
 
 .section-icon {
     font-size: 1.1rem;
@@ -260,6 +243,29 @@ h1, h2, h3, h4, h5, h6 {
     cursor: grab;
 }
 
+/* --- Buttons & Controls --- */
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+}
+
+.btn-primary {
+    background-color: var(--accent-color);
+    color: white;
+}
+
+.btn-secondary {
+    background-color: var(--card-hover-background-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
 .section-edit-controls,
 .item-edit-controls {
     display: flex;
@@ -319,28 +325,6 @@ h1, h2, h3, h4, h5, h6 {
         border-color: var(--accent-color);
     }
 
-.btn {
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 0.25rem;
-    cursor: pointer;
-    font-weight: 600;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-}
-
-.btn-primary {
-    background-color: var(--accent-color);
-    color: white;
-}
-
-.btn-secondary {
-    background-color: var(--card-hover-background-color);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-}
-
 .header-btn-group {
     display: flex;
     align-items: center;
@@ -380,11 +364,14 @@ h1, h2, h3, h4, h5, h6 {
                 background-color: var(--card-hover-background-color);
             }
 
-            .header-btn-group .buttons button.active {
+            .header-btn-group .buttons button.active,
+            .toolbar-right .btn.active {
                 background-color: var(--accent-color);
-                color: white;
+                color: var(--accent-text-color);
+                border-color: var(--accent-color-darker);
             }
 
+/* --- Search Bar --- */
 .search-bar-wrapper {
     position: relative;
     width: 100%;
@@ -408,6 +395,7 @@ h1, h2, h3, h4, h5, h6 {
     color: var(--subtle-text-color);
 }
 
+/* --- Modal --- */
 .modal-backdrop {
     position: fixed;
     top: 0;
@@ -449,6 +437,7 @@ h1, h2, h3, h4, h5, h6 {
     line-height: 1;
 }
 
+/* --- Forms --- */
 .form-group {
     margin-bottom: 1rem;
 }
@@ -476,6 +465,7 @@ h1, h2, h3, h4, h5, h6 {
     margin-top: 1.5rem;
 }
 
+/* --- Theme Toggle --- */
 .theme-toggle-switch {
     position: relative;
     display: inline-block;
@@ -538,6 +528,7 @@ h1, h2, h3, h4, h5, h6 {
         transform: translateX(26px);
     }
 
+/* --- Floating Action Button (FAB) --- */
 .fab-container {
     position: fixed;
     bottom: 2rem;
@@ -651,37 +642,4 @@ h1, h2, h3, h4, h5, h6 {
 
 .fab-menu-item:disabled i {
     color: var(--border-color);
-}
-
-
-.dashboard-container .sections-wrapper {
-    display: grid;
-    gap: 1.5rem;
-}
-
-.dashboard-container.auto .sections-wrapper {
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-}
-
-.dashboard-container.vertical .sections-wrapper {
-    grid-template-columns: 1fr;
-}
-
-.items-wrapper .item-list {
-    display: flex;
-    gap: 1rem;
-}
-
-.items-wrapper.layout-auto .item-list {
-    flex-wrap: wrap;
-}
-
-.items-wrapper.layout-vertical .item-list {
-    flex-direction: column;
-}
-
-.toolbar-right .btn.active {
-    background-color: var(--accent-color);
-    color: var(--accent-text-color);
-    border-color: var(--accent-color-darker);
 }
