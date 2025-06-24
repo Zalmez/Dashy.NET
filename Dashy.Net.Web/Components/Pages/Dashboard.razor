@@ -137,8 +137,8 @@ else
 
     protected override void OnInitialized()
     {
-        ViewOptions.OnChange += HandleOptionsChanged;
         DashboardState.OnConfigLoaded += OnConfigLoadedHandler;
+        ViewOptions.OnChange += HandleOptionsChanged;
     }
 
     private void HandleOptionsChanged()
@@ -172,15 +172,7 @@ else
     private void OpenEditModal(ItemVm item)
     {
         _itemModalTitle = $"Edit '{item.Title}'";
-        _currentItemToEdit = new ItemEditModel
-        {
-            Id = item.Id,
-            Title = item.Title,
-            Icon = item.Icon,
-            Widget = item.Widget ?? "static-link",
-            SectionId = item.SectionId,
-            Options = item.Options
-        };
+        _currentItemToEdit = new ItemEditModel(item);
         _isItemModalOpen = true;
     }
 
@@ -272,7 +264,7 @@ else
     private async Task OnSectionOrderChanged(int oldIndex, int newIndex)
     {
         if (DashboardState.Config is null) return;
-        
+
         var sections = FilteredSections.ToList();
         var movedSection = sections[oldIndex];
         sections.RemoveAt(oldIndex);
@@ -293,26 +285,12 @@ else
         bool success;
         if (itemToSave.Id > 0)
         {
-            var updateDto = new UpdateItemDto
-            {
-                Title = itemToSave.Title,
-                Icon = itemToSave.Icon,
-                Widget = itemToSave.Widget,
-                SectionId = itemToSave.SectionId,
-                Options = itemToSave.Options ?? new Dictionary<string, object>()
-            };
+            var updateDto = itemToSave.ToUpdateDto();
             success = await DashboardClient.Items.UpdateAsync(itemToSave.Id, updateDto);
         }
         else
         {
-            var createDto = new CreateItemDto
-            {
-                Title = itemToSave.Title,
-                Icon = itemToSave.Icon,
-                Widget = itemToSave.Widget,
-                SectionId = itemToSave.SectionId,
-                Options = itemToSave.Options ?? new Dictionary<string, object>()
-            };
+            var createDto = itemToSave.ToCreateDto();
             success = await DashboardClient.Items.CreateAsync(createDto);
         }
 
