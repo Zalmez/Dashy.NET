@@ -14,7 +14,11 @@
         </div>
     }
 
-    <div class="item-card @GetItemSizeClass()" @onclick="NavigateToUrl">
+    <a class="item-card @GetItemSizeClass()"
+       href="@(ViewOptions.IsEditMode ? null : Url)"
+       target="@LinkTarget"
+       rel="@(LinkTarget == "_blank" ? "noopener noreferrer" : null)">
+
         <div class="item-icon">
             @if (!string.IsNullOrWhiteSpace(Item.Icon))
             {
@@ -30,13 +34,12 @@
         </div>
         <div class="item-details">
             <div class="item-title">@Item.Title</div>
-
             @if (ViewOptions.CurrentItemSize == ItemSize.Large && !string.IsNullOrWhiteSpace(Description))
             {
                 <div class="item-description">@Description</div>
             }
         </div>
-    </div>
+    </a>
 </div>
 
 @code {
@@ -46,6 +49,7 @@
 
     private string? Url => GetOption("Url");
     private string? Description => GetOption("Description");
+    private string LinkTarget => GetOption("target") ?? "_self";
 
     protected override void OnInitialized()
     {
@@ -66,18 +70,4 @@
     {
         await OnItemEdited.InvokeAsync();
     }
-
-    private void NavigateToUrl()
-    {
-        if (!ViewOptions.IsEditMode && !string.IsNullOrWhiteSpace(Url))
-        {
-            NavManager.NavigateTo(Url, forceLoad: true);
-        }
-        else
-        {
-            Logger.LogWarning("There's no URI connected to the given StaticLinkWidget");
-        }
-    }
-
-
 }

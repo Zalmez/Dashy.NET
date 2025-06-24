@@ -64,6 +64,13 @@
                     <label for="description">Description</label>
                     <InputTextArea id="description" class="form-control" @bind-Value="EditModel.Description" />
                 </div>
+                <div class="form-group">
+                    <label for="link-target">Open Link In</label>
+                    <InputSelect id="link-target" class="form-control" @bind-Value="EditModel.LinkTarget">
+                        <option value="_self">Same Tab</option>
+                        <option value="_blank">New Tab</option>
+                    </InputSelect>
+                </div>
                 break;
 
             case "clock":

@@ -8,7 +8,7 @@ public class ItemEditModel
 
     [Required(AllowEmptyStrings = false)]
     public string Title { get; set; } = string.Empty;
-
+    public string LinkTarget { get; set; } = "_self";
     public string? Icon { get; set; }
     public string Widget { get; set; } = "static-link";
 
@@ -31,7 +31,7 @@ public class ItemEditModel
         Icon = item.Icon;
         Widget = item.Widget ?? "static-link";
         OriginalOptions = item.Options ?? new Dictionary<string, object>();
-
+        LinkTarget = GetOption("target") ?? "_self";
         Url = GetOption("url");
         Description = GetOption("description");
         LocationName = GetOption("locationName");
@@ -52,6 +52,7 @@ public class ItemEditModel
         if (!string.IsNullOrWhiteSpace(Latitude)) options["latitude"] = Latitude;
         if (!string.IsNullOrWhiteSpace(Longitude)) options["longitude"] = Longitude;
         if (!string.IsNullOrWhiteSpace(Unit)) options["unit"] = Unit;
+        if (!string.IsNullOrWhiteSpace(LinkTarget)) options["target"] = LinkTarget;
         return options;
     }
 
