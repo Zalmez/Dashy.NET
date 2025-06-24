@@ -1,4 +1,5 @@
 ﻿@using Dashy.Net.Shared
+@using Dashy.Net.Shared.Models
 @using Dashy.Net.Web.Services
 @inject WidgetRegistryService WidgetRegistry
 
@@ -9,7 +10,7 @@
             <div class="widget-option-icon">
                 <i class="@widget.Icon"></i>
             </div>
-            <div class="widget-option-name">@widget.DisplayName</div>
+            <div class="widget-option-name">@widget.Name</div>
         </div>
     }
 </div>

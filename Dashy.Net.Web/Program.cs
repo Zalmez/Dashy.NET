@@ -20,6 +20,11 @@ builder.Services.AddHttpClient<DashboardClient>(opts =>
 {
     opts.BaseAddress = new("https+http://apiservice");
 });
+builder.Services.AddHttpClient<WeatherClient>(opts =>
+{
+    opts.BaseAddress = new("https+http://apiservice");
+});
+
 
 builder.Services.AddSingleton<ThemeService>();
 builder.Services.AddSingleton<ViewOptionsService>();

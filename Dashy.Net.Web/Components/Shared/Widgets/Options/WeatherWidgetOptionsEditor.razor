@@ -1,0 +1,30 @@
+﻿@using Dashy.Net.Shared.Models
+
+<div class="form-group">
+    <label>Location Name</label>
+    <InputText class="form-control" @bind-Value="EditModel.LocationName" />
+    <small class="form-text text-muted">A friendly name for the location (e.g., "Home").</small>
+</div>
+
+<div class="form-group">
+    <label>Latitude</label>
+    <InputText class="form-control" @bind-Value="EditModel.Latitude" />
+</div>
+
+<div class="form-group">
+    <label>Longitude</label>
+    <InputText class="form-control" @bind-Value="EditModel.Longitude" />
+</div>
+
+<div class="form-group">
+    <label>Temperature Unit</label>
+    <InputSelect class="form-control" @bind-Value="EditModel.Unit">
+        <option value="celsius">Celsius (°C)</option>
+        <option value="fahrenheit">Fahrenheit (°F)</option>
+    </InputSelect>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ItemEditModel EditModel { get; set; } = default!;
+}

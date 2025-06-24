@@ -1,10 +1,4 @@
 ﻿@page "/"
-@using BlazorSortable
-@using Dashy.Net.Shared.Models
-@using Dashy.Net.Web.Clients
-@using Dashy.Net.Web.Services
-@using Dashy.Net.Web.Components.Shared
-@using Dashy.Net.Web.Components.Shared.Widgets
 @inject ILogger<Dashboard> Logger
 @inject IJSRuntime JSRuntime
 @inject DashboardClient DashboardClient
@@ -36,7 +30,6 @@ else
                           Context="currentSection"
                           class="sections-wrapper-inner"
                           Sort="ViewOptions.IsEditMode">
-                @* Control sorting here *@
                 <div class="section-item" @key="currentSection">
                     <div class="section-container" id="section-@currentSection.Id">
                         <div class="section-header" @onclick="() => ToggleSectionCollapse(currentSection.Id)">
@@ -72,6 +65,9 @@ else
                                             break;
                                         case "clock":
                                             <ClockWidget Item="item" />
+                                            break;
+                                        case "weather":
+                                            <WeatherWidget Item="item" />
                                             break;
                                         default:
                                             <UnknownWidget Widget="@item.Widget" />
@@ -130,7 +126,7 @@ else
     private CreateSectionDto? _sectionModel;
     private HashSet<int> _collapsedSections = new();
 
-    private bool _isDisposed = false;
+    private bool _isDisposed;
 
     private IEnumerable<SectionVm> FilteredSections =>
         DashboardState.Config?.Sections.Where(section =>
@@ -141,8 +137,13 @@ else
 
     protected override void OnInitialized()
     {
-        ViewOptions.OnChange += StateHasChanged;
         DashboardState.OnConfigLoaded += OnConfigLoadedHandler;
+        ViewOptions.OnChange += HandleOptionsChanged;
+    }
+
+    private void HandleOptionsChanged()
+    {
+        InvokeAsync(StateHasChanged);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -150,20 +151,14 @@ else
         if (firstRender)
         {
             var config = await DashboardClient.GetConfigAsync();
-            if (_isDisposed)
-            {
-                return;
-            }
+            if (_isDisposed) return;
             DashboardState.SetConfig(config);
         }
     }
 
     private void OnConfigLoadedHandler()
     {
-        if (_isDisposed)
-        {
-            return;
-        }
+        if (_isDisposed) return;
         InvokeAsync(StateHasChanged);
     }
 
@@ -177,15 +172,7 @@ else
     private void OpenEditModal(ItemVm item)
     {
         _itemModalTitle = $"Edit '{item.Title}'";
-        _currentItemToEdit = new ItemEditModel
-        {
-            Id = item.Id,
-            Title = item.Title,
-            Icon = item.Icon,
-            Widget = item.Widget ?? "static-link",
-            SectionId = item.SectionId,
-            Options = item.Options
-        };
+        _currentItemToEdit = new ItemEditModel(item);
         _isItemModalOpen = true;
     }
 
@@ -247,7 +234,7 @@ else
         {
             success = await DashboardClient.Sections.CreateAsync(sectionToSave);
         }
-
+        if (_isDisposed) return;
         if (success)
         {
             var newConfig = await DashboardClient.GetConfigAsync();
@@ -266,17 +253,18 @@ else
         var orderedIds = items.Select(i => i.Id).ToList();
         var dto = new ReorderItemsDto(orderedIds);
         var success = await DashboardClient.Items.ReorderAsync(dto);
-        if (!success)
+        if (!success && !_isDisposed)
         {
             var newConfig = await DashboardClient.GetConfigAsync();
             DashboardState.SetConfig(newConfig);
         }
+
     }
 
     private async Task OnSectionOrderChanged(int oldIndex, int newIndex)
     {
         if (DashboardState.Config is null) return;
-        
+
         var sections = FilteredSections.ToList();
         var movedSection = sections[oldIndex];
         sections.RemoveAt(oldIndex);
@@ -297,26 +285,12 @@ else
         bool success;
         if (itemToSave.Id > 0)
         {
-            var updateDto = new UpdateItemDto
-            {
-                Title = itemToSave.Title,
-                Icon = itemToSave.Icon,
-                Widget = itemToSave.Widget,
-                SectionId = itemToSave.SectionId,
-                Options = itemToSave.Options ?? new Dictionary<string, object>()
-            };
+            var updateDto = itemToSave.ToUpdateDto();
             success = await DashboardClient.Items.UpdateAsync(itemToSave.Id, updateDto);
         }
         else
         {
-            var createDto = new CreateItemDto
-            {
-                Title = itemToSave.Title,
-                Icon = itemToSave.Icon,
-                Widget = itemToSave.Widget,
-                SectionId = itemToSave.SectionId,
-                Options = itemToSave.Options ?? new Dictionary<string, object>()
-            };
+            var createDto = itemToSave.ToCreateDto();
             success = await DashboardClient.Items.CreateAsync(createDto);
         }
 
@@ -365,8 +339,8 @@ else
 
     public void Dispose()
     {
-
-        ViewOptions.OnChange -= StateHasChanged;
+        _isDisposed = true;
+        ViewOptions.OnChange -= HandleOptionsChanged;
         DashboardState.OnConfigLoaded -= OnConfigLoadedHandler;
     }
 }

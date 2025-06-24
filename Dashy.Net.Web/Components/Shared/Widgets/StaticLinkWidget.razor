@@ -1,6 +1,4 @@
-@using Dashy.Net.Shared.Models
-@using Dashy.Net.Web.Services
-@inject ViewOptionsService ViewOptions
+@inherits WidgetBase
 @inject IJSRuntime JSRuntime
 @inject ILogger<StaticLinkWidget> Logger
 @inject NavigationManager NavManager
@@ -15,7 +13,11 @@
         </div>
     }
 
-    <div class="item-card @GetItemSizeClass()" @onclick="NavigateToUrl">
+    <a class="item-card @GetItemSizeClass()"
+       href="@(ViewOptions.IsEditMode ? null : Url)"
+       target="@LinkTarget"
+       rel="@(LinkTarget == "_blank" ? "noopener noreferrer" : null)">
+
         <div class="item-icon">
             @if (!string.IsNullOrWhiteSpace(Item.Icon))
             {
@@ -31,43 +33,32 @@
         </div>
         <div class="item-details">
             <div class="item-title">@Item.Title</div>
-
             @if (ViewOptions.CurrentItemSize == ItemSize.Large && !string.IsNullOrWhiteSpace(Description))
             {
                 <div class="item-description">@Description</div>
             }
         </div>
-    </div>
+    </a>
 </div>
 
 @code {
-    [Parameter, EditorRequired]
-    public ItemVm Item { get; set; } = default!;
 
-    [Parameter]
-    public EventCallback<ItemVm> OnItemDeleted { get; set; }
+    [Parameter] public EventCallback<ItemVm> OnItemDeleted { get; set; }
+    [Parameter] public EventCallback OnItemEdited { get; set; }
 
-    [Parameter]
-    public EventCallback OnItemEdited { get; set; }
-
-    private string? Url => Item.Options?.GetValueOrDefault("Url")?.ToString();
-    private string? Description => Item.Options?.GetValueOrDefault("Description")?.ToString();
+    private string? Url => GetOption("url");
+    private string? Description => GetOption("Description");
+    private string LinkTarget => GetOption("target") ?? "_self";
 
     protected override void OnInitialized()
     {
         ViewOptions.OnChange += StateHasChanged;
     }
 
-    public void Dispose()
-    {
-        ViewOptions.OnChange -= StateHasChanged;
-    }
-
-    private string GetItemSizeClass() => "item-size-" + ViewOptions.CurrentItemSize.ToString().ToLower();
-
     private async Task OnDeleteClick()
     {
         var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{Item.Title}'?");
+        if (IsDisposed) return;
         if (confirmed)
         {
             await OnItemDeleted.InvokeAsync(Item);
@@ -77,17 +68,5 @@
     private async Task OnEditClick()
     {
         await OnItemEdited.InvokeAsync();
-    }
-
-    private void NavigateToUrl()
-    {
-        if (!ViewOptions.IsEditMode && !string.IsNullOrWhiteSpace(Url))
-        {
-            NavManager.NavigateTo(Url, forceLoad: true);
-        }
-        else
-        {
-            Logger.LogWarning("There's no URI connected to the given StaticLinkWidget");
-        }
     }
 }

@@ -39,5 +39,15 @@ public class ViewOptionsService
         NotifyStateChanged();
     }
 
-    private void NotifyStateChanged() => OnChange?.Invoke();
+    private void NotifyStateChanged() 
+    {
+        try
+        {
+            OnChange?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+        }
+    } 
 }

@@ -1,0 +1,74 @@
+﻿@inherits WidgetBase
+@inject WeatherClient WeatherClient
+
+<div class="weather-widget-container item-card @GetItemSizeClass()">
+    @if (_isLoading)
+    {
+        <p>Loading weather...</p>
+    }
+    else if (_weather is not null)
+    {
+        <div class="weather-icon">@GetWeatherIcon(_weather.WeatherCode)</div>
+        <div class="weather-details">
+            <div class="temperature">@_weather.Temperature.ToString("0.0")°@UnitSymbol</div>
+            <div class="location">@LocationName</div>
+        </div>
+    }
+    else
+    {
+        <p class="error-message">@_errorMessage</p>
+    }
+</div>
+
+@code {
+    private CurrentWeather? _weather;
+    private bool _isLoading = true;
+    private string _errorMessage = "Could not load weather.";
+
+    private string LocationName => GetOption("locationName") ?? "Oslo";
+    private double Latitude => double.TryParse(GetOption("latitude"), out var lat) ? lat : 59.91;
+    private double Longitude => double.TryParse(GetOption("longitude"), out var lon) ? lon : 10.75;
+    private string Unit => GetOption("unit") ?? "celsius";
+    private string UnitSymbol => Unit.Equals("fahrenheit", StringComparison.OrdinalIgnoreCase) ? "F" : "C";
+
+    protected override async Task OnInitializedAsync()
+    {
+        base.OnInitialized();
+        try
+        {
+            _weather = await WeatherClient.GetWeatherAsync(Latitude, Longitude, Unit);
+            if (IsDisposed) return;
+
+            if (_weather is null)
+            {
+                _errorMessage = "Weather data unavailable.";
+            }
+        }
+        catch (Exception)
+        {
+            if (IsDisposed) return;
+        }
+        finally
+        {
+            if (!IsDisposed)
+            {
+                _isLoading = false;
+            }
+        }
+    }
+
+    // This method converts weather codes from the API into user-friendly emoji
+    private string GetWeatherIcon(int code) => code switch
+    {
+        0 => "☀️",
+        1 or 2 or 3 => "⛅️",
+        45 or 48 => "🌫️",
+        51 or 53 or 55 or 61 or 63 or 65 => "🌧️",
+        56 or 57 or 66 or 67 => "🥶",
+        71 or 73 or 75 or 77 => "❄️",
+        80 or 81 or 82 => "🌦️",
+        85 or 86 => "🌨️",
+        95 or 96 or 99 => "⛈️",
+        _ => "❓"
+    };
+}

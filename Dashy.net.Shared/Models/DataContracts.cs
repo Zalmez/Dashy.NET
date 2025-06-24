@@ -14,6 +14,15 @@ public class CreateItemDto
     public string? Widget { get; set; }
     public int SectionId { get; set; }
     public Dictionary<string, object> Options { get; set; } = new();
+    public CreateItemDto() { }
+    public CreateItemDto(string title, string? icon, string? widget, int sectionId, Dictionary<string, object> options)
+    {
+        Title = title;
+        Icon = icon;
+        Widget = widget;
+        SectionId = sectionId;
+        Options = options;
+    }
 }
 public class UpdateItemDto
 {
@@ -24,6 +33,16 @@ public class UpdateItemDto
     public string? Widget { get; set; }
     public int SectionId { get; set; }
     public Dictionary<string, object> Options { get; set; } = new();
+
+    public UpdateItemDto() { }
+    public UpdateItemDto(string title, string? icon, string? widget, int sectionId, Dictionary<string, object> options)
+    {
+        Title = title;
+        Icon = icon;
+        Widget = widget;
+        SectionId = sectionId;
+        Options = options;
+    }
 }
 public class CreateSectionDto
 {

@@ -465,7 +465,7 @@ h1, h2, h3, h4, h5, h6 {
     margin-top: 1.5rem;
 }
 
-/* --- Theme Toggle --- */
+
 .theme-toggle-switch {
     position: relative;
     display: inline-block;
@@ -528,7 +528,6 @@ h1, h2, h3, h4, h5, h6 {
         transform: translateX(26px);
     }
 
-/* --- Floating Action Button (FAB) --- */
 .fab-container {
     position: fixed;
     bottom: 2rem;
@@ -642,4 +641,44 @@ h1, h2, h3, h4, h5, h6 {
 
 .fab-menu-item:disabled i {
     color: var(--border-color);
+}
+
+.clock-widget-container {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.time-display {
+    font-size: 2.2rem;
+    font-weight: 500;
+    line-height: 1.1;
+    color: var(--accent-color);
+}
+
+.date-display {
+    font-size: 0.9rem;
+    color: var(--subtle-text-color);
+}
+
+.error-message {
+    color: var(--danger-color);
+    font-size: 0.8rem;
+}
+
+.item-size-small .time-display {
+    font-size: 1.5rem;
+}
+
+.item-size-small .date-display {
+    font-size: 0.75rem;
+}
+
+.item-size-large .time-display {
+    font-size: 3rem;
+}
+
+.item-size-large .date-display {
+    font-size: 1rem;
 }
