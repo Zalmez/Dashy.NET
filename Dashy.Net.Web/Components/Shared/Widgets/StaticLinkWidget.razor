@@ -3,7 +3,6 @@
 @inject ILogger<StaticLinkWidget> Logger
 @inject NavigationManager NavManager
 @implements IDisposable
-@inject IJSRuntime jSRuntime
 
 <div class="item-card-wrapper">
     @if (ViewOptions.IsEditMode)
@@ -47,7 +46,7 @@
     [Parameter] public EventCallback<ItemVm> OnItemDeleted { get; set; }
     [Parameter] public EventCallback OnItemEdited { get; set; }
 
-    private string? Url => GetOption("Url");
+    private string? Url => GetOption("url");
     private string? Description => GetOption("Description");
     private string LinkTarget => GetOption("target") ?? "_self";
 

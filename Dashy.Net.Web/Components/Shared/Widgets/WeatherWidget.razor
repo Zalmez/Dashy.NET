@@ -25,7 +25,6 @@
     private bool _isLoading = true;
     private string _errorMessage = "Could not load weather.";
 
-    // --- More robust option parsing ---
     private string LocationName => GetOption("locationName") ?? "Oslo";
     private double Latitude => double.TryParse(GetOption("latitude"), out var lat) ? lat : 59.91;
     private double Longitude => double.TryParse(GetOption("longitude"), out var lon) ? lon : 10.75;
@@ -38,7 +37,6 @@
         try
         {
             _weather = await WeatherClient.GetWeatherAsync(Latitude, Longitude, Unit);
-            var weatherTask = WeatherClient.GetWeatherAsync(Latitude, Longitude, Unit);
             if (IsDisposed) return;
 
             if (_weather is null)
