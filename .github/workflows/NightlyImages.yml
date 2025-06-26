@@ -62,9 +62,7 @@ jobs:
           context: .
           file: ./Dashy.Net.ApiService/Dockerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository }}/apiservice:nightly-${{ steps.date.outputs.date }}
-          cache-from: type=gha,scope=nightly-apiservice
-          cache-to: type=gha,scope=nightly-apiservice,mode=max
+          tags: ${{ env.REGISTRY }}/${{ github.repository }}/apiservice:nightly
 
       - name: Build and Push WebFrontend Image
         if: steps.check_commits.outputs.proceed == 'true'
@@ -73,9 +71,7 @@ jobs:
           context: .
           file: ./Dashy.Net.Web/Dockerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository }}/webfrontend:nightly-${{ steps.date.outputs.date }}
-          cache-from: type=gha,scope=nightly-webfrontend
-          cache-to: type=gha,scope=nightly-webfrontend,mode=max
+          tags: ${{ env.REGISTRY }}/${{ github.repository }}/webfrontend:nightly
 
       - name: Build and Push MigrationService Image
         if: steps.check_commits.outputs.proceed == 'true'
@@ -84,6 +80,4 @@ jobs:
           context: .
           file: ./Dashy.Net.MigrationService/Dockerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository }}/migrationservice:nightly-${{ steps.date.outputs.date }}
-          cache-from: type=gha,scope=nightly-migrationservice
-          cache-to: type=gha,scope=nightly-migrationservice,mode=max
+          tags: ${{ env.REGISTRY }}/${{ github.repository }}/migrationservice:nightly
