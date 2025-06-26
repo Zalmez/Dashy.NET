@@ -8,6 +8,11 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Tag name for the release"
+        required: true
+        default: "latest"
 
 env:
   REGISTRY: ghcr.io
@@ -17,6 +22,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Determine Docker Tag
+        id: determine_tag
+        run: |
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            echo "PRIMARY_TAG=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "PRIMARY_TAG=${{ github.event.inputs.tag_name }}" >> "$GITHUB_OUTPUT"
+          fi
       - name: Checkout Repository
         uses: actions/checkout@v4
 
@@ -34,7 +47,7 @@ jobs:
           file: ./Dashy.Net.ApiService/Dockerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository }}/apiservice:${{ github.event.release.tag_name }}
+            ${{ env.REGISTRY }}/${{ github.repository }}/apiservice:${{ steps.determine_tag.outputs.PRIMARY_TAG }}
             ${{ env.REGISTRY }}/${{ github.repository }}/apiservice:${{ github.sha }}
 
       - name: Build and Push WebFrontend Image
@@ -44,7 +57,7 @@ jobs:
           file: ./Dashy.Net.Web/Dockerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository }}/webfrontend:${{ github.event.release.tag_name }}
+            ${{ env.REGISTRY }}/${{ github.repository }}/webfrontend:${{ steps.determine_tag.outputs.PRIMARY_TAG }}
             ${{ env.REGISTRY }}/${{ github.repository }}/webfrontend:${{ github.sha }}
 
       - name: Build and Push MigrationService Image
@@ -54,5 +67,5 @@ jobs:
           file: ./Dashy.Net.MigrationService/Dockerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository }}/migrationservice:${{ github.event.release.tag_name }}
+            ${{ env.REGISTRY }}/${{ github.repository }}/migrationservice:${{ steps.determine_tag.outputs.PRIMARY_TAG }}
             ${{ env.REGISTRY }}/${{ github.repository }}/migrationservice:${{ github.sha }}
