@@ -1,0 +1,89 @@
+﻿name: Nightly Build
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-and-push-nightly:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y%m%d')" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for new commits
+        id: check_commits
+        run: |
+          # Get the timestamp of the latest commit on the main branch
+          latest_commit_timestamp=$(git log -1 --format=%ct origin/main)
+
+          # Get the timestamp for 24 hours ago
+          # The schedule runs daily, so we check for any commit in that window.
+          one_day_ago_timestamp=$(date -d '24 hours ago' +%s)
+
+          echo "Latest commit was at: $(date -d @$latest_commit_timestamp)"
+          echo "Cutoff time is: $(date -d @$one_day_ago_timestamp)"
+
+          if [[ "$latest_commit_timestamp" -gt "$one_day_ago_timestamp" ]]; then
+            echo "✅ New commits found within the last 24 hours."
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "🛑 No new commits found in the last 24 hours. Halting workflow."
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Log in to the GitHub Container Registry
+        if: steps.check_commits.outputs.proceed == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push ApiService Image
+        if: steps.check_commits.outputs.proceed == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dashy.Net.ApiService/Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository }}/apiservice:nightly-${{ steps.date.outputs.date }}
+          cache-from: type=gha,scope=nightly-apiservice
+          cache-to: type=gha,scope=nightly-apiservice,mode=max
+
+      - name: Build and Push WebFrontend Image
+        if: steps.check_commits.outputs.proceed == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dashy.Net.Web/Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository }}/webfrontend:nightly-${{ steps.date.outputs.date }}
+          cache-from: type=gha,scope=nightly-webfrontend
+          cache-to: type=gha,scope=nightly-webfrontend,mode=max
+
+      - name: Build and Push MigrationService Image
+        if: steps.check_commits.outputs.proceed == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dashy.Net.MigrationService/Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository }}/migrationservice:nightly-${{ steps.date.outputs.date }}
+          cache-from: type=gha,scope=nightly-migrationservice
+          cache-to: type=gha,scope=nightly-migrationservice,mode=max
