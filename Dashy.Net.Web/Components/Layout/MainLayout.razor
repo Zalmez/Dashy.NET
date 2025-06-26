@@ -92,7 +92,6 @@
         }
     </Modal>
 
-    @* --- Floating Action Button Menu --- *@
     <div class="fab-container @(_isFabMenuOpen ? "open" : "")">
         <div class="fab-menu">
             <button class="fab-menu-item" disabled>
@@ -112,6 +111,14 @@
             <i class="fas @(_isFabMenuOpen ? "fa-times" : "fa-cog")"></i>
         </button>
     </div>
+
+    <footer class="dashboard-footer" style="position: fixed; left:0;bottom:0;width:100%;text-align:center;">
+        <div>
+            <strong>Version:</strong> 0.1.0 &nbsp;|&nbsp;
+            <strong>License:</strong> GNU Affero General Public License &nbsp;|&nbsp;
+            <strong>Disclaimer:</strong> This is a pre-release version. Features and functionality may change or be missing.
+        </div>
+    </footer>
 </div>
 
 @code {
@@ -124,6 +131,8 @@
     private int _editingButtonId = 0;
 
     private bool _isFabMenuOpen = false;
+
+    private bool _disposed = false;
 
     protected override void OnInitialized()
     {
@@ -141,6 +150,7 @@
     {
         if (firstRender)
         {
+            if (_disposed) return;
             var savedThemeClass = await JSRuntime.InvokeAsync<string?>("getFromLocalStorage", "dashy-theme");
             var initialThemeClass = savedThemeClass ?? ThemeService.CurrentTheme.CssClass;
             ThemeService.SetCurrentThemeWithoutNotification(initialThemeClass);
@@ -232,18 +242,30 @@
 
     private async Task HandleThemeToggle()
     {
+        if (_disposed) return;
         var newThemeClass = ThemeService.CurrentTheme.CssClass == "theme-dark" ? "theme-light" : "theme-dark";
-        await JSRuntime.InvokeVoidAsync("saveToLocalStorage", "dashy-theme", newThemeClass);
-        ThemeService.SetTheme(newThemeClass);
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("saveToLocalStorage", "dashy-theme", newThemeClass);
+            ThemeService.SetTheme(newThemeClass);
+        }
+        catch (ObjectDisposedException) { /* Circuit disposed, ignore */ }
+        catch (InvalidOperationException) { /* Circuit disposed, ignore */ }
     }
 
     private void OnThemeChangedHandler()
     {
+        if (_disposed) return;
         InvokeAsync(async () =>
         {
+            if (_disposed) return;
             isLightMode = ThemeService.CurrentTheme.CssClass == "theme-light";
-
-            await JSRuntime.InvokeVoidAsync("setBodyClass", ThemeService.CurrentTheme.CssClass);
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("setBodyClass", ThemeService.CurrentTheme.CssClass);
+            }
+            catch (ObjectDisposedException) { /* Circuit disposed, ignore */ }
+            catch (InvalidOperationException) { /* Circuit disposed, ignore */ }
             StateHasChanged();
         });
     }
@@ -266,6 +288,7 @@
 
     public void Dispose()
     {
+        _disposed = true;
         ThemeService.OnThemeChanged -= OnThemeChangedHandler;
         DashboardState.OnConfigLoaded -= StateHasChanged;
         ViewOptions.OnChange -= HandleOptionsChanged;
