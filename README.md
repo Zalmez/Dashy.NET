@@ -27,8 +27,8 @@ To get Dashy.Net up and running on your local machine, you'll need the .NET 9 SD
 1.  **Clone the repository:**
 
     ```bash
-    git clone [Your-Repository-URL]
-    cd [your-repository-folder]
+    git clone https://github.com/Zalmez/Dashy.NET.git
+    cd Dashy.NET
     ```
 
 2.  **Run the application using .NET Aspire:**
