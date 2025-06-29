@@ -30,7 +30,7 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
         if (dashboard is null)
         {
             logger.LogWarning("No dashboard found in the database. Seeding might be required.");
-            return Ok(new DashboardConfigVm(0, "No Dashboard Found", "Please seed the database.", new List<SectionVm>(), new List<HeaderButtonVm>()));
+            return NotFound(new DashboardConfigVm(0, "No Dashboard Found", "Please seed the database.", new List<SectionVm>(), new List<HeaderButtonVm>()));
         }
 
         // Map the database entities to the clean ViewModels the frontend expects.

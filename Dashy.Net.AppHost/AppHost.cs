@@ -7,9 +7,7 @@ var postgres = builder.AddPostgres("postgresdb")
 
 var db = postgres.AddDatabase("dashy");
 
-// Ensure migrationService waits for both the Postgres container and the database to be created
 var migrationService = builder.AddProject<Projects.Dashy_Net_MigrationService>("migrationservice")
-    .WaitFor(postgres)
     .WaitFor(db)
     .WithReference(db)
     .WithParentRelationship(db);

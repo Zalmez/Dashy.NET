@@ -10,7 +10,21 @@
 
 @if (DashboardState.Config is null)
 {
-    <p><em>Loading dashboard...</em></p>
+    @if (_isInitializing)
+    {
+        <p><span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> <span>Initializing dashboard...</span></p>
+    }
+    else if (!string.IsNullOrEmpty(_initError))
+    {
+        <div class="alert alert-danger" style="margin-top:1rem;">@_initError</div>
+        <button class="btn btn-primary" @onclick="InitializeDashboard" disabled="@_isInitializing">
+            <span><i class="fas fa-rocket"></i> Retry Initialization</span>
+        </button>
+    }
+    else
+    {
+        <p><em>No dashboard found.</em></p>
+    }
 }
 else
 {
@@ -127,6 +141,9 @@ else
 
     private bool _isDisposed;
 
+    private bool _isInitializing = false;
+    private string? _initError;
+
     private IEnumerable<SectionVm> FilteredSections =>
         DashboardState.Config?.Sections.Where(section =>
             string.IsNullOrWhiteSpace(ViewOptions.SearchTerm) ||
@@ -151,7 +168,14 @@ else
         {
             var config = await DashboardClient.GetConfigAsync();
             if (_isDisposed) return;
-            DashboardState.SetConfig(config);
+            if (config is null && !_isInitializing)
+            {
+                await InitializeDashboard();
+            }
+            else
+            {
+                DashboardState.SetConfig(config);
+            }
         }
     }
 
@@ -334,6 +358,36 @@ else
             return "collapsed";
 
         return "layout-" + ViewOptions.CurrentLayout.ToString().ToLower();
+    }
+
+    private async Task InitializeDashboard()
+    {
+        _isInitializing = true;
+        _initError = null;
+        StateHasChanged();
+        try
+        {
+            var success = await DashboardClient.SeedDashboardAsync();
+            if (!success)
+            {
+                _initError = "Failed to initialize dashboard. Please try again or check the server logs.";
+            }
+            else
+            {
+                var config = await DashboardClient.GetConfigAsync();
+                if (_isDisposed) return;
+                DashboardState.SetConfig(config);
+            }
+        }
+        catch (Exception ex)
+        {
+            _initError = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _isInitializing = false;
+            StateHasChanged();
+        }
     }
 
     public void Dispose()

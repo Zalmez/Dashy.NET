@@ -15,7 +15,6 @@
     <Folder Include="wwwroot\css\themes\" />
   </ItemGroup>
 
-  <!-- Ensure no duplicate Content/None items for JS modules to avoid static web assets build errors -->
   <ItemGroup>
     <Content Remove="wwwroot\**\*.razor.js" />
     <None Remove="wwwroot\**\*.razor.js" />
