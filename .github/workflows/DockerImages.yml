@@ -49,8 +49,8 @@ jobs:
           file: ./Dashy.Net.ApiService/Dockerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/${{ env.repository }}-apiservice:${{ steps.determine_tag.outputs.PRIMARY_TAG }}
-            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/${{ env.repository }}-apiservice:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/dashy-net-apiservice:${{ steps.determine_tag.outputs.PRIMARY_TAG }}
+            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/dashy-net-apiservice:${{ github.sha }}
 
       - name: Build and Push WebFrontend Image
         uses: docker/build-push-action@v6
@@ -59,8 +59,8 @@ jobs:
           file: ./Dashy.Net.Web/Dockerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/${{ env.repository }}-webfrontend:${{ steps.determine_tag.outputs.PRIMARY_TAG }}
-            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/${{ env.repository }}-webfrontend:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/dashy-net-webfrontend:${{ steps.determine_tag.outputs.PRIMARY_TAG }}
+            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/dashy-net-webfrontend:${{ github.sha }}
 
       - name: Build and Push MigrationService Image
         uses: docker/build-push-action@v6
@@ -69,5 +69,5 @@ jobs:
           file: ./Dashy.Net.MigrationService/Dockerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/${{ env.repository }}-migrationservice:${{ steps.determine_tag.outputs.PRIMARY_TAG }}
-            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/${{ env.repository }}-migrationservice:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/dashy-net-migrationservice:${{ steps.determine_tag.outputs.PRIMARY_TAG }}
+            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/dashy-net-migrationservice:${{ github.sha }}
