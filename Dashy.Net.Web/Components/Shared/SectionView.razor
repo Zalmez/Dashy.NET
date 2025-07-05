@@ -1,6 +1,7 @@
 ﻿@using Dashy.Net.Shared.Models
 @using Dashy.Net.Web.Services
 @using BlazorSortable
+@using Dashy.Net.Web.Components.Shared
 
 @inject ViewOptionsService ViewOptions
 
@@ -26,25 +27,26 @@
     </div>
 
     <div class="item-grid @GetItemSizeClass() @(IsCollapsed ? "collapsed" : "")">
-        <SortableList Items="Section.Items" 
-                      OnUpdate="(args) => OnItemOrderChanged.InvokeAsync((Section, (args.oldIndex, args.newIndex)))" 
-                      Sort="ViewOptions.IsEditMode" 
-                      Context="item">
-            <div class="sortable-item" @key="item">
-                @switch (item.Widget?.ToLower() ?? "static-link")
-                {
-                    case "static-link":
-                        <StaticLinkWidget Item="item" OnItemDeleted="item => OnItemDeleted.InvokeAsync(item)" OnItemEdited="() => OnItemEdited.InvokeAsync(item)" />
-                        break;
-                    case "clock":
-                        <ClockWidget Item="item" />
-                        break;
-                    default:
-                        <UnknownWidget Widget="@item.Widget" />
-                        break;
-                }
-            </div>
-        </SortableList>
+        <Dashy.Net.Web.Components.Shared.SortableList TItem="ItemVm" Items="Section.Items" 
+                      OnUpdate="(args) => OnItemOrderChanged.InvokeAsync((Section, (args.oldIndex, args.newIndex)))">
+            @foreach (var item in Section.Items)
+            {
+                <div class="sortable-item" @key="item">
+                    @switch (item.Widget?.ToLower() ?? "static-link")
+                    {
+                        case "static-link":
+                            <StaticLinkWidget Item="item" OnItemDeleted="item => OnItemDeleted.InvokeAsync(item)" OnItemEdited="() => OnItemEdited.InvokeAsync(item)" />
+                            break;
+                        case "clock":
+                            <ClockWidget Item="item" />
+                            break;
+                        default:
+                            <UnknownWidget Widget="@item.Widget" />
+                            break;
+                    }
+                </div>
+            }
+        </Dashy.Net.Web.Components.Shared.SortableList>
 
         @if (ViewOptions.IsEditMode && !IsCollapsed)
         {

@@ -66,6 +66,34 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
     }
 
     /// <summary>
+    /// Updates the dashboard's basic settings like title and subtitle.
+    /// </summary>
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> UpdateDashboard(int id, [FromBody] UpdateDashboardDto updateDto)
+    {
+        var dashboard = await dbContext.Dashboards.FindAsync(id);
+        if (dashboard is null)
+        {
+            return NotFound();
+        }
+
+        dashboard.Title = updateDto.Title;
+        dashboard.Subtitle = updateDto.Subtitle;
+
+        try
+        {
+            await dbContext.SaveChangesAsync();
+            logger.LogInformation("Dashboard {DashboardId} updated successfully", id);
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to update dashboard {DashboardId}", id);
+            return Problem("Failed to update dashboard", statusCode: 500);
+        }
+    }
+
+    /// <summary>
     /// A temporary developer utility to seed an empty database with sample data.
     /// </summary>
     [HttpPost("seed")]

@@ -1,5 +1,6 @@
 ﻿using Dashy.Net.Shared.Models;
 using Dashy.Net.Web.Services;
+using Dashy.Net.Web.Helpers;
 using Microsoft.AspNetCore.Components;
 
 namespace Dashy.Net.Web.Components.Shared.Widgets;
@@ -7,6 +8,9 @@ public abstract class WidgetBase : ComponentBase, IDisposable
 {
     [Inject]
     protected ViewOptionsService ViewOptions { get; set; } = default!;
+
+    [Inject]
+    protected EventSubscriptionManager SubscriptionManager { get; set; } = default!;
 
     /// <summary>
     /// The core data for the widget. Every widget MUST have this parameter.
@@ -43,12 +47,13 @@ public abstract class WidgetBase : ComponentBase, IDisposable
 
     protected override void OnInitialized()
     {
+        SubscriptionManager.AddSubscription(() => ViewOptions.OnChange -= StateHasChanged);
         ViewOptions.OnChange += StateHasChanged;
     }
 
     public virtual void Dispose()
     {
+        SubscriptionManager.Dispose();
         IsDisposed = true;
-        ViewOptions.OnChange -= StateHasChanged;
     }
 }

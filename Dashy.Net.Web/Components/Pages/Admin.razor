@@ -1,0 +1,232 @@
+@page "/admin"
+@inject DashboardClient DashboardClient
+@using Dashy.Net.Shared.Models
+
+<PageTitle>Admin Settings</PageTitle>
+
+<AuthorizeView>
+    <Authorized Context="_">
+        <div class="admin-container">
+            <h1>Admin Settings</h1>
+            
+            <div class="admin-tabs">
+                <button type="button" class="admin-tab @(_activeTab == "legacy" ? "active" : "")" @onclick='() => SetActiveTab("legacy")'>
+                    <i class="fas fa-cog"></i> Legacy Settings
+                </button>
+                <button type="button" class="admin-tab @(_activeTab == "providers" ? "active" : "")" @onclick='() => SetActiveTab("providers")'>
+                    <i class="fas fa-shield-alt"></i> Authentication Providers
+                </button>
+            </div>
+
+            @if (_activeTab == "legacy")
+            {
+                <div class="admin-section">
+                    <h3>Legacy Authentication Settings</h3>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Legacy Mode:</strong> This is the old single-provider authentication system. 
+                        Consider migrating to the new multi-provider system for better flexibility.
+                    </div>
+                    
+                    <EditForm Model="_settings" OnValidSubmit="SaveSettings">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+                        <div class="mb-3">
+                            <label>Authority</label>
+                            <InputText class="form-control" @bind-Value="_settings.Authority" />
+                        </div>
+                        <div class="mb-3">
+                            <label>Client ID</label>
+                            <InputText class="form-control" @bind-Value="_settings.ClientId" />
+                        </div>
+                        <div class="mb-3">
+                            <label>Client Secret</label>
+                            <InputText class="form-control" @bind-Value="_clientSecret" type="password" />
+                        </div>
+                        <div class="mb-3">
+                            <label><InputCheckbox @bind-Value="_settings.IsEnabled" /> Enable Authentication</label>
+                        </div>
+                        <button class="btn btn-primary" type="submit">Save</button>
+                        @if (_saveResult != null)
+                        {
+                            <div class="alert alert-info mt-2">@_saveResult</div>
+                        }
+                    </EditForm>
+                </div>
+            }
+            else if (_activeTab == "providers")
+            {
+                <div class="admin-section">
+                    <div class="section-header">
+                        <h3>Authentication Providers</h3>
+                        <button class="btn btn-primary" @onclick="OpenAddProviderModal">
+                            <i class="fas fa-plus"></i> Add Provider
+                        </button>
+                    </div>
+                    
+                    @if (_providers.Any())
+                    {
+                        <div class="providers-list">
+                            @foreach (var provider in _providers.OrderBy(p => p.Priority))
+                            {
+                                <div class="provider-card @(provider.IsEnabled ? "enabled" : "disabled")">
+                                    <div class="provider-header">
+                                        <div class="provider-info">
+                                            <h4>@provider.Name</h4>
+                                            <span class="provider-type">@provider.ProviderType</span>
+                                            @if (provider.IsDefault)
+                                            {
+                                                <span class="badge badge-primary">Default</span>
+                                            }
+                                        </div>
+                                        <div class="provider-status">
+                                            <span class="status-indicator @(provider.IsEnabled ? "active" : "inactive")">
+                                                @(provider.IsEnabled ? "Enabled" : "Disabled")
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="provider-actions">
+                                        <button class="btn btn-sm btn-secondary" @onclick="() => EditProvider(provider)">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteProvider(provider)">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="empty-state">
+                            <i class="fas fa-shield-alt"></i>
+                            <h4>No Authentication Providers</h4>
+                            <p>Add your first authentication provider to enable multi-provider authentication.</p>
+                            <button class="btn btn-primary" @onclick="OpenAddProviderModal">
+                                <i class="fas fa-plus"></i> Add Provider
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Provider Editor Modal -->
+        <Modal Title="@_providerModalTitle" IsOpen="@_isProviderModalOpen" OnClose="CloseProviderModal">
+            <AuthenticationProviderEditor Provider="_providerToEdit" 
+                                        OnSave="HandleProviderSaved" 
+                                        OnCancel="CloseProviderModal" />
+        </Modal>
+    </Authorized>
+    <NotAuthorized Context="_">
+        <h1>Access Denied</h1>
+        <p>You must be logged in as an admin to view this page.</p>
+        <button class="btn btn-primary" @onclick="Login">Login</button>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private string _activeTab = "legacy";
+    private AuthenticationSettings _settings = new();
+    private string? _clientSecret;
+    private string? _saveResult;
+    private List<AuthenticationProviderVm> _providers = new();
+
+    private bool _isProviderModalOpen = false;
+    private string _providerModalTitle = "";
+    private AuthenticationProviderVm? _providerToEdit;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLegacySettings();
+        await LoadProviders();
+    }
+
+    private async Task LoadLegacySettings()
+    {
+        var s = await DashboardClient.Settings.Auth.GetAsync();
+        if (s != null)
+            _settings = s;
+    }
+
+    private async Task LoadProviders()
+    {
+        var providers = await DashboardClient.Settings.Auth.Providers.GetAllAsync();
+        _providers = providers.ToList();
+    }
+
+    private void SetActiveTab(string tab)
+    {
+        _activeTab = tab;
+        _saveResult = null;
+    }
+
+    private async Task SaveSettings()
+    {
+        if (!string.IsNullOrWhiteSpace(_clientSecret))
+            _settings.ClientSecret = _clientSecret;
+        var ok = await DashboardClient.Settings.Auth.UpdateAsync(_settings);
+        _saveResult = ok ? "Settings saved." : "Failed to save settings.";
+        _clientSecret = null;
+    }
+
+    private void OpenAddProviderModal()
+    {
+        _providerModalTitle = "Add Authentication Provider";
+        _providerToEdit = null;
+        _isProviderModalOpen = true;
+    }
+
+    private void EditProvider(AuthenticationProviderVm provider)
+    {
+        _providerModalTitle = $"Edit '{provider.Name}'";
+        _providerToEdit = provider;
+        _isProviderModalOpen = true;
+    }
+
+    private void CloseProviderModal()
+    {
+        _isProviderModalOpen = false;
+        _providerToEdit = null;
+        _providerModalTitle = "";
+    }
+
+    private async Task HandleProviderSaved(bool success)
+    {
+        if (success)
+        {
+            _saveResult = _providerToEdit == null ? 
+                "Provider created successfully!" : 
+                "Provider updated successfully!";
+            await LoadProviders();
+            CloseProviderModal();
+        }
+        else
+        {
+            _saveResult = _providerToEdit == null ? 
+                "Failed to create provider." : 
+                "Failed to update provider.";
+        }
+        StateHasChanged();
+    }
+
+    private async Task DeleteProvider(AuthenticationProviderVm provider)
+    {
+        // TODO: Add confirmation dialog
+        var success = await DashboardClient.Settings.Auth.Providers.DeleteAsync(provider.Id);
+        if (success)
+        {
+            _saveResult = $"Provider '{provider.Name}' deleted successfully.";
+            await LoadProviders();
+        }
+        else
+        {
+            _saveResult = $"Failed to delete provider '{provider.Name}'.";
+        }
+        StateHasChanged();
+    }
+
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+    private void Login() => NavigationManager.NavigateTo("authentication/login", true);
+}

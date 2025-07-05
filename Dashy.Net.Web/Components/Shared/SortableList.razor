@@ -1,0 +1,43 @@
+@typeparam TItem
+
+<div class="sortable-list">
+    @if (Items != null)
+    {
+        foreach (var item in Items)
+        {
+            <div class="sortable-item" draggable="true"
+                 @ondragstart="(e) => OnDragStart(e, item)"
+                 @ondragover="OnDragOver"
+                 @ondrop="(e) => OnDrop(e, item)">
+                @ItemTemplate(item)
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public List<TItem> Items { get; set; } = new();
+    [Parameter] public RenderFragment<TItem> ItemTemplate { get; set; } = default!;
+    [Parameter] public EventCallback<(TItem draggedItem, TItem targetItem)> OnItemMoved { get; set; }
+
+    private TItem? _draggedItem;
+
+    private void OnDragStart(DragEventArgs e, TItem item)
+    {
+        _draggedItem = item;
+    }
+
+    private void OnDragOver(DragEventArgs e)
+    {
+        // Handle drag over logic
+    }
+
+    private async Task OnDrop(DragEventArgs e, TItem targetItem)
+    {
+        if (_draggedItem != null && !EqualityComparer<TItem>.Default.Equals(_draggedItem, targetItem))
+        {
+            await OnItemMoved.InvokeAsync((_draggedItem, targetItem));
+        }
+        _draggedItem = default;
+    }
+}

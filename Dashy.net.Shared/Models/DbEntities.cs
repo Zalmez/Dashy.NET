@@ -53,3 +53,56 @@ public class HeaderButton
     public int DashboardId { get; set; }
     public Dashboard Dashboard { get; set; } = null!;
 }
+
+public class AuthenticationSettings
+{
+    public int Id { get; set; }
+    public bool IsEnabled { get; set; } = false;
+    public string? Authority { get; set; }
+    public string? ClientId { get; set; }
+    public string? ClientSecret { get; set; }
+    public string? TenantId { get; set; }
+}
+
+public class AuthenticationProvider
+{
+    public int Id { get; set; }
+    [Required]
+    [StringLength(100)]
+    public required string Name { get; set; }
+    [Required]
+    [StringLength(50)]
+    public required string ProviderType { get; set; }
+    public bool IsEnabled { get; set; } = false;
+    public bool IsDefault { get; set; } = false;
+    public int Priority { get; set; } = 0;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    
+    public List<AuthenticationProviderSettings> Settings { get; set; } = [];
+}
+
+public class AuthenticationProviderSettings
+{
+    public int Id { get; set; }
+    public int AuthenticationProviderId { get; set; }
+    [Required]
+    [StringLength(100)]
+    public required string Key { get; set; }
+    [StringLength(2000)]
+    public string? Value { get; set; }
+    public bool IsEncrypted { get; set; } = false;
+    public bool IsRequired { get; set; } = false;
+    
+    public AuthenticationProvider AuthenticationProvider { get; set; } = null!;
+}
+
+public enum AuthenticationProviderType
+{
+    AzureAD,
+    GenericOAuth,
+    OpenIdConnect,
+    Authentik,
+    Keycloak,
+    Auth0
+}
