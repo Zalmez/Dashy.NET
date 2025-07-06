@@ -1,6 +1,5 @@
 using Dashy.Net.Shared.Data;
 using Dashy.Net.Shared.Models;
-using Dashy.Net.Shared.Security;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,10 +25,6 @@ public class AuthenticationSettingsProvider
                 return _cachedSettings;
 
             var settings = await _dbContext.AuthenticationSettings.AsNoTracking().FirstOrDefaultAsync();
-            if (settings != null && !string.IsNullOrEmpty(settings.ClientSecret))
-            {
-                settings.ClientSecret = AesEncryptionService.Decrypt(settings.ClientSecret);
-            }
             _cachedSettings = settings;
             _lastLoad = DateTime.UtcNow;
             return settings;

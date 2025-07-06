@@ -10,7 +10,6 @@
 @inject DashboardStateService DashboardState
 @inject ViewOptionsService ViewOptions
 @inject DashboardClient DashboardClient
-@inject AuthenticationSettingsProvider AuthSettingsProvider
 @inject AuthenticationStateProvider AuthStateProvider
 @inject EventSubscriptionManager SubscriptionManager
 @using Microsoft.AspNetCore.Components.Authorization
@@ -43,13 +42,8 @@
                     </div>
                 </div>
             }
-            @if (_authSettings?.IsEnabled == true)
-            {
+            @if(_isAuthConfigured){
                 <AuthorizeView>
-                    <Authorized>
-                        <a href="/admin" class="btn btn-outline-primary">Admin</a>
-                        <button class="btn btn-outline-secondary" @onclick="Logout">Logout</button>
-                    </Authorized>
                     <NotAuthorized>
                         <button class="btn btn-outline-primary" @onclick="Login">Login</button>
                     </NotAuthorized>
@@ -145,19 +139,17 @@
 @code {
     private bool isLightMode = false;
 
+    private bool _isAuthConfigured = false;
     private bool _isButtonManagerOpen = false;
     private bool _isButtonEditorOpen = false;
     private string _buttonEditorTitle = "";
     private HeaderButtonEditor.ButtonEditModel? _buttonToEdit;
     private int _editingButtonId = 0;
-
+    
     private bool _isFabMenuOpen = false;
     private bool _isSettingsModalOpen = false;
 
     private bool _disposed = false;
-
-    private AuthenticationSettings? _authSettings;
-
 
     protected override async Task OnInitializedAsync()
     {
@@ -165,11 +157,14 @@
         DashboardState.OnConfigLoaded += StateHasChanged;
         ViewOptions.OnChange += HandleOptionsChanged;
 
-        _authSettings = await AuthSettingsProvider.GetSettingsAsync();
+        // Check if authentication is configured
+        _isAuthConfigured = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_authority")) &&
+                                !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_clientid")) &&
+                                !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_clientsecret"));
 
-        // Force login if authentication is enabled and user is not authenticated
-        if (_authSettings?.IsEnabled == true)
+        if (_isAuthConfigured)
         {
+            // Force login if authentication is enabled and user is not authenticated
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             if (!(authState.User.Identity?.IsAuthenticated ?? false))
             {

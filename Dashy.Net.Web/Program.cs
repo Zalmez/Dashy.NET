@@ -1,5 +1,4 @@
 using BlazorSortable;
-using Dashy.Net.Shared.Security;
 using Dashy.Net.Web;
 using Dashy.Net.Web.Clients;
 using Dashy.Net.Web.Components;
@@ -43,67 +42,46 @@ builder.Services.AddHttpClient("ApiService", opts =>
 {
     opts.BaseAddress = new("https+http://apiservice");
 });
-builder.Services.AddScoped<AuthenticationSettingsProvider>();
 builder.Services.AddScoped<EventSubscriptionManager>();
 #endregion
 
-Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true; //TODO: REMOVE THIS
-var authConfigured = false;
-try
+var authAuthority = Environment.GetEnvironmentVariable("auth_authority");
+var authClientId = Environment.GetEnvironmentVariable("auth_clientid");
+var authClientSecret = Environment.GetEnvironmentVariable("auth_clientsecret");
+
+if (!string.IsNullOrWhiteSpace(authAuthority) && !string.IsNullOrWhiteSpace(authClientId) && !string.IsNullOrWhiteSpace(authClientSecret))
 {
-    var tempProvider = builder.Services.BuildServiceProvider();
-    var settingsProvider = tempProvider.GetRequiredService<AuthenticationSettingsProvider>();
-    var settings = await settingsProvider.GetSettingsAsync();
-    
-    if (settings is not null && settings.IsEnabled && 
-        !string.IsNullOrWhiteSpace(settings.Authority) && 
-        !string.IsNullOrWhiteSpace(settings.ClientId))
+    builder.Services.AddAuthentication(options =>
     {
-        builder.Services.AddAuthentication(options =>
-        {
-            options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-            options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
-        })
-        .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
-        {
-            options.LoginPath = "/authentication/login";
-            options.LogoutPath = "/authentication/logout";
-            options.ExpireTimeSpan = TimeSpan.FromHours(8);
-            options.SlidingExpiration = true;
-        })
-        .AddOpenIdConnect(OpenIdConnectDefaults.AuthenticationScheme, options =>
-        {
-            options.Authority = settings.Authority;
-            options.ClientId = settings.ClientId;
-            options.ClientSecret = settings.ClientSecret;
-            options.SaveTokens = true;
-            options.GetClaimsFromUserInfoEndpoint = true;
-            options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-            options.ResponseType = OpenIdConnectResponseType.Code;
+        options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+    })
+    .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+    {
+        options.LoginPath = "/authentication/login";
+        options.LogoutPath = "/authentication/logout";
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.SlidingExpiration = true;
+    })
+    .AddOpenIdConnect(OpenIdConnectDefaults.AuthenticationScheme, options =>
+    {
+        options.Authority = authAuthority;
+        options.ClientId = authClientId;
+        options.ClientSecret = authClientSecret;
+        options.SaveTokens = true;
+        options.GetClaimsFromUserInfoEndpoint = true;
+        options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        options.ResponseType = OpenIdConnectResponseType.Code;
 
-            // Add scopes
-            if (!string.IsNullOrEmpty(settings.Scopes))
-            {
-                foreach (var _scope in settings.Scopes.Split(" "))
-                {
-                    options.Scope.Add(_scope.ToLower());
-                }
-            }
+        // Add default scopes
+        options.Scope.Add("openid");
+        options.Scope.Add("profile");
+        options.Scope.Add("email");
 
-            options.MapInboundClaims = false;
-            options.TokenValidationParameters.NameClaimType = JwtRegisteredClaimNames.Name;
-        });
-        
-        authConfigured = true;
-    }
+        options.MapInboundClaims = false;
+        options.TokenValidationParameters.NameClaimType = JwtRegisteredClaimNames.Name;
+    });
 }
-catch (Exception ex)
-{
-    // Log authentication configuration failure but don't crash the app
-    var logger = builder.Services.BuildServiceProvider().GetRequiredService<ILogger<Program>>();
-    logger.LogWarning(ex, "Failed to configure authentication. The application will start without authentication.");
-}
-
 
 var app = builder.Build();
 
@@ -116,7 +94,7 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 // Add authentication middleware if configured
-if (authConfigured)
+if (!string.IsNullOrWhiteSpace(authAuthority) && !string.IsNullOrWhiteSpace(authClientId) && !string.IsNullOrWhiteSpace(authClientSecret))
 {
     app.UseAuthentication();
     app.UseAuthorization();
@@ -130,7 +108,7 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 // Add authentication endpoints if configured
-if (authConfigured)
+if (!string.IsNullOrWhiteSpace(authAuthority) && !string.IsNullOrWhiteSpace(authClientId) && !string.IsNullOrWhiteSpace(authClientSecret))
 {
     app.MapGet("/authentication/login", async (HttpContext context) =>
     {

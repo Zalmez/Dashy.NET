@@ -132,166 +132,19 @@
         {
             Console.WriteLine("Rendering Authentication Settings Tab");
             <div class="settings-section">
-                <h4><i class="fas fa-shield-alt"></i> Authentication Settings</h4>
-                
-                @if (_authSettings.IsEnabled)
+                <h4><i class="fas fa-shield-alt"></i> Authentication Status</h4>
+                @if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_authority")) &&
+                     !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_clientid")) &&
+                     !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_clientsecret")))
                 {
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i> Authentication is currently enabled. Configuration changes will require an application restart.
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i> Authentication is enabled.
                     </div>
                 }
                 else
                 {
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle"></i> Authentication is currently disabled. Configure and enable authentication to secure your dashboard.
-                    </div>
-                }
-
-                <EditForm Model="_authSettings" OnValidSubmit="HandleSaveAuthSettings">
-                    <DataAnnotationsValidator />
-                    
-                    <div class="setting-group">
-                        <label>
-                            <InputCheckbox @bind-Value="_authSettings.IsEnabled"/>
-                            Enable Authentication
-                        </label>
-                        <small class="form-text ">Require users to authenticate before accessing the dashboard</small>
-                    </div>
-
-                    @if (_authSettings.IsEnabled || !string.IsNullOrEmpty(_selectedProviderType))
-                    {
-                        <div class="setting-group">
-                            <label for="provider-type">Authentication Provider</label>
-                            <InputSelect id="provider-type" class="form-control" @bind-Value="_selectedProviderType" TValue="string">
-                                <option value="">Select a provider type...</option>
-                                <option value="AzureAD">Azure AD</option>
-                                <option value="Keycloak">Keycloak</option>
-                                <option value="GenericOAuth">Generic OAuth</option>
-                            </InputSelect>
-                            @if (!string.IsNullOrEmpty(_selectedProviderType))
-                            {
-                                if (_selectedProviderType == "GenericOAuth")
-                                {
-                                    <div class="setting-group">
-                                        <label for="well-known-endpoint">Well-Known Endpoint</label>
-                                        <InputText id="well-known-endpoint" class="form-control" @bind-Value="_tempMetadataAddress" />
-                                    </div>
-                                    <div class="setting-group">
-                                        <label for="client-id">Client ID</label>
-                                        <InputText id="client-id" class="form-control" @bind-Value="_tempClientId" />
-                                    </div>
-                                    <div class="setting-group">
-                                        <label for="client-secret">Client Secret</label>
-                                        <InputText id="client-secret" type="password" class="form-control" @bind-Value="_tempClientSecret" />
-                                    </div>
-                                    <div class="setting-group">
-                                        <label for="scopes">Scopes</label>
-                                        <InputText id="scopes" class="form-control" @bind-Value="_tempScopes" placeholder="e.g., openid profile email" />
-                                    </div>
-                                }
-                                else
-                                {
-                                    var template = _providerTemplates.FirstOrDefault(t => t.ProviderType == _selectedProviderType);
-                                    if (template != null)
-                                    {
-                                        <small class="form-text">@template.Description</small>
-                                        @if (_currentTemplate != template)
-                                        {
-                                            OnTemplateChanged(template);
-                                        }
-                                    }
-                                }
-                            }
-                        </div>
-
-                        @if (_currentTemplate != null && _selectedProviderType != "GenericOAuth")
-                        {
-                            <div class="provider-config-section">
-                                <h5><i class="fas fa-cog"></i> Provider Configuration</h5>
-                                
-                                @foreach (var setting in _currentTemplate.Settings)
-                                {
-                                    var settingId = $"auth-{setting.Key.ToLower()}";
-                                    var tempValue = _providerSettings.ContainsKey(setting.Key) ? _providerSettings[setting.Key] : string.Empty;
-                                    <div class="setting-group">
-                                        <label for="@settingId">@setting.Value.DisplayName</label>
-                                        
-                                        @if (setting.Value.InputType == "password" || setting.Value.IsSecret)
-                                        {
-                                            <InputText id="@settingId" 
-                                                     type="password" 
-                                                     class="form-control" 
-                                                     @bind-Value="tempValue"
-                                                     @oninput="(e) => OnSettingChanged(setting.Key, e.Value?.ToString() ?? string.Empty)"
-                                                     placeholder="@(_authSettings.Id > 0 ? "Leave blank to keep current value" : setting.Value.DefaultValue)" />
-                                        }
-                                        else if (setting.Value.InputType == "select" && setting.Value.Options != null)
-                                        {
-                                            <InputSelect id="@settingId" class="form-control" @bind-Value="tempValue" @onchange="(e) => OnSettingChanged(setting.Key, e.Value?.ToString() ?? string.Empty)">
-                                                <option value="">Select...</option>
-                                                @foreach (var option in setting.Value.Options)
-                                                {
-                                                    <option value="@option">@option</option>
-                                                }
-                                            </InputSelect>
-                                        }
-                                        else
-                                        {
-                                            <InputText id="@settingId" 
-                                                     type="@setting.Value.InputType" 
-                                                     class="form-control" 
-                                                     @bind-Value="tempValue"
-                                                     @oninput="(e) => OnSettingChanged(setting.Key, e.Value?.ToString() ?? string.Empty)"
-                                                     placeholder="@setting.Value.DefaultValue" />
-                                        }
-                                        
-                                        @if (setting.Value.IsRequired)
-                                        {
-                                            <div class="field-validation-error">
-                                                @if (string.IsNullOrWhiteSpace(tempValue) && !(_authSettings.Id > 0 && setting.Value.IsSecret))
-                                                {
-                                                    <span>@setting.Value.DisplayName is required</span>
-                                                }
-                                            </div>
-                                        }
-                                        
-                                        <small class="form-text text-muted">@setting.Value.Description</small>
-                                    </div>
-                                }
-                            </div>
-                        }
-                    }
-
-                    <div class="setting-actions">
-                        <button type="submit" class="btn btn-primary" disabled="@_isSaving">
-                            @if (_isSaving)
-                            {
-                                <i class="fas fa-spinner fa-spin"></i>
-                            }
-                            else
-                            {
-                                <i class="fas fa-save"></i>
-                            }
-                            Save Authentication Settings
-                        </button>
-                    </div>
-                </EditForm>
-
-                @if (!string.IsNullOrEmpty(_saveMessage))
-                {
-                    <div class="alert @(_saveSuccess ? "alert-success" : "alert-danger")" style="margin-top: 1rem;">
-                        @_saveMessage
-                    </div>
-                }
-
-                @if (_providerTemplates.Any())
-                {
-                    <div class="provider-info-section">
-                        <h5><i class="fas fa-info-circle"></i> Advanced Provider Management</h5>
-                        <p class="form-text text-muted">
-                            For advanced multi-provider authentication setup, including multiple providers and priority configuration, 
-                            visit the <a href="/admin" target="_blank">Admin Panel</a>.
-                        </p>
+                    <div class="alert alert-danger">
+                        <i class="fas fa-times-circle"></i> Authentication is not configured.
                     </div>
                 }
             </div>
@@ -312,7 +165,6 @@
     private DashboardSettingsModel _dashboardSettings = new();
     private AuthenticationSettings _authSettings = new();
 
-    // Dynamic provider configuration
     private List<AuthenticationProviderTemplate> _providerTemplates = new();
     private string _selectedProviderType = string.Empty;
     public string SelectedProviderType
@@ -401,8 +253,6 @@
     {
         if (authority.Contains("login.microsoftonline.com") || authority.Contains("sts.windows.net"))
             return "AzureAD";
-
-        // For other providers, default to GenericOAuth
         return "GenericOAuth";
     }
 
@@ -417,7 +267,7 @@
 
     private async Task OnValueChanged(string value)
     {
-        if (_isDisposed) return; // Prevent updates if disposed
+        if (_isDisposed) return;
 
         Logger.LogInformation("OnValueChanged triggered");
         _selectedProviderType = value;
@@ -425,7 +275,7 @@
 
         await LoadProviderTemplate();
 
-        if (_isDisposed) return; // Prevent state updates if disposed
+        if (_isDisposed) return; 
         StateHasChanged();
     }
 
@@ -460,14 +310,12 @@
     {
         if (_currentTemplate == null) return;
 
-        // Map existing AuthenticationSettings to provider settings
         if (_currentTemplate.Settings.ContainsKey("Authority"))
             _providerSettings["Authority"] = _authSettings.Authority ?? string.Empty;
 
         if (_currentTemplate.Settings.ContainsKey("ClientId"))
             _providerSettings["ClientId"] = _authSettings.ClientId ?? string.Empty;
 
-        // Don't populate secret values
         if (_currentTemplate.Settings.ContainsKey("ClientSecret"))
             _providerSettings["ClientSecret"] = string.Empty;
     }
@@ -511,7 +359,6 @@
 
             if (success)
             {
-                // Reload the dashboard config to reflect changes
                 var newConfig = await DashboardClient.GetConfigAsync();
                 if (newConfig is not null)
                 {
@@ -547,11 +394,9 @@
 
         try
         {
-            // Update provider settings from temporary variables
             if(_currentTemplate?.ProviderType != "AzureAD")
                 UpdateProviderSettings();
 
-            // Validate required fields if authentication is being enabled
             if (_authSettings.IsEnabled)
             {
                 if (string.IsNullOrEmpty(_selectedProviderType))
@@ -560,7 +405,6 @@
                     _saveSuccess = false;
                     return;
                 }
-                StateHasChanged(); //TODO: REMOVE AFTER DEBUG
                 if (_currentTemplate != null)
                 {
                     foreach (var setting in _currentTemplate.Settings.Where(s => s.Value.IsRequired))
@@ -576,7 +420,6 @@
                 }
             }
 
-            // Map provider settings back to AuthenticationSettings
             if (_authSettings.IsEnabled)
             {
                 if (_providerSettings.ContainsKey("MetadataAddress"))
