@@ -164,26 +164,47 @@
                             <label for="provider-type">Authentication Provider</label>
                             <InputSelect id="provider-type" class="form-control" @bind-Value="_selectedProviderType" TValue="string">
                                 <option value="">Select a provider type...</option>
-                                @foreach (var template in _providerTemplates)
-                                {
-                                    <option value="@template.ProviderType">@template.Name</option>
-                                }
+                                <option value="AzureAD">Azure AD</option>
+                                <option value="Keycloak">Keycloak</option>
+                                <option value="GenericOAuth">Generic OAuth</option>
                             </InputSelect>
                             @if (!string.IsNullOrEmpty(_selectedProviderType))
                             {
-                                var template = _providerTemplates.FirstOrDefault(t => t.ProviderType == _selectedProviderType);
-                                if (template != null)
+                                if (_selectedProviderType == "GenericOAuth")
                                 {
-                                    <small class="form-text">@template.Description</small>
-                                    @if (_currentTemplate != template)
+                                    <div class="setting-group">
+                                        <label for="well-known-endpoint">Well-Known Endpoint</label>
+                                        <InputText id="well-known-endpoint" class="form-control" @bind-Value="_tempMetadataAddress" />
+                                    </div>
+                                    <div class="setting-group">
+                                        <label for="client-id">Client ID</label>
+                                        <InputText id="client-id" class="form-control" @bind-Value="_tempClientId" />
+                                    </div>
+                                    <div class="setting-group">
+                                        <label for="client-secret">Client Secret</label>
+                                        <InputText id="client-secret" type="password" class="form-control" @bind-Value="_tempClientSecret" />
+                                    </div>
+                                    <div class="setting-group">
+                                        <label for="scopes">Scopes</label>
+                                        <InputText id="scopes" class="form-control" @bind-Value="_tempScopes" placeholder="e.g., openid profile email" />
+                                    </div>
+                                }
+                                else
+                                {
+                                    var template = _providerTemplates.FirstOrDefault(t => t.ProviderType == _selectedProviderType);
+                                    if (template != null)
                                     {
-                                        OnTemplateChanged(template);
+                                        <small class="form-text">@template.Description</small>
+                                        @if (_currentTemplate != template)
+                                        {
+                                            OnTemplateChanged(template);
+                                        }
                                     }
                                 }
                             }
                         </div>
 
-                        @if (_currentTemplate != null)
+                        @if (_currentTemplate != null && _selectedProviderType != "GenericOAuth")
                         {
                             <div class="provider-config-section">
                                 <h5><i class="fas fa-cog"></i> Provider Configuration</h5>
@@ -310,10 +331,15 @@
     private AuthenticationProviderTemplate? _currentTemplate;
     private Dictionary<string, string> _providerSettings = new();
 
+    private string _tempMetadataAddress = string.Empty;
+    private string _tempClientId = string.Empty;
+    private string _tempClientSecret = string.Empty;
+    private string _tempScopes = string.Empty;
+
     protected override async Task OnInitializedAsync()
     {
         Logger.LogInformation("OnInitializedAsync started");
-
+        _currentTemplate = new();
         // Load current dashboard settings
         if (DashboardState.Config is not null)
         {
@@ -437,10 +463,10 @@
         // Map existing AuthenticationSettings to provider settings
         if (_currentTemplate.Settings.ContainsKey("Authority"))
             _providerSettings["Authority"] = _authSettings.Authority ?? string.Empty;
-        
+
         if (_currentTemplate.Settings.ContainsKey("ClientId"))
             _providerSettings["ClientId"] = _authSettings.ClientId ?? string.Empty;
-        
+
         // Don't populate secret values
         if (_currentTemplate.Settings.ContainsKey("ClientSecret"))
             _providerSettings["ClientSecret"] = string.Empty;
@@ -482,7 +508,7 @@
             };
 
             var success = await DashboardClient.UpdateAsync(DashboardState.Config.Id, updateDto);
-            
+
             if (success)
             {
                 // Reload the dashboard config to reflect changes
@@ -491,7 +517,7 @@
                 {
                     DashboardState.SetConfig(newConfig);
                 }
-                
+
                 _saveMessage = "Dashboard settings saved successfully!";
                 _saveSuccess = true;
             }
@@ -521,6 +547,10 @@
 
         try
         {
+            // Update provider settings from temporary variables
+            if(_currentTemplate?.ProviderType != "AzureAD")
+                UpdateProviderSettings();
+
             // Validate required fields if authentication is being enabled
             if (_authSettings.IsEnabled)
             {
@@ -530,7 +560,7 @@
                     _saveSuccess = false;
                     return;
                 }
-
+                StateHasChanged(); //TODO: REMOVE AFTER DEBUG
                 if (_currentTemplate != null)
                 {
                     foreach (var setting in _currentTemplate.Settings.Where(s => s.Value.IsRequired))
@@ -547,20 +577,21 @@
             }
 
             // Map provider settings back to AuthenticationSettings
-            if (_currentTemplate != null && _authSettings.IsEnabled)
+            if (_authSettings.IsEnabled)
             {
-                if (_providerSettings.ContainsKey("Authority"))
-                    _authSettings.Authority = _providerSettings["Authority"];
-                
+                if (_providerSettings.ContainsKey("MetadataAddress"))
+                    _authSettings.Authority = _providerSettings["MetadataAddress"];
+
                 if (_providerSettings.ContainsKey("ClientId"))
                     _authSettings.ClientId = _providerSettings["ClientId"];
-                
+
                 if (_providerSettings.ContainsKey("TenantId"))
                     _authSettings.TenantId = _providerSettings["TenantId"];
-                
+
                 if (_providerSettings.ContainsKey("ClientSecret") && !string.IsNullOrWhiteSpace(_providerSettings["ClientSecret"]))
                     _authSettings.ClientSecret = _providerSettings["ClientSecret"];
-
+                if (_providerSettings.ContainsKey("Scopes") && !string.IsNullOrWhiteSpace(_providerSettings["Scopes"]))
+                    _authSettings.Scopes = _providerSettings["Scopes"];
                 // Auto-generate Authority for Azure AD if not provided
                 if (_selectedProviderType == "AzureAD" && 
                     string.IsNullOrWhiteSpace(_authSettings.Authority) && 
@@ -569,7 +600,8 @@
                     _authSettings.Authority = $"https://login.microsoftonline.com/{_authSettings.TenantId}";
                 }
             }
-
+            if (string.IsNullOrEmpty(_authSettings.ClientId) || string.IsNullOrEmpty(_authSettings.Authority) || string.IsNullOrEmpty(_authSettings.ClientSecret))
+                throw new Exception("Client Configuration was not passed correctly.");
             var success = await DashboardClient.Settings.Auth.UpdateAsync(_authSettings);
             
             if (success)
@@ -616,6 +648,14 @@
     {
         _currentTemplate = template;
         OnValueChanged(_selectedProviderType).ConfigureAwait(false);
+    }
+
+    private void UpdateProviderSettings()
+    {
+        _providerSettings["MetadataAddress"] = _tempMetadataAddress;
+        _providerSettings["ClientId"] = _tempClientId;
+        _providerSettings["ClientSecret"] = _tempClientSecret;
+        _providerSettings["Scopes"] = _tempScopes;
     }
 
     public class DashboardSettingsModel

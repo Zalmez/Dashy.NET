@@ -1,12 +1,15 @@
+using BlazorSortable;
+using Dashy.Net.Shared.Security;
 using Dashy.Net.Web;
 using Dashy.Net.Web.Clients;
 using Dashy.Net.Web.Components;
+using Dashy.Net.Web.Helpers;
 using Dashy.Net.Web.Services;
-using BlazorSortable;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using Dashy.Net.Web.Helpers;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using System.IdentityModel.Tokens.Jwt;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,9 +45,9 @@ builder.Services.AddHttpClient("ApiService", opts =>
 });
 builder.Services.AddScoped<AuthenticationSettingsProvider>();
 builder.Services.AddScoped<EventSubscriptionManager>();
-
 #endregion
 
+Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true; //TODO: REMOVE THIS
 var authConfigured = false;
 try
 {
@@ -72,23 +75,23 @@ try
         {
             options.Authority = settings.Authority;
             options.ClientId = settings.ClientId;
-            options.ResponseType = "code";
+            options.ClientSecret = settings.ClientSecret;
             options.SaveTokens = true;
             options.GetClaimsFromUserInfoEndpoint = true;
-            options.Scope.Clear();
-            options.Scope.Add("openid");
-            options.Scope.Add("profile");
-            options.Scope.Add("email");
-            
-            // Map roles claim
-            options.Events = new OpenIdConnectEvents
+            options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+            options.ResponseType = OpenIdConnectResponseType.Code;
+
+            // Add scopes
+            if (!string.IsNullOrEmpty(settings.Scopes))
             {
-                OnTokenValidated = context =>
+                foreach (var _scope in settings.Scopes.Split(" "))
                 {
-                    // Add any custom claims processing here
-                    return Task.CompletedTask;
+                    options.Scope.Add(_scope.ToLower());
                 }
-            };
+            }
+
+            options.MapInboundClaims = false;
+            options.TokenValidationParameters.NameClaimType = JwtRegisteredClaimNames.Name;
         });
         
         authConfigured = true;

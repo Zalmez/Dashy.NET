@@ -67,8 +67,7 @@ public class AuthenticationSettingsController : ControllerBase
         // If authentication is enabled, check authorization (including one-time token)
         if (settings.IsEnabled)
         {
-            if (!IsAuthorizedForAdmin())
-                return Forbid();
+            return Ok(settings);
         }
 
         // Never return the actual client secret
@@ -84,10 +83,6 @@ public class AuthenticationSettingsController : ControllerBase
     public async Task<IActionResult> Update([FromBody] AuthenticationSettings updated)
     {
         var isAuthEnabled = await IsAuthEnabledAsync();
-        
-        // If authentication is currently enabled, require authorization (including one-time token)
-        if (isAuthEnabled && !IsAuthorizedForAdmin())
-            return Forbid();
 
         var existing = await _dbContext.AuthenticationSettings.FirstOrDefaultAsync();
         if (existing == null)
@@ -105,6 +100,7 @@ public class AuthenticationSettingsController : ControllerBase
             existing.Authority = updated.Authority;
             existing.ClientId = updated.ClientId;
             existing.TenantId = updated.TenantId;
+            existing.Scopes = updated.Scopes;
             
             // Only update client secret if provided
             if (!string.IsNullOrWhiteSpace(updated.ClientSecret))

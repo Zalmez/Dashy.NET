@@ -1,6 +1,7 @@
 using Dashy.Net.Shared.Data;
 using Dashy.Net.Shared.Models;
 using Dashy.Net.Shared.Security;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
 namespace Dashy.Net.ApiService.Services;
@@ -19,17 +20,25 @@ public class AuthenticationSettingsProvider
 
     public async Task<AuthenticationSettings?> GetSettingsAsync()
     {
-        if (_cachedSettings != null && DateTime.UtcNow - _lastLoad < _cacheDuration)
-            return _cachedSettings;
-
-        var settings = await _dbContext.AuthenticationSettings.AsNoTracking().FirstOrDefaultAsync();
-        if (settings != null && !string.IsNullOrEmpty(settings.ClientSecret))
+        try
         {
-            settings.ClientSecret = AesEncryptionService.Decrypt(settings.ClientSecret);
+            if (_cachedSettings != null && DateTime.UtcNow - _lastLoad < _cacheDuration)
+                return _cachedSettings;
+
+            var settings = await _dbContext.AuthenticationSettings.AsNoTracking().FirstOrDefaultAsync();
+            if (settings != null && !string.IsNullOrEmpty(settings.ClientSecret))
+            {
+                settings.ClientSecret = AesEncryptionService.Decrypt(settings.ClientSecret);
+            }
+            _cachedSettings = settings;
+            _lastLoad = DateTime.UtcNow;
+            return settings;
+
         }
-        _cachedSettings = settings;
-        _lastLoad = DateTime.UtcNow;
-        return settings;
+        catch (Exception)
+        {
+            return new AuthenticationSettings { IsEnabled = false };
+        }
     }
 
     public void ClearCache()

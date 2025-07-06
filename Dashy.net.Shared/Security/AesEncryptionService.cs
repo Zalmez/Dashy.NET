@@ -14,20 +14,35 @@ public static class AesEncryptionService
     {
         var env = Environment.GetEnvironmentVariable("DASHY_AES_KEY");
         if (!string.IsNullOrEmpty(env) && env.Length == 32)
+        {
+            Console.WriteLine("DASHY_AES_KEY successfully retrieved.");
             return Encoding.UTF8.GetBytes(env);
+        }
+        Console.WriteLine("DASHY_AES_KEY is missing or invalid.");
         throw new InvalidOperationException("DASHY_AES_KEY environment variable must be set to a 32-character string for AES-256 encryption.");
     }
+
     private static byte[] GetIV()
     {
         var env = Environment.GetEnvironmentVariable("DASHY_AES_IV");
         if (!string.IsNullOrEmpty(env) && env.Length == 16)
+        {
+            Console.WriteLine("DASHY_AES_IV successfully retrieved.");
             return Encoding.UTF8.GetBytes(env);
+        }
+        Console.WriteLine("DASHY_AES_IV is missing or invalid.");
         throw new InvalidOperationException("DASHY_AES_IV environment variable must be set to a 16-character string for AES encryption.");
     }
 
     public static string Encrypt(string plainText)
     {
         if (string.IsNullOrEmpty(plainText)) return string.Empty;
+
+        if (Key == null || IV == null)
+        {
+            throw new InvalidOperationException("Encryption key or IV is not initialized.");
+        }
+
         using var aes = Aes.Create();
         aes.Key = Key;
         aes.IV = IV;
@@ -44,6 +59,12 @@ public static class AesEncryptionService
     public static string Decrypt(string cipherText)
     {
         if (string.IsNullOrEmpty(cipherText)) return string.Empty;
+
+        if (Key == null || IV == null)
+        {
+            throw new InvalidOperationException("Decryption key or IV is not initialized.");
+        }
+
         using var aes = Aes.Create();
         aes.Key = Key;
         aes.IV = IV;
