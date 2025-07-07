@@ -27,7 +27,7 @@ namespace Dashy.Net.Web.Helpers
                 catch (Exception ex)
                 {
                     // Log the exception if needed
-                    Console.WriteLine($"Error during event unsubscription: {ex.Message}");
+                    _logger.LogError(ex, "Error during event unsubscription.");
                 }
             }
 
