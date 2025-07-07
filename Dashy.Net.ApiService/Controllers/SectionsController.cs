@@ -3,14 +3,19 @@ using Dashy.Net.Shared.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using Microsoft.AspNetCore.Http;
 
 namespace Dashy.Net.ApiService.Controllers;
 
 [ApiController]
 [Route("api/sections")]
+[Produces("application/json")]
 public class SectionsController(AppDbContext dbContext, ILogger<SectionsController> logger) : ControllerBase
 {
     [HttpPost]
+    [Consumes("application/json")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateSection([FromBody] CreateSectionDto sectionDto)
     {
         var dashboard = await dbContext.Dashboards.FindAsync(sectionDto.DashboardId);
@@ -37,7 +42,10 @@ public class SectionsController(AppDbContext dbContext, ILogger<SectionsControll
 
         return CreatedAtAction(nameof(GetSection), new { id = newSection.Id }, sectionVm);
     }
+
     [HttpGet("{id}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetSection(int id)
     {
         var section = await dbContext.Sections
@@ -52,6 +60,9 @@ public class SectionsController(AppDbContext dbContext, ILogger<SectionsControll
     }
 
     [HttpPut("{id}")]
+    [Consumes("application/json")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateSection(int id, [FromBody] UpdateSectionDto sectionDto)
     {
         var sectionToUpdate = await dbContext.Sections.FindAsync(id);
@@ -69,6 +80,8 @@ public class SectionsController(AppDbContext dbContext, ILogger<SectionsControll
     }
 
     [HttpPost("reorder")]
+    [Consumes("application/json")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> ReorderSections([FromBody] ReorderSectionsDto dto)
     {
         var sectionsToReorder = await dbContext.Sections
@@ -90,6 +103,8 @@ public class SectionsController(AppDbContext dbContext, ILogger<SectionsControll
     }
 
     [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteSection(int id)
     {
         var section = await dbContext.Sections
@@ -107,5 +122,4 @@ public class SectionsController(AppDbContext dbContext, ILogger<SectionsControll
         logger.LogInformation("Successfully deleted section '{SectionName}' with ID: {SectionId}", section.Name, id);
         return NoContent();
     }
-
 }

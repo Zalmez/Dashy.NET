@@ -1,6 +1,7 @@
 ﻿@using Dashy.Net.Web.Clients
 @using Dashy.Net.Web.Components.Editors
 @using Dashy.Net.Web.Components.Shared
+@using Dashy.Net.Web.Helpers
 @using Dashy.Net.Web.Services
 @using Dashy.Net.Shared.Models
 @inherits LayoutComponentBase
@@ -9,8 +10,11 @@
 @inject DashboardStateService DashboardState
 @inject ViewOptionsService ViewOptions
 @inject DashboardClient DashboardClient
+@inject AuthenticationStateProvider AuthStateProvider
+@inject EventSubscriptionManager SubscriptionManager
+@using Microsoft.AspNetCore.Components.Authorization
 @implements IDisposable
-
+<CascadingAuthenticationState>
 <div>
     <header class="main-header">
         <div class="header-title-section">
@@ -37,6 +41,13 @@
                         }
                     </div>
                 </div>
+            }
+            @if(_isAuthConfigured){
+                <AuthorizeView>
+                    <NotAuthorized>
+                        <button class="btn btn-outline-primary" @onclick="Login">Login</button>
+                    </NotAuthorized>
+                </AuthorizeView>
             }
         </div>
     </header>
@@ -92,13 +103,17 @@
         }
     </Modal>
 
+    <Modal Title="Settings" IsOpen="@_isSettingsModalOpen" OnClose="CloseSettingsModal">
+        <SettingsModal OnClose="CloseSettingsModal" />
+    </Modal>
+
     <div class="fab-container @(_isFabMenuOpen ? "open" : "")">
         <div class="fab-menu">
-            <button class="fab-menu-item" disabled>
+            <button class="fab-menu-item" @onclick="OpenSettingsModal">
                 <i class="fas fa-user-cog"></i>
                 <span class="fab-menu-item-label">User Settings</span>
             </button>
-            <button class="fab-menu-item" disabled>
+            <button class="fab-menu-item" @onclick="OpenSettingsModal">
                 <i class="fas fa-palette"></i>
                 <span class="fab-menu-item-label">App Settings</span>
             </button>
@@ -114,28 +129,56 @@
 
     <footer class="dashboard-footer" style="position: fixed; left:0;bottom:0;width:100%;text-align:center;">
         <div>
-            <strong>Version:</strong> 0.1.0 &nbsp;|&nbsp;
+            <strong>Version:</strong> 0.1.1 &nbsp;|&nbsp;
             <strong>License:</strong> GNU Affero General Public License &nbsp;|&nbsp;
             <strong>Disclaimer:</strong> This is a pre-release version. Features and functionality may change or be missing.
         </div>
     </footer>
 </div>
-
+</CascadingAuthenticationState>
 @code {
     private bool isLightMode = false;
 
+    private bool _isAuthConfigured = false;
     private bool _isButtonManagerOpen = false;
     private bool _isButtonEditorOpen = false;
     private string _buttonEditorTitle = "";
     private HeaderButtonEditor.ButtonEditModel? _buttonToEdit;
     private int _editingButtonId = 0;
-
+    
     private bool _isFabMenuOpen = false;
+    private bool _isSettingsModalOpen = false;
 
     private bool _disposed = false;
 
+    protected override async Task OnInitializedAsync()
+    {
+        ThemeService.OnThemeChanged += OnThemeChangedHandler;
+        DashboardState.OnConfigLoaded += StateHasChanged;
+        ViewOptions.OnChange += HandleOptionsChanged;
+
+        // Check if authentication is configured
+        _isAuthConfigured = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_authority")) &&
+                                !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_clientid")) &&
+                                !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_clientsecret"));
+
+        if (_isAuthConfigured)
+        {
+            // Force login if authentication is enabled and user is not authenticated
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            if (!(authState.User.Identity?.IsAuthenticated ?? false))
+            {
+                NavigationManager.NavigateTo("authentication/login", true);
+            }
+        }
+    }
+
     protected override void OnInitialized()
     {
+        SubscriptionManager.AddSubscription(() => ThemeService.OnThemeChanged -= OnThemeChangedHandler);
+        SubscriptionManager.AddSubscription(() => DashboardState.OnConfigLoaded -= StateHasChanged);
+        SubscriptionManager.AddSubscription(() => ViewOptions.OnChange -= HandleOptionsChanged);
+
         ThemeService.OnThemeChanged += OnThemeChangedHandler;
         DashboardState.OnConfigLoaded += StateHasChanged;
         ViewOptions.OnChange += HandleOptionsChanged;
@@ -166,6 +209,16 @@
 
     private void OpenButtonManagerModal() => _isButtonManagerOpen = true;
     private void CloseButtonManagerModal() => _isButtonManagerOpen = false;
+
+    private void OpenSettingsModal()
+    {
+        Console.WriteLine("OpenSettingsModal triggered");
+        Console.WriteLine($"_isSettingsModalOpen: {_isSettingsModalOpen}");
+        _isSettingsModalOpen = true;
+        _isFabMenuOpen = false;
+    }
+
+    private void CloseSettingsModal() => _isSettingsModalOpen = false;
 
     private void OpenAddButtonEditorModal()
     {
@@ -286,8 +339,21 @@
         _isFabMenuOpen = false;
     }
 
+    private void Login()
+    {
+        NavigationManager.NavigateTo("authentication/login", true);
+    }
+
+    private void Logout()
+    {
+        NavigationManager.NavigateTo("authentication/logout", true);
+    }
+
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+
     public void Dispose()
     {
+        SubscriptionManager.Dispose();
         _disposed = true;
         ThemeService.OnThemeChanged -= OnThemeChangedHandler;
         DashboardState.OnConfigLoaded -= StateHasChanged;

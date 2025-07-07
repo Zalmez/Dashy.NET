@@ -1,23 +1,27 @@
 ﻿@using Dashy.Net.Shared.Models
 @using BlazorSortable
+@using Dashy.Net.Web.Components.Shared
 
 <div class="button-manager">
     <p>Drag and drop to reorder header buttons.</p>
-    <SortableList Items="Buttons" OnUpdate="args => HandleReorder((args.oldIndex, args.newIndex))" Context="button">
-        <div class="managed-button-item" @key="button">
-            <span>
-                @if (!string.IsNullOrWhiteSpace(button.Icon))
-                {
-                    <i class="@button.Icon"></i>
-                }
-                @button.Text
-            </span>
-            <div class="item-controls">
-                <button class="edit-btn" @onclick="() => OnEdit.InvokeAsync(button)"><i class="fas fa-pencil-alt"></i></button>
-                <button class="delete-btn" @onclick="() => OnDelete.InvokeAsync(button)"><i class="fas fa-trash-alt"></i></button>
+    <Dashy.Net.Web.Components.Shared.SortableList TItem="HeaderButtonVm" Items="Buttons" OnUpdate="args => HandleReorder((args.oldIndex, args.newIndex))">
+        @foreach (var button in Buttons)
+        {
+            <div class="managed-button-item" @key="button">
+                <span>
+                    @if (!string.IsNullOrWhiteSpace(button.Icon))
+                    {
+                        <i class="@button.Icon"></i>
+                    }
+                    @button.Text
+                </span>
+                <div class="item-controls">
+                    <button class="edit-btn" @onclick="() => OnEdit.InvokeAsync(button)"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="delete-btn" @onclick="() => OnDelete.InvokeAsync(button)"><i class="fas fa-trash-alt"></i></button>
+                </div>
             </div>
-        </div>
-    </SortableList>
+        }
+    </Dashy.Net.Web.Components.Shared.SortableList>
 
     <div class="form-actions mt-3">
         <button class="btn btn-primary" @onclick="OnAdd">

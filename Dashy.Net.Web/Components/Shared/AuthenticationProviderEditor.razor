@@ -1,0 +1,24 @@
+@using Dashy.Net.Shared.Models
+@using Microsoft.AspNetCore.Components.Forms
+@inject DashboardClient DashboardClient
+
+<div class="provider-form">
+    <h4>Provider Editor</h4>
+    <p>Provider editor functionality is being implemented...</p>
+    
+    <div class="form-actions">
+        <button type="button" class="btn btn-secondary" @onclick="OnCancel">Cancel</button>
+        <button type="button" class="btn btn-primary" @onclick="HandleSave">Save</button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public AuthenticationProviderVm? Provider { get; set; }
+    [Parameter] public EventCallback<bool> OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private async Task HandleSave()
+    {
+        await OnSave.InvokeAsync(true);
+    }
+}

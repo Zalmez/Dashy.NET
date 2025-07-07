@@ -3,11 +3,13 @@ using Dashy.Net.Shared.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using Microsoft.AspNetCore.Http;
 
 namespace Dashy.Net.ApiService.Controllers;
 
 [ApiController]
 [Route("api/dashboard")]
+[Produces("application/json")]
 public class DashboardController(AppDbContext dbContext, ILogger<DashboardController> logger) : ControllerBase
 {
     private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
@@ -17,6 +19,8 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
     /// This is the primary endpoint for the frontend to load its initial state.
     /// </summary>
     [HttpGet("config")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetConfig()
     {
         // For now, we get the first dashboard. In a multi-dashboard setup, this would take an ID.
@@ -66,9 +70,43 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
     }
 
     /// <summary>
+    /// Updates the dashboard's basic settings like title and subtitle.
+    /// </summary>
+    [HttpPut("{id:int}")]
+    [Consumes("application/json")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> UpdateDashboard(int id, [FromBody] UpdateDashboardDto updateDto)
+    {
+        var dashboard = await dbContext.Dashboards.FindAsync(id);
+        if (dashboard is null)
+        {
+            return NotFound();
+        }
+
+        dashboard.Title = updateDto.Title;
+        dashboard.Subtitle = updateDto.Subtitle;
+
+        try
+        {
+            await dbContext.SaveChangesAsync();
+            logger.LogInformation("Dashboard {DashboardId} updated successfully", id);
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to update dashboard {DashboardId}", id);
+            return Problem("Failed to update dashboard", statusCode: 500);
+        }
+    }
+
+    /// <summary>
     /// A temporary developer utility to seed an empty database with sample data.
     /// </summary>
     [HttpPost("seed")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> SeedData()
     {
         try

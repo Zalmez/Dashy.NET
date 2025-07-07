@@ -3,6 +3,7 @@ using System;
 using Dashy.Net.Shared.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Dashy.Net.Shared.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250703204352_AddMultiProviderAuthentication")]
+    partial class AddMultiProviderAuthentication
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -60,10 +63,12 @@ namespace Dashy.Net.Shared.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
+                    b.HasIndex("ProviderType", "IsDefault");
+
                     b.ToTable("AuthenticationProviders");
                 });
 
-            modelBuilder.Entity("Dashy.Net.Shared.Models.AuthenticationProviderSettings", b =>
+            modelBuilder.Entity("Dashy.Net.Shared.Models.AuthenticationProviderSetting", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -116,9 +121,6 @@ namespace Dashy.Net.Shared.Migrations
 
                     b.Property<bool>("IsEnabled")
                         .HasColumnType("boolean");
-
-                    b.Property<string>("Scopes")
-                        .HasColumnType("text");
 
                     b.Property<string>("TenantId")
                         .HasColumnType("text");
@@ -248,7 +250,7 @@ namespace Dashy.Net.Shared.Migrations
                     b.ToTable("HeaderButtons");
                 });
 
-            modelBuilder.Entity("Dashy.Net.Shared.Models.AuthenticationProviderSettings", b =>
+            modelBuilder.Entity("Dashy.Net.Shared.Models.AuthenticationProviderSetting", b =>
                 {
                     b.HasOne("Dashy.Net.Shared.Models.AuthenticationProvider", "AuthenticationProvider")
                         .WithMany("Settings")

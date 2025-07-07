@@ -13,6 +13,7 @@ public class DashboardClient
     public ItemsClient Items { get; }
     public SectionsClient Sections { get; }
     public HeaderButtonsClient HeaderButtons { get; }
+    public SettingsClient Settings { get; }
 
     public DashboardClient(HttpClient httpClient, ILoggerFactory loggerFactory)
     {
@@ -22,6 +23,7 @@ public class DashboardClient
         Items = new ItemsClient(httpClient, loggerFactory.CreateLogger<ItemsClient>());
         Sections = new SectionsClient(httpClient, loggerFactory.CreateLogger<SectionsClient>());
         HeaderButtons = new HeaderButtonsClient(httpClient, loggerFactory.CreateLogger<HeaderButtonsClient>());
+        Settings = new SettingsClient(httpClient, loggerFactory);
     }
     public async Task<DashboardConfigVm?> GetConfigAsync()
     {
@@ -88,6 +90,20 @@ public class DashboardClient
         );
     }
 
+    public async Task<bool> UpdateAsync(int id, UpdateDashboardDto updateDto)
+    {
+        try
+        {
+            var response = await _httpClient.PutAsJsonAsync($"api/dashboard/{id}", updateDto);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update dashboard {DashboardId}", id);
+            return false;
+        }
+    }
+
     public async Task<bool> SeedDashboardAsync()
     {
         try
@@ -102,3 +118,87 @@ public class DashboardClient
         }
     }
 }
+
+
+
+public class ProvidersClient
+{
+    private readonly HttpClient _httpClient;
+    private readonly ILogger<ProvidersClient> _logger;
+
+    public ProvidersClient(HttpClient httpClient, ILogger<ProvidersClient> logger)
+    {
+        _httpClient = httpClient;
+        _logger = logger;
+    }
+
+    public async Task<IEnumerable<AuthenticationProviderVm>> GetAllAsync()
+    {
+        try
+        {
+            var providers = await _httpClient.GetFromJsonAsync<IEnumerable<AuthenticationProviderVm>>("api/auth-providers");
+            return providers ?? Enumerable.Empty<AuthenticationProviderVm>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get authentication providers");
+            return Enumerable.Empty<AuthenticationProviderVm>();
+        }
+    }
+
+    public async Task<AuthenticationProviderVm?> GetAsync(int id)
+    {
+        try
+        {
+            return await _httpClient.GetFromJsonAsync<AuthenticationProviderVm>($"api/auth-providers/{id}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get authentication provider {Id}", id);
+            return null;
+        }
+    }
+
+    public async Task<bool> CreateAsync(CreateAuthenticationProviderDto createDto)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync("api/auth-providers", createDto);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create authentication provider");
+            return false;
+        }
+    }
+
+    public async Task<bool> UpdateAsync(int id, UpdateAuthenticationProviderDto updateDto)
+    {
+        try
+        {
+            var response = await _httpClient.PutAsJsonAsync($"api/auth-providers/{id}", updateDto);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update authentication provider {Id}", id);
+            return false;
+        }
+    }
+
+    public async Task<bool> DeleteAsync(int id)
+    {
+        try
+        {
+            var response = await _httpClient.DeleteAsync($"api/auth-providers/{id}");
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete authentication provider {Id}", id);
+            return false;
+        }
+    }
+}
+

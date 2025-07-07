@@ -1,0 +1,22 @@
+.sortable-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.sortable-item {
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #f9f9f9;
+    cursor: grab;
+}
+
+    .sortable-item:active {
+        cursor: grabbing;
+    }
+
+    .sortable-item.drag-over {
+        border-color: #007bff;
+        background-color: #e9f5ff;
+    }

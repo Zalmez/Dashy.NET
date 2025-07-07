@@ -99,6 +99,49 @@ public class UpdateHeaderButtonDto
 }
 public record ReorderHeaderButtonsDto(List<int> OrderedButtonIds);
 
+public class UpdateDashboardDto
+{
+    [Required(AllowEmptyStrings = false)]
+    [StringLength(200)]
+    public string Title { get; set; } = string.Empty;
+    
+    [StringLength(500)]
+    public string? Subtitle { get; set; }
+}
+
+// --- Authentication Provider DTOs ---
+
+public class CreateAuthenticationProviderDto
+{
+    [Required(AllowEmptyStrings = false)]
+    [StringLength(100)]
+    public string Name { get; set; } = string.Empty;
+    [Required(AllowEmptyStrings = false)]
+    [StringLength(50)]
+    public string ProviderType { get; set; } = string.Empty;
+    public bool IsEnabled { get; set; } = false;
+    public bool IsDefault { get; set; } = false;
+    public int Priority { get; set; } = 0;
+    public Dictionary<string, AuthenticationProviderSettingDto> Settings { get; set; } = new();
+}
+
+public class UpdateAuthenticationProviderDto
+{
+    [Required(AllowEmptyStrings = false)]
+    [StringLength(100)]
+    public string Name { get; set; } = string.Empty;
+    public bool IsEnabled { get; set; } = false;
+    public bool IsDefault { get; set; } = false;
+    public int Priority { get; set; } = 0;
+    public Dictionary<string, AuthenticationProviderSettingDto> Settings { get; set; } = new();
+}
+
+public class AuthenticationProviderSettingDto
+{
+    public string? Value { get; set; }
+    public bool IsEncrypted { get; set; } = false;
+    public bool IsRequired { get; set; } = false;
+}
 
 // --- ViewModels (Models for the Blazor UI) ---
 public record DashboardConfigVm(int Id, string Title, string? Subtitle, List<SectionVm> Sections, List<HeaderButtonVm> HeaderButtons);
@@ -112,3 +155,40 @@ public record ItemVm(
     int SectionId,
     Dictionary<string, object>? Options
 );
+
+public record AuthenticationProviderVm(
+    int Id,
+    string Name,
+    string ProviderType,
+    bool IsEnabled,
+    bool IsDefault,
+    int Priority,
+    Dictionary<string, AuthenticationProviderSettingVm> Settings
+);
+
+public record AuthenticationProviderSettingVm(
+    string? Value,
+    bool IsEncrypted,
+    bool IsRequired
+);
+
+// --- Authentication Provider Templates ---
+public class AuthenticationProviderTemplate
+{
+    public string Name { get; set; } = string.Empty;
+    public string ProviderType { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public Dictionary<string, AuthenticationProviderSettingTemplate> Settings { get; set; } = new();
+}
+
+public class AuthenticationProviderSettingTemplate
+{
+    public string DisplayName { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string? DefaultValue { get; set; }
+    public bool IsRequired { get; set; } = false;
+    public bool IsEncrypted { get; set; } = false;
+    public bool IsSecret { get; set; } = false;
+    public string InputType { get; set; } = "text"; // text, password, url, select
+    public List<string>? Options { get; set; } // For select inputs
+}
