@@ -23,7 +23,6 @@ builder.Services.AddProblemDetails();
 builder.Services.AddSingleton<OneTimeTokenService>();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
 builder.Services.AddHttpClient("WeatherApi", client =>
 {
     client.BaseAddress = new Uri("https://api.open-meteo.com/");
@@ -67,11 +66,8 @@ if (!string.IsNullOrWhiteSpace(authAuthority) && !string.IsNullOrWhiteSpace(auth
     });
 }
 
+builder.Services.AddOpenApi();
 var app = builder.Build();
-
-// Initialize the one-time token service (generates first token and logs it)
-var oneTimeTokenService = app.Services.GetRequiredService<OneTimeTokenService>();
-// Token is generated in the constructor and logged automatically
 
 // Configure the HTTP request pipeline.
 app.UseExceptionHandler();

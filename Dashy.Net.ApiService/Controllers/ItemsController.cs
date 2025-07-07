@@ -3,16 +3,21 @@ using Dashy.Net.Shared.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using Microsoft.AspNetCore.Http;
 
 namespace Dashy.Net.ApiService.Controllers;
 
 [ApiController]
 [Route("api/items")]
+[Produces("application/json")]
 public class ItemsController(AppDbContext dbContext, ILogger<ItemsController> logger) : ControllerBase
 {
     private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
     [HttpPost]
+    [Consumes("application/json")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateItem([FromBody] CreateItemDto itemDto)
     {
         var section = await dbContext.Sections.FindAsync(itemDto.SectionId);
@@ -33,6 +38,9 @@ public class ItemsController(AppDbContext dbContext, ILogger<ItemsController> lo
     }
 
     [HttpPut("{id}")]
+    [Consumes("application/json")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateItem(int id, [FromBody] UpdateItemDto itemDto)
     {
         var item = await dbContext.Items.FindAsync(id);
@@ -49,6 +57,8 @@ public class ItemsController(AppDbContext dbContext, ILogger<ItemsController> lo
     }
 
     [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteItem(int id)
     {
         var item = await dbContext.Items.FindAsync(id);
