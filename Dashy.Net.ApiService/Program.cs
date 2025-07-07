@@ -19,9 +19,6 @@ builder.Services.AddNpgsql<AppDbContext>(cnnectionString);
 // Add services to the container.
 builder.Services.AddProblemDetails();
 
-// Register the one-time token service for secure authentication configuration access
-builder.Services.AddSingleton<OneTimeTokenService>();
-
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddHttpClient("WeatherApi", client =>
 {
