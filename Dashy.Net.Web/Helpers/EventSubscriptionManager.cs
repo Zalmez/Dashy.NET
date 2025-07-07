@@ -1,12 +1,19 @@
 using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
 
 namespace Dashy.Net.Web.Helpers;
 
-public class EventSubscriptionManager(Logger<EventSubscriptionManager> logger) : IDisposable
+public class EventSubscriptionManager : IDisposable
 {
+    private readonly ILogger<EventSubscriptionManager> _logger;
     private readonly List<Action> _unsubscriptions = new();
     private bool _isDisposed;
+
+    public EventSubscriptionManager(ILogger<EventSubscriptionManager> logger)
+    {
+        _logger = logger;
+    }
 
     public void AddSubscription(Action unsubscribeAction)
     {
@@ -26,8 +33,7 @@ public class EventSubscriptionManager(Logger<EventSubscriptionManager> logger) :
             }
             catch (Exception ex)
             {
-                // Log the exception if needed
-                logger.LogError(ex, "Error during event unsubscription.");
+                _logger.LogError(ex, "Error during event unsubscription.");
             }
         }
 

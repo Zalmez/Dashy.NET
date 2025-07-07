@@ -42,7 +42,7 @@ builder.Services.AddHttpClient("ApiService", opts =>
 {
     opts.BaseAddress = new("https+http://apiservice");
 });
-builder.Services.AddScoped<EventSubscriptionManager>();
+builder.Services.AddTransient<EventSubscriptionManager>();
 #endregion
 
 var authAuthority = Environment.GetEnvironmentVariable("auth_authority");
