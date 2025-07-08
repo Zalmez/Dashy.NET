@@ -7,7 +7,6 @@
 @inject WidgetRegistryService WidgetRegistry
 @inject FileStorageService FileStorageService
 
-
 <EditForm Model="EditModel" OnValidSubmit="HandleValidSubmit">
     <DataAnnotationsValidator />
 
@@ -46,7 +45,6 @@
     <hr />
     <p class="subtle-text" style="margin-bottom: 1rem;">Widget-Specific Options:</p>
 
-    @* This switch statement will now react dynamically to the dropdown selection *@
     @if(EditModel.Widget is null)
     {
         <p class="subtle-text">Please select a widget type to see options.</p>
@@ -74,11 +72,41 @@
                 break;
 
             case "clock":
-                <p class="subtle-text">This widget has no specific options to configure.</p>
+                <div class="form-group">
+                    <label for="timezone">Timezone</label>
+                    <InputText id="timezone" class="form-control" @bind-Value="EditModel.Timezone" />
+                </div>
+                <div class="form-group">
+                    <label for="time-format">Time Format</label>
+                    <InputSelect id="time-format" class="form-control" @bind-Value="EditModel.TimeFormat">
+                        <option value="24-hour">24-Hour</option>
+                        <option value="12-hour">12-Hour</option>
+                    </InputSelect>
+                </div>
                 break;
+
             case "weather":
-                <WeatherWidgetOptionsEditor EditModel="EditModel"/>
+                <div class="form-group">
+                    <label for="location-name">Location Name</label>
+                    <InputText id="location-name" class="form-control" @bind-Value="EditModel.LocationName" />
+                </div>
+                <div class="form-group">
+                    <label for="latitude">Latitude</label>
+                    <InputText id="latitude" class="form-control" @bind-Value="EditModel.Latitude" />
+                </div>
+                <div class="form-group">
+                    <label for="longitude">Longitude</label>
+                    <InputText id="longitude" class="form-control" @bind-Value="EditModel.Longitude" />
+                </div>
+                <div class="form-group">
+                    <label for="unit">Unit</label>
+                    <InputSelect id="unit" class="form-control" @bind-Value="EditModel.Unit">
+                        <option value="celsius">Celsius</option>
+                        <option value="fahrenheit">Fahrenheit</option>
+                    </InputSelect>
+                </div>
                 break;
+
             default:
                 <p class="subtle-text">Unknown widget type. No specific options available.</p>
                 break;
@@ -141,6 +169,48 @@
 
     private async Task HandleValidSubmit()
     {
+        EditModel.Options = new Dictionary<string, object>();
+
+        switch (EditModel.Widget)
+        {
+            case "static-link":
+                if (!string.IsNullOrEmpty(EditModel.Url))
+                {
+                    EditModel.Options["url"] = EditModel.Url;
+                }
+                if (!string.IsNullOrEmpty(EditModel.Description))
+                {
+                    EditModel.Options["description"] = EditModel.Description;
+                }
+                if (!string.IsNullOrEmpty(EditModel.LinkTarget))
+                {
+                    EditModel.Options["linkTarget"] = EditModel.LinkTarget;
+                }
+                break;
+
+            case "clock":
+                EditModel.Options["timezone"] = EditModel.Timezone ?? "UTC";
+                EditModel.Options["format"] = EditModel.TimeFormat ?? "24-hour";
+                break;
+
+            case "weather":
+                if (!string.IsNullOrEmpty(EditModel.LocationName))
+                {
+                    EditModel.Options["locationName"] = EditModel.LocationName;
+                }
+                if (!string.IsNullOrEmpty(EditModel.Latitude))
+                {
+                    EditModel.Options["latitude"] = EditModel.Latitude;
+                }
+                if (!string.IsNullOrEmpty(EditModel.Longitude))
+                {
+                    EditModel.Options["longitude"] = EditModel.Longitude;
+                }
+                EditModel.Options["unit"] = EditModel.Unit;
+                break;
+
+        }
+
         await OnSave.InvokeAsync(EditModel);
     }
 

@@ -19,6 +19,11 @@ public class ItemEditModel
     public string? Longitude { get; set; }
     public string Unit { get; set; } = "celsius";
 
+    public string? Timezone { get; set; } 
+    public string? TimeFormat { get; set; } 
+
+    public Dictionary<string, object> Options { get; set; } = new();
+
     private Dictionary<string, object> OriginalOptions { get; set; } = new();
 
     public ItemEditModel() { }
@@ -38,6 +43,8 @@ public class ItemEditModel
         Latitude = GetOption("latitude");
         Longitude = GetOption("longitude");
         Unit = GetOption("unit") ?? "celsius";
+        Timezone = GetOption("timezone") ?? "UTC";
+        TimeFormat = GetOption("format") ?? "24-hour"; 
     }
 
     private string? GetOption(string key) =>
@@ -53,6 +60,8 @@ public class ItemEditModel
         if (!string.IsNullOrWhiteSpace(Longitude)) options["longitude"] = Longitude;
         if (!string.IsNullOrWhiteSpace(Unit)) options["unit"] = Unit;
         if (!string.IsNullOrWhiteSpace(LinkTarget)) options["target"] = LinkTarget;
+        if (!string.IsNullOrWhiteSpace(Timezone)) options["timezone"] = Timezone;
+        if (!string.IsNullOrWhiteSpace(TimeFormat)) options["format"] = TimeFormat; 
         return options;
     }
 

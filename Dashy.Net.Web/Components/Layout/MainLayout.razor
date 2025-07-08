@@ -157,14 +157,12 @@
         DashboardState.OnConfigLoaded += StateHasChanged;
         ViewOptions.OnChange += HandleOptionsChanged;
 
-        // Check if authentication is configured
         _isAuthConfigured = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_authority")) &&
                                 !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_clientid")) &&
                                 !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_clientsecret"));
 
         if (_isAuthConfigured)
         {
-            // Force login if authentication is enabled and user is not authenticated
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             if (!(authState.User.Identity?.IsAuthenticated ?? false))
             {

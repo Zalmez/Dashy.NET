@@ -12,10 +12,7 @@ using System.IdentityModel.Tokens.Jwt;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add service defaults & Aspire client integrations.
 builder.AddServiceDefaults();
-
-// Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
@@ -73,7 +70,6 @@ if (!string.IsNullOrWhiteSpace(authAuthority) && !string.IsNullOrWhiteSpace(auth
         options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
         options.ResponseType = OpenIdConnectResponseType.Code;
 
-        // Add default scopes
         options.Scope.Add("openid");
         options.Scope.Add("profile");
         options.Scope.Add("email");
@@ -93,7 +89,6 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// Add authentication middleware if configured
 if (!string.IsNullOrWhiteSpace(authAuthority) && !string.IsNullOrWhiteSpace(authClientId) && !string.IsNullOrWhiteSpace(authClientSecret))
 {
     app.UseAuthentication();
@@ -107,7 +102,6 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-// Add authentication endpoints if configured
 if (!string.IsNullOrWhiteSpace(authAuthority) && !string.IsNullOrWhiteSpace(authClientId) && !string.IsNullOrWhiteSpace(authClientSecret))
 {
     app.MapGet("/authentication/login", async (HttpContext context) =>
