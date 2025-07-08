@@ -1,0 +1,171 @@
+﻿@inherits WidgetBase
+@inject IJSRuntime JSRuntime
+@using System.Text.Json
+@using System.Text.Json.Serialization
+
+<div class="item-card-wrapper">
+    <div class="public-ip-widget item-card @GetItemSizeClass()">
+        @if (ViewOptions.IsEditMode)
+        {
+            <div class="item-edit-controls">
+                <button class="edit-btn" title="Edit Item" @onclick="OnEditClick"><i class="fas fa-pencil-alt"></i></button>
+                <button class="delete-btn" title="Delete Item" @onclick="OnDeleteClick"><i class="fas fa-trash-alt"></i></button>
+            </div>
+        }
+        <div class="widget-title" style="text-align: center; font-weight: bold; font-size: 1.5rem; margin-bottom: 0.5rem;">
+            <i class="fas fa-wifi"></i> @Item.Title
+        </div>
+        <div class="widget-content" style="text-align: center;">
+            @if (_isLoading)
+            {
+                <p>Loading...</p>
+            }
+            else if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <p class="error-message">@_errorMessage</p>
+            }
+            else
+            {
+                <div class="ip-address" style="font-size: 2rem; font-weight: bold; margin-bottom: 0.5rem;">@_publicIP</div>
+                <div class="location" style="display: flex; align-items: center; justify-content: center;">
+                    <img src="@_flagUrl" alt="Country Flag" class="country-flag" style="width: 40px; height: auto; margin-right: 0.5rem;" />
+                    <div>
+                        <div style="font-weight: bold;">@_zipcode, @_location</div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+
+    private string? _publicIP;
+    private string? _location;
+    private int? _zipcode;
+    private string? _flagUrl;
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private string _selectedProvider => GetOption("provider") ?? "ipapi.co";
+    private string _apiKey => GetOption("apikey") ?? "";
+
+    private Dictionary<string, Func<Task>> _providers;
+
+    protected override async Task OnInitializedAsync()
+    {
+        base.OnInitialized();
+        _providers = new Dictionary<string, Func<Task>>
+        {
+            { "ipapi.co", FetchFromIpApi },
+            { "ipgeolocation.io", FetchFromIpGeolocation }
+        };
+        await FetchData();
+    }
+
+    private async Task FetchData()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        _publicIP = null;
+        _location = null;
+        _flagUrl = null;
+
+        if (_providers.TryGetValue(_selectedProvider, out var fetchMethod))
+        {
+            await fetchMethod();
+        }
+        else
+        {
+            _errorMessage = "Invalid provider selected.";
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task OnEditClick()
+    {
+        await OnItemEdited.InvokeAsync();
+    }
+
+    private async Task OnDeleteClick()
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{Item.Title}'?");
+        if (IsDisposed) return;
+        if (confirmed)
+        {
+            await OnItemDeleted.InvokeAsync(Item);
+        }
+    }
+
+    private async Task FetchFromIpApi()
+    {
+        try
+        {
+            var httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.Add("User-Agent", "ipapi.co/#c-sharp-v1.03");
+            var response = await httpClient.GetFromJsonAsync<PublicIPResponse>("https://ipapi.co/json/");
+
+            if (response is not null)
+            {
+                _publicIP = response.Ip;
+                _location = $"{response.City}, {response.CountryName}";
+                _flagUrl = $"https://flagcdn.com/{response.CountryCode.ToLower()}.svg";
+            }
+            else
+            {
+                _errorMessage = "Failed to fetch IP details from ipapi.co.";
+            }
+        }
+        catch (Exception)
+        {
+
+        }
+    }
+
+    private async Task FetchFromIpGeolocation()
+    {
+        var httpClient = new HttpClient();
+        var response = await httpClient.GetFromJsonAsync<IpGeolocationResponse>($"https://api.ipgeolocation.io/v2/ipgeo?apiKey={_apiKey}&fields=location");
+
+        if (response is not null)
+        {
+            _publicIP = response.Ip;
+            _location = $"{response.location.City}, {response.location.CountryName}";
+            _flagUrl = $"https://flagcdn.com/{response.location.CountryCode.ToLower()}.svg";
+            _zipcode = response.location.ZipCode;
+        }
+        else
+        {
+            _errorMessage = "Failed to fetch IP details from ipgeolocation.io.";
+        }
+    }
+
+    private class PublicIPResponse
+    {
+        public string Ip { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
+        public string CountryName { get; set; } = string.Empty;
+        public string CountryCode { get; set; } = string.Empty;
+    }
+
+    private class IpGeolocationResponse
+    {
+        [JsonPropertyName("ip")]
+        public string Ip { get; set; } = string.Empty;
+        [JsonPropertyName("location")]
+        public Location location { get; set; } = new();
+    }
+    private class Location
+    {
+        [JsonPropertyName("city")]
+        public string City { get; set; } = string.Empty;
+        [JsonPropertyName("country_name")]
+        public string CountryName { get; set; } = string.Empty;
+        [JsonPropertyName("country_code2")]
+        public string CountryCode { get; set; } = string.Empty;
+        [JsonPropertyName("country_flag")]
+        public string CountryFlag { get; set; } = string.Empty;
+        [JsonPropertyName("zipcode")]
+        public int ZipCode { get; set; } = 0;
+    }
+}

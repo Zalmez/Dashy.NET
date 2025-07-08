@@ -76,13 +76,16 @@ else
                                             <StaticLinkWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
                                             break;
                                         case "clock":
-                                            <ClockWidget Item="currentItem" />
+                                            <ClockWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)"/>
                                             break;
                                         case "weather":
-                                            <WeatherWidget Item="currentItem" />
+                                            <WeatherWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
+                                            break;
+                                        case "public ip":
+                                            <PublicIPWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
                                             break;
                                         default:
-                                            <UnknownWidget Widget="@currentItem.Widget" />
+                                            <UnknownWidget Widget="@currentItem.Widget"  />
                                             break;
                                     }
                                 </div>

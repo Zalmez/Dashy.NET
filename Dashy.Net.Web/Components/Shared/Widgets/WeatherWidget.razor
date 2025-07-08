@@ -18,6 +18,13 @@
     {
         <p class="error-message">@_errorMessage</p>
     }
+    @if (IsEditMode)
+    {
+        <div class="widget-actions">
+            <button class="btn btn-primary" @onclick="EditWidget">Edit</button>
+            <button class="btn btn-danger" @onclick="DeleteWidget">Delete</button>
+        </div>
+    }
 </div>
 
 @code {
@@ -30,6 +37,9 @@
     private double Longitude => double.TryParse(GetOption("longitude"), out var lon) ? lon : 10.75;
     private string Unit => GetOption("unit") ?? "celsius";
     private string UnitSymbol => Unit.Equals("fahrenheit", StringComparison.OrdinalIgnoreCase) ? "F" : "C";
+
+    [Parameter]
+    public bool IsEditMode { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -71,4 +81,14 @@
         95 or 96 or 99 => "⛈️",
         _ => "❓"
     };
+
+    private void EditWidget()
+    {
+        // Logic to edit the widget
+    }
+
+    private void DeleteWidget()
+    {
+        // Logic to delete the widget
+    }
 }

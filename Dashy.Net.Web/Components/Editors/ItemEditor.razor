@@ -51,7 +51,7 @@
     }
     else
     {
-        @switch (EditModel.Widget)
+        @switch (EditModel.Widget.ToLower())
         {
             case "static-link":
                 <div class="form-group">
@@ -107,8 +107,21 @@
                 </div>
                 break;
 
-            default:
-                <p class="subtle-text">Unknown widget type. No specific options available.</p>
+            case "public ip":
+                <div class="form-group">
+                    <label for="provider">Provider</label>
+                    <InputSelect id="provider" class="form-control" @bind-Value="EditModel.Provider">
+                        <option value="ipapi.co">ipapi.co</option>
+                        <option value="ipgeolocation.io">ipgeolocation.io</option>
+                    </InputSelect>
+                </div>
+                @if (EditModel.Provider == "ipgeolocation.io")
+                {
+                    <div class="form-group">
+                        <label for="api-key">API Key</label>
+                        <InputText id="api-key" class="form-control" @bind-Value="EditModel.ApiKey" />
+                    </div>
+                }
                 break;
         }
     }
@@ -209,6 +222,13 @@
                 EditModel.Options["unit"] = EditModel.Unit;
                 break;
 
+            case "public-ip":
+                EditModel.Options["provider"] = EditModel.Provider;
+                if (EditModel.Provider == "ipgeolocation.io")
+                {
+                    EditModel.Options["apiKey"] = EditModel.ApiKey;
+                }
+                break;
         }
 
         await OnSave.InvokeAsync(EditModel);

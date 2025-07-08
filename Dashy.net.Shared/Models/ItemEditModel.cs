@@ -22,6 +22,9 @@ public class ItemEditModel
     public string? Timezone { get; set; } 
     public string? TimeFormat { get; set; } 
 
+    public string? Provider { get; set; }
+    public string? ApiKey { get; set; }
+
     public Dictionary<string, object> Options { get; set; } = new();
 
     private Dictionary<string, object> OriginalOptions { get; set; } = new();
@@ -45,6 +48,8 @@ public class ItemEditModel
         Unit = GetOption("unit") ?? "celsius";
         Timezone = GetOption("timezone") ?? "UTC";
         TimeFormat = GetOption("format") ?? "24-hour"; 
+        Provider = GetOption("provider");
+        ApiKey = GetOption("apiKey");
     }
 
     private string? GetOption(string key) =>
@@ -62,6 +67,8 @@ public class ItemEditModel
         if (!string.IsNullOrWhiteSpace(LinkTarget)) options["target"] = LinkTarget;
         if (!string.IsNullOrWhiteSpace(Timezone)) options["timezone"] = Timezone;
         if (!string.IsNullOrWhiteSpace(TimeFormat)) options["format"] = TimeFormat; 
+        if (!string.IsNullOrWhiteSpace(Provider)) options["provider"] = Provider;
+        if (!string.IsNullOrWhiteSpace(ApiKey)) options["apiKey"] = ApiKey;
         return options;
     }
 

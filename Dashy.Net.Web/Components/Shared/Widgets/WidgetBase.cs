@@ -30,6 +30,8 @@ public abstract class WidgetBase : ComponentBase, IDisposable
     /// <returns>A string representing the CSS class name for the current item size.  The format is "item-size-" followed by the
     protected string GetItemSizeClass() => "item-size-" + ViewOptions.CurrentItemSize.ToString().ToLower();
 
+    [Parameter] public EventCallback<ItemVm> OnItemDeleted { get; set; }
+    [Parameter] public EventCallback OnItemEdited { get; set; }
 
     /// <summary>
     /// A convenience property to safely get an option from the item's dictionary.
