@@ -36,3 +36,11 @@ public class PublicIPWidgetDescriptor : IWidgetDescriptor
     public string Icon => "fas fa-network-wired";
     public Type? OptionsEditorComponent => null;
 }
+
+public class RssWidgetDescriptor : IWidgetDescriptor
+{
+    public string TypeIdentifier => "rss";
+    public string Name => "RSS Feed";
+    public string Icon => "fas fa-rss";
+    public Type? OptionsEditorComponent => null;
+}

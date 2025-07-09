@@ -84,6 +84,9 @@ else
                                         case "public ip":
                                             <PublicIPWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
                                             break;
+                                        case "rss feed":
+                                            <RssWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
+                                            break;
                                         default:
                                             <UnknownWidget Widget="@currentItem.Widget"  />
                                             break;

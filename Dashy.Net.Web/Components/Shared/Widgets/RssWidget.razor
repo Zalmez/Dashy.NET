@@ -1,0 +1,73 @@
+﻿@inherits WidgetBase
+@inject IJSRuntime JSRuntime
+@inject ILogger<RssWidget> Logger
+@inject NavigationManager NavManager
+@implements IDisposable
+
+<div class="item-card-wrapper">
+    @if (ViewOptions.IsEditMode)
+    {
+        <div class="item-edit-controls">
+            <button class="edit-btn" title="Edit Item" @onclick="OnEditClick"><i class="fas fa-pencil-alt"></i></button>
+            <button class="delete-btn" title="Delete Item" @onclick="OnDeleteClick"><i class="fas fa-trash-alt"></i></button>
+        </div>
+    }
+
+    <div class="item-card @GetItemSizeClass()">
+        <div class="item-icon">
+            @if (!string.IsNullOrWhiteSpace(Item.Icon))
+            {
+                @if (Item.Icon.StartsWith("/") || Item.Icon.StartsWith("http"))
+                {
+                    <img src="@Item.Icon" alt="@Item.Title" class="item-img-icon" />
+                }
+                else
+                {
+                    <i class="@Item.Icon"></i>
+                }
+            }
+        </div>
+        <div class="item-details">
+            <div class="item-title">@Item.Title</div>
+            <ul class="rss-feed-items">
+                @foreach (var feedItem in GetRssFeedItems())
+                {
+                    <li><a href="@feedItem.Link" target="_blank">@feedItem.Title</a></li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>
+
+@code {
+    private IEnumerable<RssFeedItem> GetRssFeedItems()
+    {
+        // Mock implementation for RSS feed items
+        return new List<RssFeedItem>
+        {
+            new RssFeedItem { Title = "Sample Item 1", Link = "https://example.com/item1" },
+            new RssFeedItem { Title = "Sample Item 2", Link = "https://example.com/item2" }
+        };
+    }
+
+    private async Task OnDeleteClick()
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{Item.Title}'?");
+        if (IsDisposed) return;
+        if (confirmed)
+        {
+            await OnItemDeleted.InvokeAsync(Item);
+        }
+    }
+
+    private async Task OnEditClick()
+    {
+        await OnItemEdited.InvokeAsync();
+    }
+
+    private class RssFeedItem
+    {
+        public string Title { get; set; } = string.Empty;
+        public string Link { get; set; } = string.Empty;
+    }
+}
