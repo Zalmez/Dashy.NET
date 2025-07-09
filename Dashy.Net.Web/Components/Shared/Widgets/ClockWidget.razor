@@ -11,6 +11,13 @@
     {
         <div class="error-message">@_errorMessage</div>
     }
+    @if (IsEditMode)
+    {
+        <div class="widget-actions">
+            <button class="btn btn-primary" @onclick="EditWidget">Edit</button>
+            <button class="btn btn-danger" @onclick="DeleteWidget">Delete</button>
+        </div>
+    }
 </div>
 
 @code
@@ -21,6 +28,9 @@
 
     private string TimeFormat => GetOption("timeFormat") ?? "HH:mm:ss";
     private string DateFormat => GetOption("dateFormat") ?? "dddd, MMMM d";
+
+    [Parameter]
+    public bool IsEditMode { get; set; }
 
     protected override void OnInitialized()
     {
@@ -40,6 +50,16 @@
         if (IsDisposed) return;
         _currentTime = DateTime.Now;
         InvokeAsync(StateHasChanged);
+    }
+
+    private void EditWidget()
+    {
+        // Logic to edit the widget
+    }
+
+    private void DeleteWidget()
+    {
+        // Logic to delete the widget
     }
 
     public override void Dispose()

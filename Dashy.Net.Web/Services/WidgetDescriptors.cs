@@ -28,3 +28,11 @@ public class WeatherWidgetDescriptor : IWidgetDescriptor
     public string Description => "Displays the current weather for a location.";
     public Type? OptionsEditorComponent => typeof(WeatherWidgetOptionsEditor);
 }
+
+public class PublicIPWidgetDescriptor : IWidgetDescriptor
+{
+    public string TypeIdentifier => "public-ip";
+    public string Name => "Public IP";
+    public string Icon => "fas fa-network-wired";
+    public Type? OptionsEditorComponent => null;
+}

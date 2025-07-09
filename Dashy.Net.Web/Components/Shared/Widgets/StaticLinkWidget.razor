@@ -43,9 +43,6 @@
 
 @code {
 
-    [Parameter] public EventCallback<ItemVm> OnItemDeleted { get; set; }
-    [Parameter] public EventCallback OnItemEdited { get; set; }
-
     private string? Url => GetOption("url");
     private string? Description => GetOption("Description");
     private string LinkTarget => GetOption("target") ?? "_self";
