@@ -1,0 +1,171 @@
+﻿@using System.Xml
+@inherits WidgetBase
+@inject IJSRuntime JSRuntime
+@inject ILogger<RssWidget> Logger
+@inject NavigationManager NavManager
+@implements IDisposable
+
+<div class="item-card-wrapper">
+    @if (ViewOptions.IsEditMode)
+    {
+        <div class="item-edit-controls">
+            <button class="edit-btn" title="Edit Item" @onclick="OnEditClick"><i class="fas fa-pencil-alt"></i></button>
+            <button class="delete-btn" title="Delete Item" @onclick="OnDeleteClick"><i class="fas fa-trash-alt"></i></button>
+        </div>
+    }
+    <!--style="max-width:@maxWidth" //Removed for now testing other solutions-->
+    <div class="item-card @GetItemSizeClass()">
+        <div class="item-icon">
+            @if (!string.IsNullOrWhiteSpace(Item.Icon))
+            {
+                @if (Item.Icon.StartsWith("/") || Item.Icon.StartsWith("http"))
+                {
+                    <img src="@Item.Icon" alt="@Item.Title" class="item-img-icon" />
+                }
+                else
+                {
+                    <i class="@Item.Icon"></i>
+                }
+            }
+        </div>
+        <div class="item-details">
+            @switch (ViewOptions.CurrentItemSize)
+            {
+                case ItemSize.Small:
+                    <ul class="rss-feed-items">
+                        @foreach (var feedItem in _rssFeedItems)
+                        {
+                            <li>
+                                <div class="rss-item-header">
+                                    <i class="@Item.Icon"></i>
+                                    <h6>@feedItem.Title</h6>
+                                    <a href="@feedItem.Link" target="_blank" class="rss-continue-reading"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                    break;
+
+                case ItemSize.Medium:
+                    <ul class="rss-feed-items rss-grid">
+                        @foreach (var feedItem in _rssFeedItems)
+                        {
+                            <li>
+                                <div class="rss-item-header">
+                                    <i class="@Item.Icon"></i>
+                                    <h5>@feedItem.Title</h5>
+                                </div>
+                                <p class="rss-publish-date">@feedItem.PublishDate.ToString("ddd, MMM dd yyyy")</p>
+                                <p class="rss-description">@feedItem.Description.Substring(0, Math.Min(feedItem.Description.Length, 100))...</p>
+                            </li>
+                        }
+                    </ul>
+                    break;
+
+                case ItemSize.Large:
+                    <ul class="rss-feed-items">
+                        @foreach (var feedItem in _rssFeedItems)
+                        {
+                            <li>
+                                <div class="rss-item-header">
+                                    <i class="@Item.Icon"></i>
+                                    <h4>@feedItem.Title</h4>
+                                </div>
+                                <p class="rss-publish-date">@feedItem.PublishDate.ToString("ddd, MMM dd yyyy")</p>
+                                <p class="rss-description">@feedItem.Description</p>
+                                <a href="@feedItem.Link" target="_blank" class="rss-continue-reading">Continue Reading</a>
+                                <hr class="rss-item-separator" />
+                            </li>
+                        }
+                    </ul>
+                    break;
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private IEnumerable<RssFeedItem> _rssFeedItems = Enumerable.Empty<RssFeedItem>();
+    private int? maxItems => int.TryParse(GetOption("MaxItems"), out var result) ? result : null;
+    private string maxWidth => GetOption("maxSize") ?? "100%";
+
+    protected override async Task OnInitializedAsync()
+    {
+        base.OnInitialized();
+        _rssFeedItems = await GetRssFeedItems();
+    }
+
+    private async Task<IEnumerable<RssFeedItem>> GetRssFeedItems()
+    {
+        var feedUrl = GetOption("FeedUrl");
+        if (string.IsNullOrWhiteSpace(feedUrl))
+        {
+            Logger.LogWarning("FeedUrl is not set for RssWidget.");
+            return Enumerable.Empty<RssFeedItem>();
+        }
+        var feedItems = new List<RssFeedItem>();
+        try
+        {
+            var httpClient = new HttpClient();
+            httpClient.Timeout = TimeSpan.FromSeconds(10);
+            var response = await httpClient.GetStringAsync(feedUrl);
+            var xmlDoc = new XmlDocument();
+            xmlDoc.LoadXml(response);
+            var items = xmlDoc.SelectNodes("//item");
+            if (items != null)
+            {
+                var count = 0;
+                foreach (XmlNode item in items)
+                {
+                    if (count >= maxItems)
+                        break;
+                    count++;
+                    var titleNode = item.SelectSingleNode("title");
+                    var linkNode = item.SelectSingleNode("link");
+                    var descriptionNode = item.SelectSingleNode("description") ?? item.SelectSingleNode("content:encoded");
+                    if (titleNode != null && linkNode != null)
+                    {
+                        feedItems.Add(new RssFeedItem
+                        {
+                            Title = titleNode.InnerText,
+                            Link = linkNode.InnerText,
+                            Description = descriptionNode?.InnerText ?? string.Empty,
+                            PublishDate = DateTime.TryParse(item.SelectSingleNode("pubDate")?.InnerText, out var pubDate) ? pubDate : DateTime.MinValue
+                        });
+                    }
+                }
+            }
+            if (feedItems.Count == 0)
+                Logger.LogWarning($"No items found in RSS feed from {feedUrl}");
+            return feedItems;
+        }
+        catch (Exception)
+        {
+            Logger.LogError($"Failed to fetch RSS feed from {feedUrl}");
+            return Enumerable.Empty<RssFeedItem>();
+        }
+    }
+
+    private async Task OnDeleteClick()
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{Item.Title}'?");
+        if (IsDisposed) return;
+        if (confirmed)
+        {
+            await OnItemDeleted.InvokeAsync(Item);
+        }
+    }
+
+    private async Task OnEditClick()
+    {
+        await OnItemEdited.InvokeAsync();
+    }
+
+    private class RssFeedItem
+    {
+        public string Title { get; set; } = string.Empty;
+        public string Link { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public DateTime PublishDate { get; set; } = DateTime.MinValue;
+    }
+}

@@ -25,6 +25,10 @@ public class ItemEditModel
     public string? Provider { get; set; }
     public string? ApiKey { get; set; }
 
+    public string? FeedUrl { get; set; } // RSS feed URL
+    public int MaxItems { get; set; } = 5; // Maximum number of items to display
+    public string? MaxSize { get; set; } // Maximum size of RSS items (e.g., rem, px, %)
+
     public Dictionary<string, object> Options { get; set; } = new();
 
     private Dictionary<string, object> OriginalOptions { get; set; } = new();
@@ -50,6 +54,8 @@ public class ItemEditModel
         TimeFormat = GetOption("format") ?? "24-hour"; 
         Provider = GetOption("provider");
         ApiKey = GetOption("apiKey");
+        FeedUrl = GetOption("feedUrl");
+        MaxItems = int.TryParse(GetOption("maxItems"), out var maxItems) ? maxItems : 5;
     }
 
     private string? GetOption(string key) =>
@@ -69,6 +75,9 @@ public class ItemEditModel
         if (!string.IsNullOrWhiteSpace(TimeFormat)) options["format"] = TimeFormat; 
         if (!string.IsNullOrWhiteSpace(Provider)) options["provider"] = Provider;
         if (!string.IsNullOrWhiteSpace(ApiKey)) options["apiKey"] = ApiKey;
+        if (!string.IsNullOrWhiteSpace(FeedUrl)) options["feedUrl"] = FeedUrl;
+        options["maxItems"] = MaxItems;
+        if (!string.IsNullOrWhiteSpace(MaxSize)) options["maxSize"] = MaxSize;
         return options;
     }
 
