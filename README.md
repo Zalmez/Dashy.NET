@@ -9,7 +9,8 @@
 
 ## About Dashy.Net
 
-Dashy.Net helps you organize your applications, services, and bookmarks into a single, beautiful dashboard. Built entirely on the .NET platform using Blazor for the frontend and .NET Aspire for orchestration, it aims to provide a fast, secure, and highly customizable dashboarding experience.
+Dashy.Net helps you organize your applications, services, and bookmarks into a single dashboard. Built entirely on the .NET platform using Blazor for the frontend and .NET Aspire for orchestration, it aims to provide a fast, secure, and highly customizable dashboarding experience.
+‼️‼️NOTE: This is still in an early development phase. The docker images are available, but as the license says it's delivered "as is"‼️‼️
 
 ## Key Features
 
