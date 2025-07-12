@@ -62,7 +62,7 @@ public class AuthenticationSettings
     public string? ClientId { get; set; }
     public string? ClientSecret { get; set; }
     public string? TenantId { get; set; }
-    public string? Scopes { get; set; } // Added Scopes field
+    public string? Scopes { get; set; }
 }
 
 public class AuthenticationProvider

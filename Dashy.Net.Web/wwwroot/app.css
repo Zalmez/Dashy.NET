@@ -105,9 +105,9 @@ h1, h2, h3, h4, h5, h6 {
 
 .add-section-container {
     margin-bottom: 2rem;
-    max-width: 1800px;
     margin-left: auto;
     margin-right: auto;
+    max-width: 50rem;
 }
 
 .sections-wrapper {
@@ -118,7 +118,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .section-item {
-    max-width: 100%;
+    max-width: 45rem;
 }
 
 .sections-wrapper-inner {

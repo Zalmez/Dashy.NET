@@ -189,6 +189,6 @@ public class AuthenticationProviderSettingTemplate
     public bool IsRequired { get; set; } = false;
     public bool IsEncrypted { get; set; } = false;
     public bool IsSecret { get; set; } = false;
-    public string InputType { get; set; } = "text"; // text, password, url, select
-    public List<string>? Options { get; set; } // For select inputs
+    public string InputType { get; set; } = "text";
+    public List<string>? Options { get; set; } 
 }

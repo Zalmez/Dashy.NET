@@ -1,5 +1,6 @@
 ﻿@inherits WidgetBase
 @inject WeatherClient WeatherClient
+@inject IJSRuntime JSRuntime
 
 <div class="weather-widget-container item-card @GetItemSizeClass()">
     @if (_isLoading)
@@ -21,8 +22,8 @@
     @if (IsEditMode)
     {
         <div class="widget-actions">
-            <button class="btn btn-primary" @onclick="EditWidget">Edit</button>
-            <button class="btn btn-danger" @onclick="DeleteWidget">Delete</button>
+            <button class="btn btn-primary" @onclick="OnEditClick">Edit</button>
+            <button class="btn btn-danger" @onclick="OnDeleteClick">Delete</button>
         </div>
     }
 </div>
@@ -82,13 +83,18 @@
         _ => "❓"
     };
 
-    private void EditWidget()
+    private async Task OnDeleteClick()
     {
-        // Logic to edit the widget
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{Item.Title}'?");
+        if (IsDisposed) return;
+        if (confirmed)
+        {
+            await OnItemDeleted.InvokeAsync(Item);
+        }
     }
 
-    private void DeleteWidget()
+    private async Task OnEditClick()
     {
-        // Logic to delete the widget
+        await OnItemEdited.InvokeAsync();
     }
 }

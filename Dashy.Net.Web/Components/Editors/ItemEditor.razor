@@ -138,6 +138,8 @@
                     <InputText id="max-size" class="form-control" @bind-Value="EditModel.MaxSize" />
                 </div> *@
                 break;
+            case "threat feed":
+                break;
         }
     }
 
@@ -184,14 +186,14 @@
     protected override void OnParametersSet()
     {
         var descriptor = WidgetRegistry.GetDescriptor(EditModel.Widget);
-        _editorComponentType = descriptor?.OptionsEditorComponent;
-        if (_editorComponentType is not null)
-        {
-            _editorParameters = new Dictionary<string, object>
-            {
-                { "EditModel", EditModel }
-            };
-        }
+        // _editorComponentType = descriptor?.OptionsEditorComponent;
+        // if (_editorComponentType is not null)
+        // {
+        //     _editorParameters = new Dictionary<string, object>
+        //     {
+        //         { "EditModel", EditModel }
+        //     };
+        // }
         StateHasChanged();
     }
 

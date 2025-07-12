@@ -26,7 +26,6 @@ public class WeatherWidgetDescriptor : IWidgetDescriptor
     public string Icon => "fas fa-cloud-sun";
     public string Name => "weather";
     public string Description => "Displays the current weather for a location.";
-    public Type? OptionsEditorComponent => typeof(WeatherWidgetOptionsEditor);
 }
 
 public class PublicIPWidgetDescriptor : IWidgetDescriptor
@@ -34,7 +33,6 @@ public class PublicIPWidgetDescriptor : IWidgetDescriptor
     public string TypeIdentifier => "public-ip";
     public string Name => "Public IP";
     public string Icon => "fas fa-network-wired";
-    public Type? OptionsEditorComponent => null;
 }
 
 public class RssWidgetDescriptor : IWidgetDescriptor
@@ -42,5 +40,11 @@ public class RssWidgetDescriptor : IWidgetDescriptor
     public string TypeIdentifier => "rss";
     public string Name => "RSS Feed";
     public string Icon => "fas fa-rss";
-    public Type? OptionsEditorComponent => null;
+}
+
+public class VulnerabilityFeedDescriptor : IWidgetDescriptor
+{
+    public string TypeIdentifier => "vulnerabilityfeed";
+    public string Name => "Vulnerability Feed";
+    public string Icon => "fas fa-rss";
 }

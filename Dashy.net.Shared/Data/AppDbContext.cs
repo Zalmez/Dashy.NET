@@ -17,7 +17,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         base.OnModelCreating(modelBuilder);
 
-        // Configure AuthenticationProvider
         modelBuilder.Entity<AuthenticationProvider>(entity =>
         {
             entity.HasKey(e => e.Id);

@@ -25,9 +25,11 @@ public class ItemEditModel
     public string? Provider { get; set; }
     public string? ApiKey { get; set; }
 
-    public string? FeedUrl { get; set; } // RSS feed URL
-    public int MaxItems { get; set; } = 5; // Maximum number of items to display
-    public string? MaxSize { get; set; } // Maximum size of RSS items (e.g., rem, px, %)
+    public string? FeedUrl { get; set; }
+    public int MaxItems { get; set; } = 5; 
+    public string? MaxSize { get; set; }
+
+    public string? Severity { get; set; } // Added severity property for widgets like ThreatFeedWidget
 
     public Dictionary<string, object> Options { get; set; } = new();
 
@@ -56,6 +58,7 @@ public class ItemEditModel
         ApiKey = GetOption("apiKey");
         FeedUrl = GetOption("feedUrl");
         MaxItems = int.TryParse(GetOption("maxItems"), out var maxItems) ? maxItems : 5;
+        Severity = GetOption("severity"); // Added severity initialization
     }
 
     private string? GetOption(string key) =>
@@ -78,6 +81,7 @@ public class ItemEditModel
         if (!string.IsNullOrWhiteSpace(FeedUrl)) options["feedUrl"] = FeedUrl;
         options["maxItems"] = MaxItems;
         if (!string.IsNullOrWhiteSpace(MaxSize)) options["maxSize"] = MaxSize;
+        if (!string.IsNullOrWhiteSpace(Severity)) options["severity"] = Severity; // Added severity packing
         return options;
     }
 

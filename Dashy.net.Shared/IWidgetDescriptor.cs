@@ -5,5 +5,4 @@ public interface IWidgetDescriptor
     string TypeIdentifier { get; }
     string Name { get; }
     string Icon { get; }
-    Type? OptionsEditorComponent { get; }
 }

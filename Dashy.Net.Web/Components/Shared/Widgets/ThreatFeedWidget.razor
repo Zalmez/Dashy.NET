@@ -1,0 +1,387 @@
+﻿@using System.Text.Json.Serialization
+@inherits WidgetBase
+@inject IJSRuntime JSRuntime
+@inject ILogger<ThreatFeedWidget> Logger
+@inject NavigationManager NavManager
+@implements IDisposable
+
+<div class="item-card-wrapper">
+    @if (ViewOptions.IsEditMode)
+    {
+        <div class="item-edit-controls">
+            <button class="edit-btn" title="Edit Item" @onclick="OnEditClick"><i class="fas fa-pencil-alt"></i></button>
+            <button class="delete-btn" title="Delete Item" @onclick="OnDeleteClick"><i class="fas fa-trash-alt"></i></button>
+        </div>
+    }
+
+    <div class="item-card">
+        <div class="threat-feed-widget">
+            <div class="widget-header">
+                <h2>Vulnerability Feed</h2>
+            </div>
+
+            <div class="vulnerability-list">
+                @if (vulnerabilities != null && vulnerabilities.Any())
+                {
+                    foreach (var cve in vulnerabilities)
+                    {
+                        var score = cve.Metrics?.CvssMetricV31?.FirstOrDefault()?.CvssData.BaseScore ?? 0;
+                        var severityColor = GetSeverityColor(score);
+                        var shortDescription = cve.Descriptions?.FirstOrDefault()?.Value?.Split('.').FirstOrDefault();
+                        var cveUrl = cve.References?.FirstOrDefault()?.Url ?? "#";
+
+                        <a href="@cveUrl" target="_blank" class="vulnerability-item">
+                            <div class="score" style="background-color:@severityColor; ">
+                                @score.ToString("0.0")
+                            </div>
+                            <div class="details">
+                                <h3>@cve.Id</h3>
+                                <p>@shortDescription</p>
+                                <small>@cve.Published.ToString("ddd, dd MMM yy")</small>
+                            </div>
+                        </a>
+                    }
+                }
+                else
+                {
+                    <p>No vulnerabilities found.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    private string? pubStartDate => GetOption("pubStartDate") ?? DateTime.UtcNow.AddDays(-30).ToString("yyyy-MM-ddTHH:mm:ssZ");
+    private string? pubEndDate => GetOption("pubEndDate") ?? DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
+    private int minScore => int.TryParse(GetOption("minScore"), out var score) ? score : 6;
+    private int maxItems = 10;
+    private List<Cve>? vulnerabilities;
+
+    protected override void OnInitialized()
+    {
+        ViewOptions.OnChange += StateHasChanged;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        base.OnInitialized();
+        vulnerabilities = await GetVulnerabilityFeedAsync();
+    }
+
+    private async Task<List<Cve>> GetVulnerabilityFeedAsync()
+    {
+        var httpClient = new HttpClient();
+        try
+        {
+            string url = $"https://services.nvd.nist.gov/rest/json/cves/2.0?noRejected&pubStartDate={pubStartDate}&pubEndDate={pubEndDate}&resultsPerPage={maxItems}";
+
+            var response = await httpClient.GetFromJsonAsync<NvdResponse>(url);
+            if (response?.Vulnerabilities == null)
+                return new List<Cve>();
+            var filteredVulnerabilities = response.Vulnerabilities
+                .Select(v => v.Cve)
+                .Where(cve =>
+                    (cve.Metrics?.CvssMetricV31?.Any(m => m.CvssData.BaseScore > 6.0) ?? false) ||
+                    (cve.Metrics?.CvssMetricV2?.Any(m => m.CvssData.BaseScore > 6.0) ?? false)
+                ).ToList();
+            filteredVulnerabilities = filteredVulnerabilities
+                .OrderByDescending(cve => cve.Metrics?.CvssMetricV31?.FirstOrDefault()?.CvssData.BaseScore ?? 0)
+                .ThenByDescending(cve => cve.Published)
+                .ToList();
+            return filteredVulnerabilities;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error fetching vulnerability feed");
+        }
+        return new List<Cve>();
+    }
+
+    private async Task RefreshFeed()
+    {
+        vulnerabilities = await GetVulnerabilityFeedAsync();
+        StateHasChanged();
+    }
+
+    private string GetSeverityColor(double score)
+    {
+        return score switch
+        {
+            >= 9.0 => "#ff4d4d", // Critical
+            >= 7.0 => "#ffa500", // High
+            >= 4.0 => "#ffff00", // Medium
+            _ => "#90ee90"       // Low
+        };
+    }
+
+    private async Task OnDeleteClick()
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{Item.Title}'?");
+        if (IsDisposed) return;
+        if (confirmed)
+        {
+            await OnItemDeleted.InvokeAsync(Item);
+        }
+    }
+
+    private async Task OnEditClick()
+    {
+        await OnItemEdited.InvokeAsync();
+    }
+    public class NvdResponse
+    {
+        [JsonPropertyName("resultsPerPage")]
+        public int ResultsPerPage { get; set; }
+
+        [JsonPropertyName("startIndex")]
+        public int StartIndex { get; set; }
+
+        [JsonPropertyName("totalResults")]
+        public int TotalResults { get; set; }
+
+        [JsonPropertyName("format")]
+        public string Format { get; set; }
+
+        [JsonPropertyName("version")]
+        public string Version { get; set; }
+
+        [JsonPropertyName("timestamp")]
+        public DateTime Timestamp { get; set; }
+
+        [JsonPropertyName("vulnerabilities")]
+        public List<VulnerabilityItem> Vulnerabilities { get; set; }
+    }
+
+    public class VulnerabilityItem
+    {
+        [JsonPropertyName("cve")]
+        public Cve Cve { get; set; }
+    }
+
+    public class Cve
+    {
+        [JsonPropertyName("id")]
+        public string Id { get; set; }
+
+        [JsonPropertyName("sourceIdentifier")]
+        public string SourceIdentifier { get; set; }
+
+        [JsonPropertyName("published")]
+        public DateTime Published { get; set; }
+
+        [JsonPropertyName("lastModified")]
+        public DateTime LastModified { get; set; }
+
+        [JsonPropertyName("vulnStatus")]
+        public string VulnStatus { get; set; }
+
+        [JsonPropertyName("descriptions")]
+        public List<Description> Descriptions { get; set; }
+
+        [JsonPropertyName("metrics")]
+        public Metrics Metrics { get; set; }
+
+        [JsonPropertyName("weaknesses")]
+        public List<Weakness> Weaknesses { get; set; }
+
+        [JsonPropertyName("configurations")]
+        public List<Configuration> Configurations { get; set; }
+
+        [JsonPropertyName("references")]
+        public List<Reference> References { get; set; }
+    }
+
+    public class Description
+    {
+        [JsonPropertyName("lang")]
+        public string Lang { get; set; }
+
+        [JsonPropertyName("value")]
+        public string Value { get; set; }
+    }
+
+    public class Metrics
+    {
+        [JsonPropertyName("cvssMetricV2")]
+        public List<CvssMetricV2> CvssMetricV2 { get; set; }
+
+        [JsonPropertyName("cvssMetricV31")]
+        public List<CvssMetricV31> CvssMetricV31 { get; set; }
+    }
+
+    public class CvssMetricV2
+    {
+        [JsonPropertyName("source")]
+        public string Source { get; set; }
+
+        [JsonPropertyName("type")]
+        public string Type { get; set; }
+
+        [JsonPropertyName("cvssData")]
+        public CvssDataV2 CvssData { get; set; }
+
+        [JsonPropertyName("baseSeverity")]
+        public string BaseSeverity { get; set; }
+
+        [JsonPropertyName("exploitabilityScore")]
+        public double ExploitabilityScore { get; set; }
+
+        [JsonPropertyName("impactScore")]
+        public double ImpactScore { get; set; }
+
+        [JsonPropertyName("acInsufInfo")]
+        public bool AcInsufInfo { get; set; }
+
+        [JsonPropertyName("obtainAllPrivilege")]
+        public bool ObtainAllPrivilege { get; set; }
+
+        [JsonPropertyName("obtainUserPrivilege")]
+        public bool ObtainUserPrivilege { get; set; }
+
+        [JsonPropertyName("obtainOtherPrivilege")]
+        public bool ObtainOtherPrivilege { get; set; }
+
+        [JsonPropertyName("userInteractionRequired")]
+        public bool UserInteractionRequired { get; set; }
+    }
+
+    public class CvssDataV2
+    {
+        [JsonPropertyName("version")]
+        public string Version { get; set; }
+
+        [JsonPropertyName("vectorString")]
+        public string VectorString { get; set; }
+
+        [JsonPropertyName("accessVector")]
+        public string AccessVector { get; set; }
+
+        [JsonPropertyName("accessComplexity")]
+        public string AccessComplexity { get; set; }
+
+        [JsonPropertyName("authentication")]
+        public string Authentication { get; set; }
+
+        [JsonPropertyName("confidentialityImpact")]
+        public string ConfidentialityImpact { get; set; }
+
+        [JsonPropertyName("integrityImpact")]
+        public string IntegrityImpact { get; set; }
+
+        [JsonPropertyName("availabilityImpact")]
+        public string AvailabilityImpact { get; set; }
+
+        [JsonPropertyName("baseScore")]
+        public double BaseScore { get; set; }
+    }
+
+    public class CvssMetricV31
+    {
+        [JsonPropertyName("source")]
+        public string Source { get; set; }
+
+        [JsonPropertyName("type")]
+        public string Type { get; set; }
+
+        [JsonPropertyName("cvssData")]
+        public CvssDataV31 CvssData { get; set; }
+
+        [JsonPropertyName("exploitabilityScore")]
+        public double ExploitabilityScore { get; set; }
+
+        [JsonPropertyName("impactScore")]
+        public double ImpactScore { get; set; }
+    }
+
+    public class CvssDataV31
+    {
+        [JsonPropertyName("version")]
+        public string Version { get; set; }
+
+        [JsonPropertyName("vectorString")]
+        public string VectorString { get; set; }
+
+        [JsonPropertyName("attackVector")]
+        public string AttackVector { get; set; }
+
+        [JsonPropertyName("attackComplexity")]
+        public string AttackComplexity { get; set; }
+
+        [JsonPropertyName("privilegesRequired")]
+        public string PrivilegesRequired { get; set; }
+
+        [JsonPropertyName("userInteraction")]
+        public string UserInteraction { get; set; }
+
+        [JsonPropertyName("scope")]
+        public string Scope { get; set; }
+
+        [JsonPropertyName("confidentialityImpact")]
+        public string ConfidentialityImpact { get; set; }
+
+        [JsonPropertyName("integrityImpact")]
+        public string IntegrityImpact { get; set; }
+
+        [JsonPropertyName("availabilityImpact")]
+        public string AvailabilityImpact { get; set; }
+
+        [JsonPropertyName("baseScore")]
+        public double BaseScore { get; set; }
+
+        [JsonPropertyName("baseSeverity")]
+        public string BaseSeverity { get; set; }
+    }
+
+    public class Weakness
+    {
+        [JsonPropertyName("source")]
+        public string Source { get; set; }
+
+        [JsonPropertyName("type")]
+        public string Type { get; set; }
+
+        [JsonPropertyName("description")]
+        public List<Description> Description { get; set; }
+    }
+
+    public class Configuration
+    {
+        [JsonPropertyName("nodes")]
+        public List<Node> Nodes { get; set; }
+    }
+
+    public class Node
+    {
+        [JsonPropertyName("operator")]
+        public string Operator { get; set; }
+
+        [JsonPropertyName("negate")]
+        public bool Negate { get; set; }
+
+        [JsonPropertyName("cpeMatch")]
+        public List<CpeMatch> CpeMatch { get; set; }
+    }
+
+    public class CpeMatch
+    {
+        [JsonPropertyName("vulnerable")]
+        public bool Vulnerable { get; set; }
+
+        [JsonPropertyName("criteria")]
+        public string Criteria { get; set; }
+
+        [JsonPropertyName("matchCriteriaId")]
+        public string MatchCriteriaId { get; set; }
+    }
+
+    public class Reference
+    {
+        [JsonPropertyName("url")]
+        public string Url { get; set; }
+
+        [JsonPropertyName("source")]
+        public string Source { get; set; }
+    }
+}

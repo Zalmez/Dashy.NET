@@ -1,0 +1,75 @@
+.threat-feed-widget {
+    background-color: #1e1e2f;
+    color: #ffffff;
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.widget-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.widget-header h2 {
+    font-size: 1.5rem;
+    margin: 0;
+}
+
+.widget-actions button {
+    background: none;
+    border: none;
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 1.2rem;
+    margin-left: 0.5rem;
+}
+
+.vulnerability-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.vulnerability-item {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem;
+    border: 1px solid #444;
+    border-radius: 8px;
+    background-color: #2e2e3f;
+    gap: 1rem;
+}
+
+
+.details h3 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.details p {
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
+}
+
+.details small {
+    color: #aaa;
+    font-size: 0.8rem;
+}
+.score {
+    width: 3rem;
+    height: 3rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #000;
+    flex-shrink: 0;
+}
+a {
+    text-decoration: none;
+}
