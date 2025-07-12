@@ -133,6 +133,10 @@
                     <label for="max-items">Maximum Items</label>
                     <InputNumber id="max-items" class="form-control" @bind-Value="EditModel.MaxItems" />
                 </div>
+@*                 <div class="form-group">
+                    <label for="max-size">Maximum Size (e.g., rem, px, %)</label>
+                    <InputText id="max-size" class="form-control" @bind-Value="EditModel.MaxSize" />
+                </div> *@
                 break;
         }
     }
@@ -241,12 +245,16 @@
                 }
                 break;
 
-            case "rss":
+            case "rss feed":
                 if (!string.IsNullOrEmpty(EditModel.FeedUrl))
                 {
                     EditModel.Options["feedUrl"] = EditModel.FeedUrl;
                 }
                 EditModel.Options["maxItems"] = EditModel.MaxItems;
+                if (!string.IsNullOrWhiteSpace(EditModel.MaxSize))
+                {
+                    EditModel.Options["maxSize"] = EditModel.MaxSize;
+                }
                 break;
         }
 

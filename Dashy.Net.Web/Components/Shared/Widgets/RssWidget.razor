@@ -13,7 +13,7 @@
             <button class="delete-btn" title="Delete Item" @onclick="OnDeleteClick"><i class="fas fa-trash-alt"></i></button>
         </div>
     }
-
+    <!--style="max-width:@maxWidth" //Removed for now testing other solutions-->
     <div class="item-card @GetItemSizeClass()">
         <div class="item-icon">
             @if (!string.IsNullOrWhiteSpace(Item.Icon))
@@ -29,20 +29,56 @@
             }
         </div>
         <div class="item-details">
-            <div class="item-title">@Item.Title</div>
-            @if(_rssFeedItems.Count() >= 0)
+            @switch (ViewOptions.CurrentItemSize)
             {
-                <div class="item-description">Latest RSS Feed Items:</div>
-                <ul class="rss-feed-items">
-                    @foreach (var feedItem in _rssFeedItems)
-                    {
-                        <li><a href="@feedItem.Link" target="_blank">@feedItem.Title <i style="padding-top: 10px" class="fa-solid fa-arrow-up-right-from-square"></i> </a></li>
-                    }
-                </ul>
-            }
-            else
-            {
-                <div class="item-description">No items found in the RSS feed.</div>
+                case ItemSize.Small:
+                    <ul class="rss-feed-items">
+                        @foreach (var feedItem in _rssFeedItems)
+                        {
+                            <li>
+                                <div class="rss-item-header">
+                                    <i class="@Item.Icon"></i>
+                                    <h6>@feedItem.Title</h6>
+                                    <a href="@feedItem.Link" target="_blank" class="rss-continue-reading"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                    break;
+
+                case ItemSize.Medium:
+                    <ul class="rss-feed-items rss-grid">
+                        @foreach (var feedItem in _rssFeedItems)
+                        {
+                            <li>
+                                <div class="rss-item-header">
+                                    <i class="@Item.Icon"></i>
+                                    <h5>@feedItem.Title</h5>
+                                </div>
+                                <p class="rss-publish-date">@feedItem.PublishDate.ToString("ddd, MMM dd yyyy")</p>
+                                <p class="rss-description">@feedItem.Description.Substring(0, Math.Min(feedItem.Description.Length, 100))...</p>
+                            </li>
+                        }
+                    </ul>
+                    break;
+
+                case ItemSize.Large:
+                    <ul class="rss-feed-items">
+                        @foreach (var feedItem in _rssFeedItems)
+                        {
+                            <li>
+                                <div class="rss-item-header">
+                                    <i class="@Item.Icon"></i>
+                                    <h4>@feedItem.Title</h4>
+                                </div>
+                                <p class="rss-publish-date">@feedItem.PublishDate.ToString("ddd, MMM dd yyyy")</p>
+                                <p class="rss-description">@feedItem.Description</p>
+                                <a href="@feedItem.Link" target="_blank" class="rss-continue-reading">Continue Reading</a>
+                                <hr class="rss-item-separator" />
+                            </li>
+                        }
+                    </ul>
+                    break;
             }
         </div>
     </div>
@@ -51,6 +87,7 @@
 @code {
     private IEnumerable<RssFeedItem> _rssFeedItems = Enumerable.Empty<RssFeedItem>();
     private int? maxItems => int.TryParse(GetOption("MaxItems"), out var result) ? result : null;
+    private string maxWidth => GetOption("maxSize") ?? "100%";
 
     protected override async Task OnInitializedAsync()
     {
@@ -80,13 +117,13 @@
                 var count = 0;
                 foreach (XmlNode item in items)
                 {
-                    if (count > maxItems)
+                    if (count >= maxItems)
                         break;
                     count++;
                     var titleNode = item.SelectSingleNode("title");
                     var linkNode = item.SelectSingleNode("link");
                     var descriptionNode = item.SelectSingleNode("description") ?? item.SelectSingleNode("content:encoded");
-                    if (titleNode != null && linkNode != null)  
+                    if (titleNode != null && linkNode != null)
                     {
                         feedItems.Add(new RssFeedItem
                         {
@@ -102,18 +139,18 @@
                 Logger.LogWarning($"No items found in RSS feed from {feedUrl}");
             return feedItems;
         }
-        catch (Exception)  
+        catch (Exception)
         {
             Logger.LogError($"Failed to fetch RSS feed from {feedUrl}");
             return Enumerable.Empty<RssFeedItem>();
         }
     }
-  
-    private async Task OnDeleteClick()  
+
+    private async Task OnDeleteClick()
     {
         var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{Item.Title}'?");
         if (IsDisposed) return;
-        if (confirmed)  
+        if (confirmed)
         {
             await OnItemDeleted.InvokeAsync(Item);
         }
@@ -123,8 +160,8 @@
     {
         await OnItemEdited.InvokeAsync();
     }
-  
-    private class RssFeedItem  
+
+    private class RssFeedItem
     {
         public string Title { get; set; } = string.Empty;
         public string Link { get; set; } = string.Empty;

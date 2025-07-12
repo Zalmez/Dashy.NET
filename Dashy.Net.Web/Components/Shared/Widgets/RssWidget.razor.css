@@ -10,3 +10,7 @@ a:hover{
     text-decoration: underline;
     color: darkblue;
 }
+
+.rss-item-header.h6{
+    font-size: 0.5rem;
+}

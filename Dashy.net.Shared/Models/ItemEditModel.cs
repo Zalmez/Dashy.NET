@@ -27,6 +27,7 @@ public class ItemEditModel
 
     public string? FeedUrl { get; set; } // RSS feed URL
     public int MaxItems { get; set; } = 5; // Maximum number of items to display
+    public string? MaxSize { get; set; } // Maximum size of RSS items (e.g., rem, px, %)
 
     public Dictionary<string, object> Options { get; set; } = new();
 
@@ -76,6 +77,7 @@ public class ItemEditModel
         if (!string.IsNullOrWhiteSpace(ApiKey)) options["apiKey"] = ApiKey;
         if (!string.IsNullOrWhiteSpace(FeedUrl)) options["feedUrl"] = FeedUrl;
         options["maxItems"] = MaxItems;
+        if (!string.IsNullOrWhiteSpace(MaxSize)) options["maxSize"] = MaxSize;
         return options;
     }
 
