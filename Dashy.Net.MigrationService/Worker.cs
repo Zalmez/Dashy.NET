@@ -55,16 +55,22 @@ namespace Dashy.Net.MigrationService
                         sb.AppendLine(exceptions[i].ToString());
                     }
                     logger.LogError(sb.ToString());
+                    Environment.ExitCode = 1; // Set exit code for failure
                     throw new AggregateException($"Database was out of reach after {maxAttempts} attempts.", exceptions);
                 }
 
                 await dbContext.Database.MigrateAsync(stoppingToken);
                 logger.LogInformation("Database migration completed successfully");
+
+                // Gracefully stop the application after successful execution
+                logger.LogInformation("Stopping application gracefully after successful migration.");
+                Environment.ExitCode = 0; // Set exit code for success
                 hostApplicationLifetime.StopApplication();
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "An error occurred during database migration.");
+                Environment.ExitCode = 1; // Set exit code for failure
                 hostApplicationLifetime.StopApplication();
             }
         }
