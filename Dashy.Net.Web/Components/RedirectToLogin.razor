@@ -1,0 +1,24 @@
+﻿@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ILogger<RedirectToLogin> Logger
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        var user = await AuthStateProvider.GetAuthenticationStateAsync();
+        if(user == null)
+            return;
+        if (!user.User.Identity.IsAuthenticated)
+        {
+            try
+            {
+                Logger.LogInformation("redirecting to authentication endpoint");
+                Navigation.NavigateTo($"authentication/login", forceLoad: true);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Failed to redirect to authentication endpoint", ex);
+            }
+        }
+    }
+}

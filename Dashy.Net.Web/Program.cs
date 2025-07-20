@@ -1,5 +1,4 @@
 using BlazorSortable;
-using Dashy.Net.Web;
 using Dashy.Net.Web.Clients;
 using Dashy.Net.Web.Components;
 using Dashy.Net.Web.Helpers;
@@ -27,14 +26,12 @@ builder.Services.AddHttpClient<WeatherClient>(opts =>
 {
     opts.BaseAddress = new("https+http://apiservice");
 });
-
 builder.Services.AddSingleton<ThemeService>();
 builder.Services.AddSingleton<ViewOptionsService>();
 builder.Services.AddSortableServices();
 builder.Services.AddSingleton<DashboardStateService>();
 builder.Services.AddScoped<FileStorageService>();
 builder.Services.AddSingleton<WidgetRegistryService>();
-
 builder.Services.AddHttpClient("ApiService", opts =>
 {
     opts.BaseAddress = new("https+http://apiservice");
@@ -42,9 +39,20 @@ builder.Services.AddHttpClient("ApiService", opts =>
 builder.Services.AddTransient<EventSubscriptionManager>();
 #endregion
 
+
 var authAuthority = Environment.GetEnvironmentVariable("auth_authority");
 var authClientId = Environment.GetEnvironmentVariable("auth_clientid");
 var authClientSecret = Environment.GetEnvironmentVariable("auth_clientsecret");
+
+//build the logger so we can log warnings if auth settings are not provided
+var loggerFactory = LoggerFactory.Create(logging =>
+{
+    logging.AddConsole();
+    logging.SetMinimumLevel(LogLevel.Warning);
+});
+builder.Services.AddSingleton<ILoggerFactory>(loggerFactory);
+
+var logger = loggerFactory.CreateLogger("Webfrontend.Program");
 
 if (!string.IsNullOrWhiteSpace(authAuthority) && !string.IsNullOrWhiteSpace(authClientId) && !string.IsNullOrWhiteSpace(authClientSecret))
 {
@@ -53,15 +61,9 @@ if (!string.IsNullOrWhiteSpace(authAuthority) && !string.IsNullOrWhiteSpace(auth
         options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
         options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
     })
-    .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
-    {
-        options.LoginPath = "/authentication/login";
-        options.LogoutPath = "/authentication/logout";
-        options.ExpireTimeSpan = TimeSpan.FromHours(8);
-        options.SlidingExpiration = true;
-    })
     .AddOpenIdConnect(OpenIdConnectDefaults.AuthenticationScheme, options =>
     {
+        options.PushedAuthorizationBehavior = PushedAuthorizationBehavior.UseIfAvailable;
         options.Authority = authAuthority;
         options.ClientId = authClientId;
         options.ClientSecret = authClientSecret;
@@ -70,13 +72,35 @@ if (!string.IsNullOrWhiteSpace(authAuthority) && !string.IsNullOrWhiteSpace(auth
         options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
         options.ResponseType = OpenIdConnectResponseType.Code;
 
-        options.Scope.Add("openid");
-        options.Scope.Add("profile");
-        options.Scope.Add("email");
+        options.Scope.Add(OpenIdConnectScope.OpenIdProfile);
+        options.Scope.Add(OpenIdConnectScope.OfflineAccess);
+        options.Scope.Add(OpenIdConnectScope.OpenId);
+        options.Scope.Add(OpenIdConnectScope.Email);
 
         options.MapInboundClaims = false;
-        options.TokenValidationParameters.NameClaimType = JwtRegisteredClaimNames.Name;
+        options.TokenValidationParameters.NameClaimType = "name";
+        options.TokenValidationParameters.RoleClaimType = "roles";
+        options.CallbackPath = new PathString("/signin-oidc");
+        options.SignedOutCallbackPath = new PathString("/signout-callback-oidc");
+        options.RemoteSignOutPath = new PathString("/signout-oidc");
+        options.ReturnUrlParameter = "ReturnUrl";
+    })
+    .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+    {
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.SlidingExpiration = true;
+        options.ReturnUrlParameter = "ReturnUrl";
     });
+    
+}
+else
+{
+    if (string.IsNullOrWhiteSpace(authAuthority))
+        logger.LogWarning("Authentication authority is not set. Please set the environment variable 'auth_authority' to enable authentication.");
+    if(string.IsNullOrWhiteSpace(authClientId))
+        logger.LogWarning("Authentication client ID is not set. Please set the environment variable 'auth_clientid' to enable authentication.");
+    if(string.IsNullOrWhiteSpace(authClientSecret))
+        logger.LogWarning("Authentication client secret is not set. Please set the environment variable 'auth_clientsecret' to enable authentication.");
 }
 
 var app = builder.Build();
@@ -104,9 +128,13 @@ app.MapRazorComponents<App>()
 
 if (!string.IsNullOrWhiteSpace(authAuthority) && !string.IsNullOrWhiteSpace(authClientId) && !string.IsNullOrWhiteSpace(authClientSecret))
 {
-    app.MapGet("/authentication/login", async (HttpContext context) =>
+    app.MapGet("/authentication/login", async (HttpContext context, string? returnUrl) =>
     {
-        await context.ChallengeAsync(OpenIdConnectDefaults.AuthenticationScheme);
+        var props = new AuthenticationProperties
+        {
+            RedirectUri = !string.IsNullOrEmpty(returnUrl) ? returnUrl : "/"
+        };
+        await context.ChallengeAsync(OpenIdConnectDefaults.AuthenticationScheme, props);
     });
 
     app.MapGet("/authentication/logout", async (HttpContext context) =>

@@ -4,6 +4,7 @@
 @using Dashy.Net.Web.Helpers
 @using Dashy.Net.Web.Services
 @using Dashy.Net.Shared.Models
+@using Microsoft.AspNetCore.Components.Authorization
 @inherits LayoutComponentBase
 @inject ThemeService ThemeService
 @inject IJSRuntime JSRuntime
@@ -12,10 +13,11 @@
 @inject DashboardClient DashboardClient
 @inject AuthenticationStateProvider AuthStateProvider
 @inject EventSubscriptionManager SubscriptionManager
-@using Microsoft.AspNetCore.Components.Authorization
+
 @implements IDisposable
 <CascadingAuthenticationState>
 <div>
+    
     <header class="main-header">
         <div class="header-title-section">
             <h1>@DashboardState.Config?.Title</h1>
@@ -45,7 +47,7 @@
             @if(_isAuthConfigured){
                 <AuthorizeView>
                     <NotAuthorized>
-                        <button class="btn btn-outline-primary" @onclick="Login">Login</button>
+                        <RedirectToLogin />
                     </NotAuthorized>
                 </AuthorizeView>
             }
@@ -145,30 +147,23 @@
     private string _buttonEditorTitle = "";
     private HeaderButtonEditor.ButtonEditModel? _buttonToEdit;
     private int _editingButtonId = 0;
-    
+
     private bool _isFabMenuOpen = false;
     private bool _isSettingsModalOpen = false;
 
     private bool _disposed = false;
+    AuthenticationState authState = default;
 
     protected override async Task OnInitializedAsync()
     {
         ThemeService.OnThemeChanged += OnThemeChangedHandler;
         DashboardState.OnConfigLoaded += StateHasChanged;
         ViewOptions.OnChange += HandleOptionsChanged;
-
         _isAuthConfigured = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_authority")) &&
-                                !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_clientid")) &&
-                                !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_clientsecret"));
+                            !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_clientid")) &&
+                            !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_clientsecret"));
+        authState = await AuthStateProvider.GetAuthenticationStateAsync();
 
-        if (_isAuthConfigured)
-        {
-            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-            if (!(authState.User.Identity?.IsAuthenticated ?? false))
-            {
-                NavigationManager.NavigateTo("authentication/login", true);
-            }
-        }
     }
 
     protected override void OnInitialized()
