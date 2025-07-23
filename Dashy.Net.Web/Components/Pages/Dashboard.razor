@@ -88,7 +88,7 @@ else
                                             <RssWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
                                             break;
                                         case "vulnerability feed":
-                                            <ThreatFeedWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
+                                            <VulnerabilityFeedWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
                                             break;
                                         default:
                                             <UnknownWidget Widget="@currentItem.Widget"  />
