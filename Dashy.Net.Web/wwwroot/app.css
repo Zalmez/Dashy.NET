@@ -31,31 +31,57 @@ body.theme-light {
 }
 
 body.theme-dark {
-  --background-color: #0f172a;
-  --text-color: #f1f5f9;
+  --background-color: #0a0a0a;
+  --text-color: #ffffff;
   --accent-text-color: #ffffff;
-  --card-background-color: #1e293b;
-  --card-hover-background-color: #334155;
-  --border-color: #334155;
-  --subtle-text-color: #94a3b8;
+  --card-background-color: rgba(255, 255, 255, 0.08);
+  --card-hover-background-color: rgba(255, 255, 255, 0.15);
+  --border-color: rgba(255, 255, 255, 0.1);
+  --subtle-text-color: #a1a1aa;
   --accent-color: #6366f1;
   --accent-color-darker: #4f46e5;
   --danger-color: #ef4444;
   --danger-hover-color: #dc2626;
-  --header-bg: rgba(15, 23, 42, 0.85);
-  --header-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
-  --card-hover-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.25);
+  --header-bg: rgba(0, 0, 0, 0.6);
+  --header-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  --card-hover-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  --glass-background: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+  --glass-hover-background: rgba(255, 255, 255, 0.1);
 }
 
 /* --- Base Element Styles --- */
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
-  background-color: var(--background-color);
+  background: linear-gradient(
+    135deg,
+    #0a0a0a 0%,
+    #1a1a2e 25%,
+    #16213e 50%,
+    #0f3460 75%,
+    #0a0a0a 100%
+  );
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
   color: var(--text-color);
   transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
   margin: 0;
+  min-height: 100vh;
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 h1,
@@ -77,11 +103,14 @@ h6 {
   justify-content: space-between;
   align-items: center;
   padding: 1rem 2rem;
-  background: var(--header-bg);
-  backdrop-filter: blur(8px);
-  box-shadow: var(--header-shadow);
+  background: var(--glass-background);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  box-shadow: var(--glass-shadow);
   position: sticky;
-  top: 0;
+  top: 1rem;
+  margin: 1rem 2rem 0;
   z-index: 100;
 }
 
@@ -91,18 +120,93 @@ h6 {
 }
 
 .header-title-section h1 {
-  font-size: 1.5rem;
-  font-weight: 600;
+  font-size: 1.75rem;
+  font-weight: 700;
   margin: 0;
-  background: linear-gradient(
-    45deg,
-    var(--accent-color),
-    var(--accent-color-darker)
-  );
+  background: linear-gradient(135deg, #ffffff 0%, #a78bfa 50%, #06b6d4 100%);
   -webkit-background-clip: text;
-  background-clip: text;
   -webkit-text-fill-color: transparent;
-  color: transparent;
+  background-clip: text;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.header-user-section {
+  display: flex;
+  align-items: center;
+}
+
+.header-controls {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.control-label {
+  font-size: 0.75rem;
+  color: var(--subtle-text-color);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.button-group {
+  display: flex;
+  gap: 0.25rem;
+  background: var(--glass-background);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 0.25rem;
+  backdrop-filter: blur(10px);
+}
+
+.control-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-color);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.control-btn:hover {
+  background: var(--glass-hover-background);
+  transform: scale(1.05);
+}
+
+.control-btn.active {
+  background: var(--accent-color);
+  color: white;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+}
+
+.notification-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ef4444;
+  color: white;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
 }
 
 .header-subtitle {
@@ -117,9 +221,12 @@ h6 {
   justify-content: space-between;
   align-items: center;
   padding: 1rem 2rem;
-  background: var(--card-background-color);
-  border-bottom: 1px solid var(--border-color);
-  margin-bottom: 2rem;
+  background: var(--glass-background);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  box-shadow: var(--glass-shadow);
+  margin: 1rem 2rem;
 }
 
 .toolbar-left {
@@ -368,37 +475,48 @@ h6 {
 
 .item-edit-controls {
   position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
+  top: 0.75rem;
+  right: 0.75rem;
   z-index: 10;
+  display: flex;
+  gap: 0.5rem;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.glass-tile:hover .item-edit-controls {
+  opacity: 1;
 }
 
 .edit-btn,
 .delete-btn {
-  background: var(--card-background-color);
+  background: var(--glass-background);
   color: var(--text-color);
-  border: 1px solid var(--border-color);
-  border-radius: 50%;
-  width: 30px;
-  height: 30px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.8rem;
-  transition: all 0.2s ease-in-out;
+  font-size: 0.75rem;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
 }
 
 .edit-btn:hover {
   background: var(--accent-color);
   border-color: var(--accent-color);
   color: white;
+  transform: scale(1.1);
 }
 
 .delete-btn:hover {
   background: var(--danger-color);
   border-color: var(--danger-hover-color);
   color: white;
+  transform: scale(1.1);
 }
 
 .add-item-btn {
@@ -496,7 +614,8 @@ h6 {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -504,13 +623,16 @@ h6 {
 }
 
 .modal-content {
-  background-color: var(--card-background-color);
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  background: rgba(15, 25, 45, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  backdrop-filter: blur(30px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
   max-width: 800px;
   width: 100%;
   padding: 1.5rem;
   z-index: 1060;
+  color: var(--text-color);
 }
 
 .modal-header {
@@ -638,18 +760,26 @@ h6 {
 .fab-main-button {
   width: 60px;
   height: 60px;
-  background-color: var(--accent-color);
-  color: white;
+  background: var(--glass-background);
+  color: var(--text-color);
+  border: 1px solid var(--glass-border);
   border-radius: 50%;
-  border: none;
+  backdrop-filter: blur(20px);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.5rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--glass-shadow);
   cursor: pointer;
   transition: all 0.3s ease-in-out;
   z-index: 101;
+}
+
+.fab-main-button:hover {
+  background: var(--glass-hover-background);
+  border-color: var(--accent-color);
+  transform: scale(1.05);
+  box-shadow: 0 8px 30px rgba(99, 102, 241, 0.4);
 }
 
 .fab-container.open .fab-main-button {
@@ -674,17 +804,25 @@ h6 {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  background: var(--card-hover-background-color);
+  background: var(--glass-background);
   color: var(--text-color);
-  border: none;
+  border: 1px solid var(--glass-border);
   border-radius: 2rem;
+  backdrop-filter: blur(20px);
   margin-bottom: 0.75rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--glass-shadow);
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.2s ease-in-out;
   transform: translateY(10px);
   opacity: 0;
+}
+
+.fab-menu-item:hover {
+  background: var(--glass-hover-background);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+  transform: translateX(-4px);
 }
 
 .fab-container.open .fab-menu-item {
@@ -702,11 +840,6 @@ h6 {
 
 .fab-container.open .fab-menu-item:nth-child(3) {
   transition-delay: 0s;
-}
-
-.fab-menu-item:hover {
-  background-color: var(--accent-color);
-  color: white;
 }
 
 .fab-menu-item:disabled {

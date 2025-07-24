@@ -20,68 +20,71 @@
     
     <header class="main-header">
         <div class="header-title-section">
-            <h1>@DashboardState.Config?.Title</h1>
-            @if (!string.IsNullOrWhiteSpace(DashboardState.Config?.Subtitle))
-            {
-                <p class="header-subtitle">@DashboardState.Config.Subtitle</p>
-            }
+            <h1>@(DashboardState.Config?.Title ?? "Dashy.NET")</h1>
         </div>
-        <div class="header-controls">
-            @if (DashboardState.Config?.HeaderButtons is not null && DashboardState.Config.HeaderButtons.Any())
-            {
-                <div class="header-btn-group">
-                    <div class="buttons">
-                        @foreach (var button in DashboardState.Config.HeaderButtons)
-                        {
-                            <a href="@button.Url" target="_blank" class="btn">
-                                @if (!string.IsNullOrWhiteSpace(button.Icon))
-                                {
-                                    <i class="@button.Icon" style="margin-right: 0.5rem;"></i>
-                                }
-                                <span>@button.Text</span>
-                            </a>
-                        }
+        <div class="header-user-section">
+            <div class="header-controls">
+                <!-- Layout Controls -->
+                <div class="control-group">
+                    <span class="control-label">Layout</span>
+                    <div class="button-group">
+                        <button type="button" 
+                                class="control-btn @(IsLayout(LayoutOrientation.Auto) ? "active" : "")" 
+                                title="Auto Layout" 
+                                @onclick="() => SetLayout(LayoutOrientation.Auto)">
+                            <i class="fas fa-th-large"></i>
+                        </button>
+                        <button type="button" 
+                                class="control-btn @(IsLayout(LayoutOrientation.Vertical) ? "active" : "")" 
+                                title="Vertical Layout" 
+                                @onclick="() => SetLayout(LayoutOrientation.Vertical)">
+                            <i class="fas fa-bars"></i>
+                        </button>
                     </div>
                 </div>
-            }
-            @if(_isAuthConfigured){
-                <AuthorizeView>
-                    <NotAuthorized>
-                        <RedirectToLogin />
-                    </NotAuthorized>
-                </AuthorizeView>
-            }
+                
+                <!-- Item Size Controls -->
+                <div class="control-group">
+                    <span class="control-label">Size</span>
+                    <div class="button-group">
+                        <button type="button" 
+                                class="control-btn @(IsItemSize(ItemSize.Small) ? "active" : "")" 
+                                title="Small Items" 
+                                @onclick="() => SetItemSize(ItemSize.Small)">
+                            <i class="fas fa-compress"></i>
+                        </button>
+                        <button type="button" 
+                                class="control-btn @(IsItemSize(ItemSize.Medium) ? "active" : "")" 
+                                title="Medium Items" 
+                                @onclick="() => SetItemSize(ItemSize.Medium)">
+                            <i class="fas fa-grip-horizontal"></i>
+                        </button>
+                        <button type="button" 
+                                class="control-btn @(IsItemSize(ItemSize.Large) ? "active" : "")" 
+                                title="Large Items" 
+                                @onclick="() => SetItemSize(ItemSize.Large)">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </header>
 
-    <div class="toolbar">
-        <div class="toolbar-left">
-            <SearchBar />
-        </div>
-        <div class="toolbar-right">
-            <HeaderButtonGroup Label="Layout">
-                <button class="btn btn-secondary @(ViewOptions.CurrentLayout == LayoutOrientation.Auto ? "active" : "")" @onclick="() => ViewOptions.SetLayout(LayoutOrientation.Auto)">
-                    <i class="fas fa-th-large"></i> Auto
-                </button>
-                <button class="btn btn-secondary @(ViewOptions.CurrentLayout == LayoutOrientation.Vertical ? "active" : "")" @onclick="() => ViewOptions.SetLayout(LayoutOrientation.Vertical)">
-                    <i class="fas fa-bars"></i> Vertical
-                </button>
-            </HeaderButtonGroup>
-            <HeaderButtonGroup Label="Item Size">
-                <button class="@(IsItemSize(ItemSize.Small) ? "active" : "")" @onclick="() => SetItemSize(ItemSize.Small)"><i class="fas fa-compress"></i></button>
-                <button class="@(IsItemSize(ItemSize.Medium) ? "active" : "")" @onclick="() => SetItemSize(ItemSize.Medium)"><i class="fas fa-grip-horizontal"></i></button>
-                <button class="@(IsItemSize(ItemSize.Large) ? "active" : "")" @onclick="() => SetItemSize(ItemSize.Large)"><i class="fas fa-expand"></i></button>
-            </HeaderButtonGroup>
-
-            @if (ViewOptions.IsEditMode)
-            {
+    @if (ViewOptions.IsEditMode)
+    {
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <SearchBar />
+            </div>
+            <div class="toolbar-right">
                 <HeaderButtonGroup Label="Config">
                     <button @onclick="OpenButtonManagerModal" title="Configure Header Buttons"><i class="fas fa-cog"></i></button>
                 </HeaderButtonGroup>
-            }
-            <ThemeToggleButton IsLightMode="isLightMode" OnToggle="HandleThemeToggle" />
+                <ThemeToggleButton IsLightMode="isLightMode" OnToggle="HandleThemeToggle" />
+            </div>
         </div>
-    </div>
+    }
 
     <main class="content">
         @Body
@@ -196,7 +199,9 @@
 
     private async Task ReloadDashboard()
     {
+        if (_disposed) return;
         var config = await DashboardClient.GetConfigAsync();
+        if (_disposed) return;
         DashboardState.SetConfig(config);
     }
 
@@ -238,13 +243,14 @@
 
     private async Task HandleSaveButton(HeaderButtonEditor.ButtonEditModel model)
     {
+        if (_disposed) return;
         bool success;
         if (_editingButtonId > 0)
         {
             var dto = new UpdateHeaderButtonDto
             {
                 Text = model.Text,
-                Url = model.Url,
+                Url = model.Url ?? string.Empty,
                 Icon = model.Icon
             };
             success = await DashboardClient.HeaderButtons.UpdateAsync(_editingButtonId, dto);
@@ -254,7 +260,7 @@
             var dto = new CreateHeaderButtonDto
             {
                 Text = model.Text,
-                Url = model.Url,
+                Url = model.Url ?? string.Empty,
                 Icon = model.Icon,
                 DashboardId = DashboardState.Config.Id
             };
@@ -262,6 +268,7 @@
         }
         else { success = false; }
 
+        if (_disposed) return;
         if (success)
         {
             await ReloadDashboard();
@@ -271,18 +278,20 @@
 
     private async Task HandleDeleteButton(HeaderButtonVm button)
     {
+        if (_disposed) return;
         var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete the '{button.Text}' button?");
-        if (confirmed)
-        {
-            var success = await DashboardClient.HeaderButtons.DeleteAsync(button.Id);
-            if (success) await ReloadDashboard();
-        }
+        if (_disposed || !confirmed) return;
+        var success = await DashboardClient.HeaderButtons.DeleteAsync(button.Id);
+        if (_disposed) return;
+        if (success) await ReloadDashboard();
     }
 
     private async Task HandleReorderButtons(List<int> orderedIds)
     {
+        if (_disposed) return;
         var dto = new ReorderHeaderButtonsDto(orderedIds);
         var success = await DashboardClient.HeaderButtons.ReorderAsync(dto);
+        if (_disposed) return;
         if (!success) await ReloadDashboard();
     }
 
