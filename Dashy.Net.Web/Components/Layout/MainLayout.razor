@@ -21,6 +21,12 @@
     <header class="main-header">
         <div class="header-title-section">
             <h1>@(DashboardState.Config?.Title ?? "Dashy.NET")</h1>
+            @if (ViewOptions.IsEditMode)
+            {
+                <div class="header-search">
+                    <SearchBar />
+                </div>
+            }
         </div>
         <div class="header-user-section">
             <div class="header-controls">
@@ -67,24 +73,14 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- Theme Toggle -->
+                <div class="control-group">
+                    <ThemeToggleButton IsLightMode="isLightMode" OnToggle="HandleThemeToggle" />
+                </div>
             </div>
         </div>
     </header>
-
-    @if (ViewOptions.IsEditMode)
-    {
-        <div class="toolbar">
-            <div class="toolbar-left">
-                <SearchBar />
-            </div>
-            <div class="toolbar-right">
-                <HeaderButtonGroup Label="Config">
-                    <button @onclick="OpenButtonManagerModal" title="Configure Header Buttons"><i class="fas fa-cog"></i></button>
-                </HeaderButtonGroup>
-                <ThemeToggleButton IsLightMode="isLightMode" OnToggle="HandleThemeToggle" />
-            </div>
-        </div>
-    }
 
     <main class="content">
         @Body
