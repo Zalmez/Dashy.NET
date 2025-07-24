@@ -105,12 +105,13 @@
 .items-wrapper {
   display: flex;
   gap: 1rem;
-  flex-wrap: wrap; /* Default auto layout */
-  flex: 1; /* Fill remaining space in section */
+  flex-wrap: wrap;
+  flex: 1;
   transition: all 0.3s ease;
   overflow: hidden;
   opacity: 1;
-  max-height: 1000px; /* Large enough to accommodate content */
+  max-height: 1000px;
+  justify-content: center;
 }
 
 .items-wrapper.layout-auto {
