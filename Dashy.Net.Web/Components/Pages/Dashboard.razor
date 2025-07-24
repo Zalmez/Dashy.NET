@@ -372,22 +372,19 @@ else
             };
         }
         
-        // Medium items are more flexible
         if (currentItemSize == ItemSize.Medium)
         {
             return itemCount switch
             {
-                >= 6 => "section-size-large",  // 6+ medium items need large width
-                >= 4 => "section-size-medium", // 4-5 medium items benefit from medium width
-                _ => "section-size-auto"       // 1-3 medium items fit in auto width
+                >= 6 => "section-size-large",
+                >= 4 => "section-size-medium",
+                _ => "section-size-auto"
             };
         }
-        
-        // Small items are most flexible and rarely need expansion
         return itemCount switch
         {
-            >= 8 => "section-size-medium",  // Only expand for many small items
-            _ => "section-size-auto"        // Small items generally fit well in auto width
+            >= 8 => "section-size-medium",
+            _ => "section-size-auto"
         };
     }
 

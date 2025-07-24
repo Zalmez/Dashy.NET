@@ -11,65 +11,89 @@
   flex-wrap: wrap;
   gap: 2rem;
   align-items: flex-start;
+  justify-content: stretch;
 }
 
 .section-item {
-  flex: 0 0 auto;
-  min-width: 300px;
-  max-width: 500px;
-  width: calc(50% - 1rem);
+  flex: 1 1 auto;
+  min-width: 320px;
+  max-width: none;
 }
 
-/* Section size variations based on item size and content needs */
+.section-item.section-size-auto {
+  flex: 1 1 auto;
+  min-width: 320px;
+}
+
 .section-item.section-size-small {
-  max-width: 400px;
+  flex: 1 1 400px;
+  min-width: 320px;
 }
 
 .section-item.section-size-medium {
-  max-width: 600px;
+  flex: 1.5 1 500px;
+  min-width: 400px;
 }
 
 .section-item.section-size-large {
-  max-width: 750px;
+  flex: 2 1 600px;
+  min-width: 500px;
 }
 
 @media (max-width: 768px) {
-  .section-item {
-    width: 100%;
-    min-width: unset;
-  }
-
-  /* All section sizes become full width on mobile */
+  .section-item,
   .section-item.section-size-small,
   .section-item.section-size-medium,
   .section-item.section-size-large {
+    flex: 1 1 100%;
+    min-width: unset;
     max-width: none;
   }
 }
 
-@media (min-width: 1200px) {
+@media (min-width: 769px) and (max-width: 1199px) {
   .section-item {
-    width: calc(33.333% - 1.333rem);
+    flex: 1 1 calc(50% - 1rem);
+    min-width: 320px;
   }
 
-  /* Adjust large sections to take more space when needed */
   .section-item.section-size-large {
-    width: calc(50% - 1rem);
+    flex: 1 1 100%;
+  }
+}
+
+@media (min-width: 1200px) {
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 2rem;
+    align-items: start;
+  }
+
+  .section-item {
+    flex: none;
+  }
+
+  .section-item.section-size-small {
+    grid-column: span 1;
+  }
+
+  .section-item.section-size-medium {
+    grid-column: span 1;
+  }
+
+  .section-item.section-size-large {
+    grid-column: span 2;
   }
 }
 
 @media (min-width: 1600px) {
-  .section-item {
-    width: calc(25% - 1.5rem);
-  }
-
-  /* Larger sections can span more columns on very wide screens */
-  .section-item.section-size-medium {
-    width: calc(33.333% - 1.333rem);
+  .dashboard-grid {
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
   }
 
   .section-item.section-size-large {
-    width: calc(41.666% - 1.333rem); /* ~5/12 width */
+    grid-column: span 2;
   }
 }
 
@@ -145,7 +169,7 @@
   overflow: hidden;
   opacity: 1;
   max-height: 1000px;
-  justify-content: center;
+  justify-content: flex-start; /* Changed from center to better utilize space */
 }
 
 .items-wrapper.layout-auto {
@@ -154,10 +178,9 @@
 }
 
 .items-wrapper.layout-auto .item {
-  flex: 0 0 auto;
-  width: auto;
+  flex: 1 1 auto;
   min-width: 200px;
-  max-width: 300px;
+  max-width: 350px; /* Slightly increased max-width */
 }
 
 .items-wrapper.layout-vertical {
