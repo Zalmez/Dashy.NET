@@ -7,9 +7,36 @@
 }
 
 .dashboard-grid {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 2rem;
-  grid-template-columns: 1fr;
+  align-items: flex-start;
+}
+
+.section-item {
+  flex: 0 0 auto;
+  min-width: 300px;
+  max-width: 500px;
+  width: calc(50% - 1rem);
+}
+
+@media (max-width: 768px) {
+  .section-item {
+    width: 100%;
+    min-width: unset;
+  }
+}
+
+@media (min-width: 1200px) {
+  .section-item {
+    width: calc(33.333% - 1.333rem);
+  }
+}
+
+@media (min-width: 1600px) {
+  .section-item {
+    width: calc(25% - 1.5rem);
+  }
 }
 
 .main-tiles-section {
@@ -27,6 +54,9 @@
 
 .section-container {
   margin-bottom: 2rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .section-header {
@@ -73,10 +103,38 @@
 }
 
 .items-wrapper {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap; /* Default auto layout */
+  flex: 1; /* Fill remaining space in section */
   transition: all 0.3s ease;
+}
+
+.items-wrapper.layout-auto {
+  flex-wrap: wrap;
+  flex-direction: row;
+}
+
+.items-wrapper.layout-auto .item {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 200px;
+  max-width: 300px;
+}
+
+.items-wrapper.layout-vertical {
+  flex-direction: column;
+  flex-wrap: nowrap;
+}
+
+.items-wrapper.layout-vertical .item {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: none;
+}
+
+.items-wrapper .item {
+  flex: 0 0 auto;
 }
 
 .items-wrapper.collapsed {
