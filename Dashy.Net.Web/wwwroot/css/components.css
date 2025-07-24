@@ -20,10 +20,30 @@
   width: calc(50% - 1rem);
 }
 
+/* Section size variations based on item size and content needs */
+.section-item.section-size-small {
+  max-width: 400px;
+}
+
+.section-item.section-size-medium {
+  max-width: 600px;
+}
+
+.section-item.section-size-large {
+  max-width: 750px;
+}
+
 @media (max-width: 768px) {
   .section-item {
     width: 100%;
     min-width: unset;
+  }
+
+  /* All section sizes become full width on mobile */
+  .section-item.section-size-small,
+  .section-item.section-size-medium,
+  .section-item.section-size-large {
+    max-width: none;
   }
 }
 
@@ -31,11 +51,25 @@
   .section-item {
     width: calc(33.333% - 1.333rem);
   }
+
+  /* Adjust large sections to take more space when needed */
+  .section-item.section-size-large {
+    width: calc(50% - 1rem);
+  }
 }
 
 @media (min-width: 1600px) {
   .section-item {
     width: calc(25% - 1.5rem);
+  }
+
+  /* Larger sections can span more columns on very wide screens */
+  .section-item.section-size-medium {
+    width: calc(33.333% - 1.333rem);
+  }
+
+  .section-item.section-size-large {
+    width: calc(41.666% - 1.333rem); /* ~5/12 width */
   }
 }
 

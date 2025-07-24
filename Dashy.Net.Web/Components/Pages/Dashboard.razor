@@ -2,6 +2,7 @@
 @using Dashy.Net.Web.Helpers
 @using Dashy.Net.Web.Components.Shared
 @using Dashy.Net.Shared.Models
+@using Dashy.Net.Web.Services
 @inject ILogger<Dashboard> Logger
 @inject IJSRuntime JSRuntime
 @inject DashboardClient DashboardClient
@@ -45,7 +46,7 @@ else
         <div class="dashboard-grid">
             @foreach (var currentSection in FilteredSections)
             {
-                <div class="section-item" @key="currentSection.Id">
+                <div class="section-item @GetSectionSizeClass(currentSection)" @key="currentSection.Id">
                     <div class="section-container" id="section-@currentSection.Id">
                         <div class="section-header" @onclick="() => ToggleSectionCollapse(currentSection.Id)">
                             <div class="section-header-left">
@@ -341,6 +342,53 @@ else
             return "collapsed";
 
         return "layout-" + ViewOptions.CurrentLayout.ToString().ToLower();
+    }
+
+    private string GetSectionSizeClass(SectionVm section)
+    {
+        var itemCount = section.Items.Count;
+        var currentItemSize = ViewOptions.CurrentItemSize;
+        var isVerticalLayout = ViewOptions.CurrentLayout == LayoutOrientation.Vertical;
+        
+        if (itemCount == 0)
+            return "section-size-auto";
+        if (isVerticalLayout)
+        {
+            return currentItemSize switch
+            {
+                ItemSize.Large when itemCount >= 1 => "section-size-medium", 
+                ItemSize.Medium when itemCount >= 2 => "section-size-small",
+                _ => "section-size-auto"
+            };
+        }
+
+        if (currentItemSize == ItemSize.Large)
+        {
+            return itemCount switch
+            {
+                >= 4 => "section-size-large",
+                >= 2 => "section-size-medium",
+                _ => "section-size-auto"
+            };
+        }
+        
+        // Medium items are more flexible
+        if (currentItemSize == ItemSize.Medium)
+        {
+            return itemCount switch
+            {
+                >= 6 => "section-size-large",  // 6+ medium items need large width
+                >= 4 => "section-size-medium", // 4-5 medium items benefit from medium width
+                _ => "section-size-auto"       // 1-3 medium items fit in auto width
+            };
+        }
+        
+        // Small items are most flexible and rarely need expansion
+        return itemCount switch
+        {
+            >= 8 => "section-size-medium",  // Only expand for many small items
+            _ => "section-size-auto"        // Small items generally fit well in auto width
+        };
     }
 
     private async Task InitializeDashboard()
