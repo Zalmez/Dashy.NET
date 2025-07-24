@@ -20,17 +20,16 @@
     
     <header class="main-header">
         <div class="header-title-section">
-            <h1>@(DashboardState.Config?.Title ?? "Dashy.NET")</h1>
-            @if (ViewOptions.IsEditMode)
-            {
-                <div class="header-search">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <img src="images/dashynet_logo_notext.png" alt="Dashy.NET Logo" class="header-logo" />
+                <h1>@(DashboardState.Config?.Title ?? "Dashy.NET")</h1>
+                @* <div class="header-search">
                     <SearchBar />
-                </div>
-            }
+                </div> *@
+            </div>
         </div>
         <div class="header-user-section">
             <div class="header-controls">
-                <!-- Layout Controls -->
                 <div class="control-group">
                     <span class="control-label">Layout</span>
                     <div class="button-group">

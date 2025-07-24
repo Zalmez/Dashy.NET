@@ -32,15 +32,6 @@
 }
 else
 {
-    @if (ViewOptions.IsEditMode)
-    {
-        <div class="add-section-container">
-            <button class="btn btn-primary" @onclick="OpenAddSectionModal">
-                <i class="fas fa-plus"></i> Add New Section
-            </button>
-        </div>
-    }
-
     <div class="dashboard-container">
         @if (ViewOptions.IsEditMode)
         {

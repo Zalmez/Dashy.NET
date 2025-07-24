@@ -150,6 +150,13 @@ h6 {
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
+.header-logo {
+  width: 70px;
+  height: 70px;
+  border-radius: 25%;
+  object-fit: cover;
+}
+
 .header-search {
   margin-top: 0.75rem;
   max-width: 400px;
