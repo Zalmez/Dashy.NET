@@ -108,6 +108,9 @@
   flex-wrap: wrap; /* Default auto layout */
   flex: 1; /* Fill remaining space in section */
   transition: all 0.3s ease;
+  overflow: hidden;
+  opacity: 1;
+  max-height: 1000px; /* Large enough to accommodate content */
 }
 
 .items-wrapper.layout-auto {
@@ -138,7 +141,11 @@
 }
 
 .items-wrapper.collapsed {
-  display: none;
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  overflow: hidden;
 }
 
 .glass-tile {
