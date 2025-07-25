@@ -1,3 +1,23 @@
+/* --- RSS Widget --- */
+.rss-continue-reading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  color: var(--accent-color);
+  font-weight: 600;
+  text-decoration: none;
+  margin-top: 0.5em;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0.2em 0.6em;
+  transition: background 0.15s, color 0.15s;
+}
+
+.rss-continue-reading:hover {
+  background: var(--accent-color);
+  color: var(--accent-text-color);
+  text-decoration: underline;
+}
 /*==============================================================
   1. GLOBAL STYLES & THEMING
 ==============================================================*/
@@ -413,6 +433,7 @@ h6 {
   background: linear-gradient(45deg, var(--accent-color), transparent);
   opacity: 0;
   transition: opacity 0.3s ease-in-out;
+  pointer-events: none;
 }
 
 .item-card:hover {
