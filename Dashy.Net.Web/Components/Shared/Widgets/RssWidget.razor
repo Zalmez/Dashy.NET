@@ -10,10 +10,10 @@
     {
         <div class="item-edit-controls">
             <button class="edit-btn" title="Edit Item" @onclick="OnEditClick"><i class="fas fa-pencil-alt"></i></button>
-            <button class="delete-btn" title="Delete Item" @onclick="OnDeleteClick"><i class="fas fa-trash-alt"></i></button>
+            <button class="delete-btn" title="Delete Item" @onclick="OnDeleteClick"><i
+                    class="fas fa-trash-alt"></i></button>
         </div>
     }
-    <!--style="max-width:@maxWidth" //Removed for now testing other solutions-->
     <div class="item-card @GetItemSizeClass()">
         <div class="item-icon">
             @if (!string.IsNullOrWhiteSpace(Item.Icon))
@@ -39,8 +39,10 @@
                                 <div class="rss-item-header">
                                     <i class="@Item.Icon"></i>
                                     <h6>@feedItem.Title</h6>
-                                    <a href="@feedItem.Link" target="_blank" class="rss-continue-reading"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
                                 </div>
+                                <a href="@feedItem.Link" target="_blank" rel="noopener noreferrer"
+                                    class="rss-continue-reading">Continue Reading <i
+                                        class="fa-solid fa-arrow-up-right-from-square"></i></a>
                             </li>
                         }
                     </ul>
@@ -56,9 +58,13 @@
                                     <h5>@feedItem.Title</h5>
                                 </div>
                                 <p class="rss-publish-date">@feedItem.PublishDate.ToString("ddd, MMM dd yyyy")</p>
-                                <p class="rss-description">@feedItem.Description.Substring(0, Math.Min(feedItem.Description.Length, 100))...</p>
-                            </li>
-                        }
+                                <p class="rss-description">@feedItem.Description.Substring(0, Math.Min(feedItem.Description.Length,
+                                                            100))...</p>
+                    <a href="@feedItem.Link" target="_blank" rel="noopener noreferrer"
+                        class="rss-continue-reading">Continue Reading <i
+                            class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                </li>
+                                }
                     </ul>
                     break;
 
@@ -73,7 +79,9 @@
                                 </div>
                                 <p class="rss-publish-date">@feedItem.PublishDate.ToString("ddd, MMM dd yyyy")</p>
                                 <p class="rss-description">@feedItem.Description</p>
-                                <a href="@feedItem.Link" target="_blank" class="rss-continue-reading">Continue Reading</a>
+                                <a href="@feedItem.Link" target="_blank" rel="noopener noreferrer"
+                                    class="rss-continue-reading">Continue Reading <i
+                                        class="fa-solid fa-arrow-up-right-from-square"></i></a>
                                 <hr class="rss-item-separator" />
                             </li>
                         }
@@ -127,10 +135,11 @@
                     {
                         feedItems.Add(new RssFeedItem
                         {
-                            Title = titleNode.InnerText,
+                            Title = HtmlDecode(StripHtml(titleNode.InnerText)),
                             Link = linkNode.InnerText,
-                            Description = descriptionNode?.InnerText ?? string.Empty,
-                            PublishDate = DateTime.TryParse(item.SelectSingleNode("pubDate")?.InnerText, out var pubDate) ? pubDate : DateTime.MinValue
+                            Description = HtmlDecode(StripHtml(descriptionNode?.InnerText ?? string.Empty)),
+                            PublishDate = DateTime.TryParse(item.SelectSingleNode("pubDate")?.InnerText, out var pubDate) ? pubDate :
+                        DateTime.MinValue
                         });
                     }
                 }
@@ -144,6 +153,21 @@
             Logger.LogError($"Failed to fetch RSS feed from {feedUrl}");
             return Enumerable.Empty<RssFeedItem>();
         }
+    }
+
+    // Utility to strip HTML tags from a string
+    private static string StripHtml(string input)
+    {
+        if (string.IsNullOrEmpty(input)) return string.Empty;
+        // Remove HTML tags
+        return System.Text.RegularExpressions.Regex.Replace(input, "<.*?>", string.Empty).Trim();
+    }
+
+    // Utility to decode HTML entities
+    private static string HtmlDecode(string input)
+    {
+        if (string.IsNullOrEmpty(input)) return string.Empty;
+        return System.Net.WebUtility.HtmlDecode(input);
     }
 
     private async Task OnDeleteClick()
