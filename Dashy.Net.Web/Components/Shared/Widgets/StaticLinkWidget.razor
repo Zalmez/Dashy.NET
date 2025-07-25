@@ -4,26 +4,25 @@
 @inject NavigationManager NavManager
 @implements IDisposable
 
-<div class="item-card-wrapper">
+<div class="glass-tile @GetTileColorClass() @GetItemSizeClass()" @onclick="HandleTileClick"
+    @onclick:preventDefault="ViewOptions.IsEditMode">
     @if (ViewOptions.IsEditMode)
     {
         <div class="item-edit-controls">
-            <button class="edit-btn" title="Edit Item" @onclick="OnEditClick"><i class="fas fa-pencil-alt"></i></button>
-            <button class="delete-btn" title="Delete Item" @onclick="OnDeleteClick"><i class="fas fa-trash-alt"></i></button>
+            <button class="edit-btn" title="Edit Item" @onclick="OnEditClick" @onclick:stopPropagation="true"><i
+                    class="fas fa-pencil-alt"></i></button>
+            <button class="delete-btn" title="Delete Item" @onclick="OnDeleteClick" @onclick:stopPropagation="true"><i
+                    class="fas fa-trash-alt"></i></button>
         </div>
     }
 
-    <a class="item-card @GetItemSizeClass()"
-       href="@(ViewOptions.IsEditMode ? null : Url)"
-       target="@LinkTarget"
-       rel="@(LinkTarget == "_blank" ? "noopener noreferrer" : null)">
-
-        <div class="item-icon">
+    <div class="tile-content">
+        <div class="tile-icon">
             @if (!string.IsNullOrWhiteSpace(Item.Icon))
             {
                 @if (Item.Icon.StartsWith("/") || Item.Icon.StartsWith("http"))
                 {
-                    <img src="@Item.Icon" alt="@Item.Title" class="item-img-icon" />
+                    <img src="@Item.Icon" alt="@Item.Title" />
                 }
                 else
                 {
@@ -31,14 +30,12 @@
                 }
             }
         </div>
-        <div class="item-details">
-            <div class="item-title">@Item.Title</div>
-            @if (ViewOptions.CurrentItemSize == ItemSize.Large && !string.IsNullOrWhiteSpace(Description))
-            {
-                <div class="item-description">@Description</div>
-            }
-        </div>
-    </a>
+        <div class="tile-title">@Item.Title</div>
+        @if (ViewOptions.CurrentItemSize == ItemSize.Large && !string.IsNullOrWhiteSpace(Description))
+        {
+            <div class="tile-description">@Description</div>
+        }
+    </div>
 </div>
 
 @code {
@@ -49,7 +46,29 @@
 
     protected override void OnInitialized()
     {
-        ViewOptions.OnChange += StateHasChanged;
+        base.OnInitialized();
+    }
+
+    private void HandleTileClick()
+    {
+        if (!ViewOptions.IsEditMode && !string.IsNullOrWhiteSpace(Url))
+        {
+            if (LinkTarget == "_blank")
+            {
+                _ = JSRuntime.InvokeVoidAsync("open", Url, "_blank");
+            }
+            else
+            {
+                NavManager.NavigateTo(Url);
+            }
+        }
+    }
+
+    private string GetTileColorClass()
+    {
+        var hash = Item.Title.GetHashCode();
+        var colors = new[] { "blue", "green", "purple", "orange", "red", "pink", "teal" };
+        return colors[Math.Abs(hash) % colors.Length];
     }
 
     private async Task OnDeleteClick()

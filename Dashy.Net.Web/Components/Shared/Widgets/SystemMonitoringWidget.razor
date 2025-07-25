@@ -1,0 +1,137 @@
+@inject IJSRuntime JSRuntime
+@implements IDisposable
+
+<div class="monitoring-widget">
+    <div class="widget-header">
+        <h3 class="widget-title">System Monitoring</h3>
+    </div>
+    <div class="monitoring-grid">
+        <div class="monitor-card">
+            <div class="monitor-icon">
+                <i class="fas fa-microchip"></i>
+            </div>
+            <div class="monitor-info">
+                <div class="monitor-label">CPU</div>
+                <div class="monitor-value">@_cpuUsage%</div>
+            </div>
+        </div>
+        <div class="monitor-card">
+            <div class="monitor-icon">
+                <i class="fas fa-memory"></i>
+            </div>
+            <div class="monitor-info">
+                <div class="monitor-label">RAM</div>
+                <div class="monitor-value">@_ramUsage MB</div>
+            </div>
+        </div>
+        <div class="monitor-card">
+            <div class="monitor-icon">
+                <i class="fas fa-network-wired"></i>
+            </div>
+            <div class="monitor-info">
+                <div class="monitor-label">Network</div>
+                <div class="monitor-value">@_networkUsage MB</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private int _cpuUsage = 0;
+    private int _ramUsage = 0;
+    private int _networkUsage = 0;
+    private Timer? _timer;
+    private Random _random = new Random();
+
+    protected override void OnInitialized()
+    {
+        // Simulate system monitoring with random values
+        _timer = new Timer(UpdateMetrics, null, TimeSpan.Zero, TimeSpan.FromSeconds(2));
+    }
+
+    private void UpdateMetrics(object? state)
+    {
+        _cpuUsage = _random.Next(10, 85);
+        _ramUsage = _random.Next(2000, 8000);
+        _networkUsage = _random.Next(50, 500);
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        _timer?.Dispose();
+    }
+}
+
+<style>
+    .monitoring-widget {
+        background: var(--glass-background);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+        backdrop-filter: blur(20px);
+        box-shadow: var(--glass-shadow);
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .monitoring-widget:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .widget-header {
+        margin-bottom: 1.5rem;
+    }
+
+    .widget-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-color);
+        margin: 0;
+    }
+
+    .monitoring-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+    }
+
+    .monitor-card {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        transition: all 0.3s ease;
+    }
+
+    .monitor-card:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: var(--accent-color);
+    }
+
+    .monitor-icon {
+        font-size: 1.5rem;
+        color: var(--accent-color);
+        text-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+    }
+
+    .monitor-info {
+        flex: 1;
+    }
+
+    .monitor-label {
+        font-size: 0.875rem;
+        color: var(--subtle-text-color);
+        margin-bottom: 0.25rem;
+    }
+
+    .monitor-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-color);
+    }
+</style>

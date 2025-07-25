@@ -2,6 +2,7 @@
 @using Dashy.Net.Web.Helpers
 @using Dashy.Net.Web.Components.Shared
 @using Dashy.Net.Shared.Models
+@using Dashy.Net.Web.Services
 @inject ILogger<Dashboard> Logger
 @inject IJSRuntime JSRuntime
 @inject DashboardClient DashboardClient
@@ -32,20 +33,20 @@
 }
 else
 {
-    @if (ViewOptions.IsEditMode)
-    {
-        <div class="add-section-container">
-            <button class="btn btn-primary" @onclick="OpenAddSectionModal">
-                <i class="fas fa-plus"></i> Add New Section
-            </button>
-        </div>
-    }
-
     <div class="dashboard-container">
-        <div class="sections-wrapper">
+        @if (ViewOptions.IsEditMode)
+        {
+            <div class="add-section-container">
+                <button class="btn btn-primary" @onclick="OpenAddSectionModal">
+                    <i class="fas fa-plus"></i> Add New Section
+                </button>
+            </div>
+        }
+
+        <div class="dashboard-grid">
             @foreach (var currentSection in FilteredSections)
             {
-                <div class="section-item" @key="currentSection.Id">
+                <div class="section-item @GetSectionSizeClass(currentSection)" @key="currentSection.Id">
                     <div class="section-container" id="section-@currentSection.Id">
                         <div class="section-header" @onclick="() => ToggleSectionCollapse(currentSection.Id)">
                             <div class="section-header-left">
@@ -66,7 +67,7 @@ else
                                 </div>
                             }
                         </div>
-                        <div style="margin-top: 1rem;" class="items-wrapper @GetItemsContainerClass(currentSection.Id)">
+                        <div class="items-wrapper @GetItemsContainerClass(currentSection.Id)">
                             @foreach (var currentItem in currentSection.Items)
                             {
                                 <div class="item" @key="currentItem.Id">
@@ -88,10 +89,10 @@ else
                                             <RssWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
                                             break;
                                         case "vulnerability feed":
-                                            <ThreatFeedWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
+                                            <VulnerabilityFeedWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
                                             break;
                                         default:
-                                            <UnknownWidget Widget="@currentItem.Widget"  />
+                                            <UnknownWidget Item="currentItem" Widget="@currentItem.Widget" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
                                             break;
                                     }
                                 </div>
@@ -257,6 +258,7 @@ else
 
     private async Task HandleSaveSection(CreateSectionDto sectionToSave)
     {
+        if (_isDisposed) return;
         bool success;
         if (_sectionToEdit is not null)
         {
@@ -271,6 +273,7 @@ else
         if (success)
         {
             var newConfig = await DashboardClient.GetConfigAsync();
+            if (_isDisposed) return;
             DashboardState.SetConfig(newConfig);
         }
         CloseSectionModal();
@@ -278,6 +281,7 @@ else
 
     private async Task HandleSaveItem(ItemEditModel itemToSave)
     {
+        if (_isDisposed) return;
         bool success;
         if (itemToSave.Id > 0)
         {
@@ -290,9 +294,11 @@ else
             success = await DashboardClient.Items.CreateAsync(createDto);
         }
 
+        if (_isDisposed) return;
         if (success)
         {
             var newConfig = await DashboardClient.GetConfigAsync();
+            if (_isDisposed) return;
             DashboardState.SetConfig(newConfig);
         }
 
@@ -301,7 +307,9 @@ else
 
     private async Task HandleItemDeleted(ItemVm itemToDelete)
     {
+        if (_isDisposed) return;
         var success = await DashboardClient.Items.DeleteAsync(itemToDelete.Id);
+        if (_isDisposed) return;
         if (success)
         {
             var config = DashboardState.Config;
@@ -317,9 +325,11 @@ else
 
     private async Task HandleSectionDeleted(SectionVm sectionToDelete)
     {
+        if (_isDisposed) return;
         var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete the entire '{sectionToDelete.Name}' section and all of its items?");
-        if (!confirmed) return;
+        if (_isDisposed || !confirmed) return;
         var success = await DashboardClient.Sections.DeleteAsync(sectionToDelete.Id);
+        if (_isDisposed) return;
         if (success)
         {
             DashboardState.Config?.Sections.Remove(sectionToDelete);
@@ -332,6 +342,50 @@ else
             return "collapsed";
 
         return "layout-" + ViewOptions.CurrentLayout.ToString().ToLower();
+    }
+
+    private string GetSectionSizeClass(SectionVm section)
+    {
+        var itemCount = section.Items.Count;
+        var currentItemSize = ViewOptions.CurrentItemSize;
+        var isVerticalLayout = ViewOptions.CurrentLayout == LayoutOrientation.Vertical;
+        
+        if (itemCount == 0)
+            return "section-size-auto";
+        if (isVerticalLayout)
+        {
+            return currentItemSize switch
+            {
+                ItemSize.Large when itemCount >= 1 => "section-size-medium", 
+                ItemSize.Medium when itemCount >= 2 => "section-size-small",
+                _ => "section-size-auto"
+            };
+        }
+
+        if (currentItemSize == ItemSize.Large)
+        {
+            return itemCount switch
+            {
+                >= 4 => "section-size-large",
+                >= 2 => "section-size-medium",
+                _ => "section-size-auto"
+            };
+        }
+        
+        if (currentItemSize == ItemSize.Medium)
+        {
+            return itemCount switch
+            {
+                >= 6 => "section-size-large",
+                >= 4 => "section-size-medium",
+                _ => "section-size-auto"
+            };
+        }
+        return itemCount switch
+        {
+            >= 8 => "section-size-medium",
+            _ => "section-size-auto"
+        };
     }
 
     private async Task InitializeDashboard()

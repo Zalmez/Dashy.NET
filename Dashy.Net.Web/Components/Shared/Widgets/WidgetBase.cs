@@ -4,6 +4,7 @@ using Dashy.Net.Web.Helpers;
 using Microsoft.AspNetCore.Components;
 
 namespace Dashy.Net.Web.Components.Shared.Widgets;
+
 public abstract class WidgetBase : ComponentBase, IDisposable
 {
     [Inject]
@@ -49,8 +50,13 @@ public abstract class WidgetBase : ComponentBase, IDisposable
 
     protected override void OnInitialized()
     {
-        SubscriptionManager.AddSubscription(() => ViewOptions.OnChange -= StateHasChanged);
-        ViewOptions.OnChange += StateHasChanged;
+        SubscriptionManager.AddSubscription(() => ViewOptions.OnChange -= HandleViewOptionsChanged);
+        ViewOptions.OnChange += HandleViewOptionsChanged;
+    }
+
+    private void HandleViewOptionsChanged()
+    {
+        InvokeAsync(StateHasChanged);
     }
 
     public virtual void Dispose()

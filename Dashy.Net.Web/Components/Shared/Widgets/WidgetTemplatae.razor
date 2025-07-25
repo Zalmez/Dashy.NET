@@ -1,15 +1,15 @@
 ﻿@inherits WidgetBase
 @inject IJSRuntime JSRuntime
-@inject ILogger<WidgetTemplatae> Logger  // Change WidgetTemplatae to the actual widget name
+@inject ILogger<WidgetTemplatae> Logger // Change WidgetTemplatae to the actual widget name
 @inject NavigationManager NavManager
-@implements IDisposable
 
 <div class="item-card-wrapper">
     @if (ViewOptions.IsEditMode)
     {
         <div class="item-edit-controls">
             <button class="edit-btn" title="Edit Item" @onclick="OnEditClick"><i class="fas fa-pencil-alt"></i></button>
-            <button class="delete-btn" title="Delete Item" @onclick="OnDeleteClick"><i class="fas fa-trash-alt"></i></button>
+            <button class="delete-btn" title="Delete Item" @onclick="OnDeleteClick"><i
+                    class="fas fa-trash-alt"></i></button>
         </div>
     }
 
@@ -23,11 +23,7 @@
 
 @code {
 
-    private string? SOMEVALUE => GetOption("SOMEOPTION");  // Remember to update Dashy.Net.Shared/models/ItemEditModel.cs to add new options
-    protected override void OnInitialized()
-    {
-        ViewOptions.OnChange += StateHasChanged;
-    }
+    private string? SOMEVALUE => GetOption("SOMEOPTION"); //Remember to update Dashy.Net.Shared/models/ItemEditModel.cs to add new options
 
     private async Task OnDeleteClick()
     {
