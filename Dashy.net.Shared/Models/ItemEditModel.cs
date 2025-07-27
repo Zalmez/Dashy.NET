@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
 namespace Dashy.Net.Shared.Models;
+
 public class ItemEditModel
 {
     public int Id { get; set; }
@@ -19,14 +20,15 @@ public class ItemEditModel
     public string? Longitude { get; set; }
     public string Unit { get; set; } = "celsius";
 
-    public string? Timezone { get; set; } 
-    public string? TimeFormat { get; set; } 
+    public string? Timezone { get; set; }
+    public string? TimeFormat { get; set; }
 
     public string? Provider { get; set; }
     public string? ApiKey { get; set; }
 
     public string? FeedUrl { get; set; }
-    public int MaxItems { get; set; } = 5; 
+    public int MaxItems { get; set; } = 5;
+    public int RefreshInterval { get; set; } = 5; // Refresh interval in minutes
     public string? MaxSize { get; set; }
 
     public string? Severity { get; set; } // Added severity property for widgets like ThreatFeedWidget
@@ -53,11 +55,12 @@ public class ItemEditModel
         Longitude = GetOption("longitude");
         Unit = GetOption("unit") ?? "celsius";
         Timezone = GetOption("timezone") ?? "UTC";
-        TimeFormat = GetOption("format") ?? "24-hour"; 
+        TimeFormat = GetOption("format") ?? "24-hour";
         Provider = GetOption("provider");
         ApiKey = GetOption("apiKey");
         FeedUrl = GetOption("feedUrl");
         MaxItems = int.TryParse(GetOption("maxItems"), out var maxItems) ? maxItems : 5;
+        RefreshInterval = int.TryParse(GetOption("refreshInterval"), out var refreshInterval) ? refreshInterval : 5;
         Severity = GetOption("severity"); // Added severity initialization
     }
 
@@ -75,11 +78,12 @@ public class ItemEditModel
         if (!string.IsNullOrWhiteSpace(Unit)) options["unit"] = Unit;
         if (!string.IsNullOrWhiteSpace(LinkTarget)) options["target"] = LinkTarget;
         if (!string.IsNullOrWhiteSpace(Timezone)) options["timezone"] = Timezone;
-        if (!string.IsNullOrWhiteSpace(TimeFormat)) options["format"] = TimeFormat; 
+        if (!string.IsNullOrWhiteSpace(TimeFormat)) options["format"] = TimeFormat;
         if (!string.IsNullOrWhiteSpace(Provider)) options["provider"] = Provider;
         if (!string.IsNullOrWhiteSpace(ApiKey)) options["apiKey"] = ApiKey;
         if (!string.IsNullOrWhiteSpace(FeedUrl)) options["feedUrl"] = FeedUrl;
         options["maxItems"] = MaxItems;
+        options["refreshInterval"] = RefreshInterval;
         if (!string.IsNullOrWhiteSpace(MaxSize)) options["maxSize"] = MaxSize;
         if (!string.IsNullOrWhiteSpace(Severity)) options["severity"] = Severity; // Added severity packing
         return options;
