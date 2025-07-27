@@ -48,6 +48,9 @@ jobs:
           context: .
           file: ./Dashy.Net.ApiService/Dockerfile
           push: true
+          build-args: |
+            GITHUB_REF_NAME=${{ steps.determine_tag.outputs.PRIMARY_TAG }}
+            GITHUB_REF_TYPE=tag
           tags: |
             ${{ env.REGISTRY }}/${{ env.AUTHOR }}/dashy-net-apiservice:${{ steps.determine_tag.outputs.PRIMARY_TAG }}
             ${{ env.REGISTRY }}/${{ env.AUTHOR }}/dashy-net-apiservice:${{ github.sha }}
@@ -58,6 +61,9 @@ jobs:
           context: .
           file: ./Dashy.Net.Web/Dockerfile
           push: true
+          build-args: |
+            GITHUB_REF_NAME=${{ steps.determine_tag.outputs.PRIMARY_TAG }}
+            GITHUB_REF_TYPE=tag
           tags: |
             ${{ env.REGISTRY }}/${{ env.AUTHOR }}/dashy-net-webfrontend:${{ steps.determine_tag.outputs.PRIMARY_TAG }}
             ${{ env.REGISTRY }}/${{ env.AUTHOR }}/dashy-net-webfrontend:${{ github.sha }}
@@ -68,6 +74,9 @@ jobs:
           context: .
           file: ./Dashy.Net.MigrationService/Dockerfile
           push: true
+          build-args: |
+            GITHUB_REF_NAME=${{ steps.determine_tag.outputs.PRIMARY_TAG }}
+            GITHUB_REF_TYPE=tag
           tags: |
             ${{ env.REGISTRY }}/${{ env.AUTHOR }}/dashy-net-migrationservice:${{ steps.determine_tag.outputs.PRIMARY_TAG }}
             ${{ env.REGISTRY }}/${{ env.AUTHOR }}/dashy-net-migrationservice:${{ github.sha }}

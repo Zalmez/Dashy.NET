@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <PropertyGroup>
+    <!-- Version will be automatically set from Git tags during build -->
+    <!-- For local development, this fallback version will be used -->
+    <Version>0.1.0-dev</Version>
+    <AssemblyVersion>0.1.0.0</AssemblyVersion>
+    <FileVersion>0.1.0.0</FileVersion>
+    
+    <!-- Extract version from GITHUB_REF when building from tag -->
+    <GitHubRefName Condition="'$(GITHUB_REF_NAME)' != ''">$(GITHUB_REF_NAME)</GitHubRefName>
+    <GitHubRefType Condition="'$(GITHUB_REF_TYPE)' != ''">$(GITHUB_REF_TYPE)</GitHubRefType>
+    
+    <!-- Set version from Git tag when available -->
+    <Version Condition="'$(GitHubRefType)' == 'tag' AND '$(GitHubRefName)' != ''">$(GitHubRefName)</Version>
+    <!-- Remove 'v' prefix if present (e.g., v1.0.0 -> 1.0.0) -->
+    <Version Condition="'$(Version)' != '' AND $(Version.StartsWith('v'))">$(Version.Substring(1))</Version>
+    
+    <!-- Parse version for assembly attributes -->
+    <VersionSuffix Condition="$(Version.Contains('-'))">$(Version.Split('-')[1])</VersionSuffix>
+    <VersionPrefix Condition="$(Version.Contains('-'))">$(Version.Split('-')[0])</VersionPrefix>
+    <VersionPrefix Condition="!$(Version.Contains('-'))">$(Version)</VersionPrefix>
+    
+    <!-- Set assembly versions based on parsed version -->
+    <AssemblyVersion Condition="'$(VersionPrefix)' != ''">$(VersionPrefix).0</AssemblyVersion>
+    <FileVersion Condition="'$(VersionPrefix)' != ''">$(VersionPrefix).0</FileVersion>
+    
+    <!-- Generate assembly info -->
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+</Project>

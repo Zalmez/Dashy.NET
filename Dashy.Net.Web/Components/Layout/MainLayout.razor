@@ -16,6 +16,7 @@
 @inject DashboardClient DashboardClient
 @inject AuthenticationStateProvider AuthStateProvider
 @inject EventSubscriptionManager SubscriptionManager
+@inject IVersionService VersionService
 
 @implements IDisposable
 <CascadingAuthenticationState>
@@ -197,9 +198,12 @@
 
     <footer class="dashboard-footer" style="position: fixed; left:0;bottom:0;width:100%;text-align:center;">
         <div>
-            <strong>Version:</strong> 0.1.1 &nbsp;|&nbsp;
+            <strong>Version:</strong> @VersionService.GetVersion() &nbsp;|&nbsp;
             <strong>License:</strong> GNU Affero General Public License &nbsp;|&nbsp;
-            <strong>Disclaimer:</strong> This is a pre-release version. Features and functionality may change or be missing.
+            @if (VersionService.IsPreRelease())
+            {
+                <strong>Disclaimer:</strong> <span>This is a pre-release version. Features and functionality may change or be missing.</span>
+            }
         </div>
     </footer>
 </div>

@@ -1,6 +1,10 @@
 ﻿FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
+# Accept build arguments for version information
+ARG GITHUB_REF_NAME
+ARG GITHUB_REF_TYPE
+
 # Copy all .csproj files and the .sln file.
 # These paths are relative to the solution root, which we will set as the
 # build context in azure.yaml.
@@ -17,6 +21,10 @@ RUN dotnet restore "Dashy.Net.sln"
 
 # Copy the rest of the application's source code
 COPY . .
+
+# Set environment variables for build
+ENV GITHUB_REF_NAME=${GITHUB_REF_NAME}
+ENV GITHUB_REF_TYPE=${GITHUB_REF_TYPE}
 
 # Set the workdir to the specific project we want to publish
 WORKDIR "/src/Dashy.Net.ApiService"
