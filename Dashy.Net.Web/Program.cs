@@ -32,6 +32,7 @@ builder.Services.AddSortableServices();
 builder.Services.AddSingleton<DashboardStateService>();
 builder.Services.AddScoped<FileStorageService>();
 builder.Services.AddSingleton<WidgetRegistryService>();
+builder.Services.AddSingleton<IVersionService, VersionService>();
 builder.Services.AddHttpClient("ApiService", opts =>
 {
     opts.BaseAddress = new("https+http://apiservice");
@@ -91,15 +92,15 @@ if (!string.IsNullOrWhiteSpace(authAuthority) && !string.IsNullOrWhiteSpace(auth
         options.SlidingExpiration = true;
         options.ReturnUrlParameter = "ReturnUrl";
     });
-    
+
 }
 else
 {
     if (string.IsNullOrWhiteSpace(authAuthority))
         logger.LogWarning("Authentication authority is not set. Please set the environment variable 'auth_authority' to enable authentication.");
-    if(string.IsNullOrWhiteSpace(authClientId))
+    if (string.IsNullOrWhiteSpace(authClientId))
         logger.LogWarning("Authentication client ID is not set. Please set the environment variable 'auth_clientid' to enable authentication.");
-    if(string.IsNullOrWhiteSpace(authClientSecret))
+    if (string.IsNullOrWhiteSpace(authClientSecret))
         logger.LogWarning("Authentication client secret is not set. Please set the environment variable 'auth_clientsecret' to enable authentication.");
 }
 

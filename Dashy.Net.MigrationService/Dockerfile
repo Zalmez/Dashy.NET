@@ -1,6 +1,10 @@
 ﻿FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
+# Accept build arguments for version information
+ARG GITHUB_REF_NAME
+ARG GITHUB_REF_TYPE
+
 COPY Dashy.Net.MigrationService/Dashy.Net.MigrationService.csproj ./Dashy.Net.MigrationService/
 COPY Dashy.Net.ApiService/Dashy.Net.ApiService.csproj ./Dashy.Net.ApiService/
 COPY Dashy.Net.Web/Dashy.Net.Web.csproj ./Dashy.Net.Web/
@@ -10,6 +14,10 @@ COPY Dashy.Net.ServiceDefaults/Dashy.Net.ServiceDefaults.csproj ./Dashy.Net.Serv
 RUN dotnet restore ./Dashy.Net.MigrationService/Dashy.Net.MigrationService.csproj
 
 COPY . .
+
+# Set environment variables for build
+ENV GITHUB_REF_NAME=${GITHUB_REF_NAME}
+ENV GITHUB_REF_TYPE=${GITHUB_REF_TYPE}
 
 WORKDIR /src/Dashy.Net.MigrationService
 RUN dotnet publish Dashy.Net.MigrationService.csproj -c Release -o /app/publish /p:UseAppHost=false
