@@ -5,6 +5,8 @@
 @using Dashy.Net.Web.Services
 @using Dashy.Net.Shared.Models
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using System.ComponentModel.DataAnnotations
 @inherits LayoutComponentBase
 @inject ThemeService ThemeService
 @inject IJSRuntime JSRuntime
@@ -107,8 +109,47 @@
         <SettingsModal OnClose="CloseSettingsModal" />
     </Modal>
 
+    <Modal Title="Create New Dashboard" IsOpen="@_isCreateDashboardModalOpen" OnClose="CloseCreateDashboardModal">
+        @if (_newDashboard is not null)
+        {
+            <EditForm Model="_newDashboard" OnValidSubmit="HandleCreateDashboard">
+                <DataAnnotationsValidator />
+                <div class="form-group">
+                    <label for="new-dashboard-title">Dashboard Title</label>
+                    <InputText id="new-dashboard-title" class="form-control" @bind-Value="_newDashboard.Title" />
+                    <ValidationMessage For="@(() => _newDashboard.Title)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="new-dashboard-subtitle">Dashboard Subtitle</label>
+                    <InputText id="new-dashboard-subtitle" class="form-control" @bind-Value="_newDashboard.Subtitle" />
+                    <small class="form-text">Optional subtitle displayed below the main title</small>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseCreateDashboardModal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" disabled="@_isCreatingDashboard">
+                        @if (_isCreatingDashboard)
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            <span>Creating...</span>
+                        }
+                        else
+                        {
+                            <span>Create Dashboard</span>
+                        }
+                    </button>
+                </div>
+            </EditForm>
+        }
+    </Modal>
+
     <div class="fab-container @(_isFabMenuOpen ? "open" : "")">
         <div class="fab-menu">
+            <button class="fab-menu-item" @onclick="OpenCreateDashboardModal">
+                <i class="fas fa-plus"></i>
+                <span class="fab-menu-item-label">New Dashboard</span>
+            </button>
             <button class="fab-menu-item" @onclick="OpenSettingsModal">
                 <i class="fas fa-user-cog"></i>
                 <span class="fab-menu-item-label">User Settings</span>
@@ -148,6 +189,11 @@
 
     private bool _isFabMenuOpen = false;
     private bool _isSettingsModalOpen = false;
+
+    // Dashboard creation fields
+    private bool _isCreateDashboardModalOpen = false;
+    private bool _isCreatingDashboard = false;
+    private CreateDashboardDto? _newDashboard;
 
     private bool _disposed = false;
     AuthenticationState authState = default;
@@ -197,7 +243,7 @@
         if (_disposed) return;
         var config = await DashboardClient.GetConfigAsync();
         if (_disposed) return;
-        DashboardState.SetConfig(config);
+        await InvokeAsync(() => DashboardState.SetConfig(config));
     }
 
     private void OpenButtonManagerModal() => _isButtonManagerOpen = true;
@@ -344,6 +390,55 @@
     private void Logout()
     {
         NavigationManager.NavigateTo("authentication/logout", true);
+    }
+
+    // Dashboard creation methods
+    private void OpenCreateDashboardModal()
+    {
+        _newDashboard = new CreateDashboardDto();
+        _isCreateDashboardModalOpen = true;
+        _isFabMenuOpen = false;
+    }
+
+    private void CloseCreateDashboardModal()
+    {
+        _isCreateDashboardModalOpen = false;
+        _newDashboard = null;
+        _isCreatingDashboard = false;
+    }
+
+    private async Task HandleCreateDashboard()
+    {
+        if (_newDashboard is null) return;
+
+        _isCreatingDashboard = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await DashboardClient.CreateAsync(_newDashboard);
+            if (_disposed) return;
+
+            if (result is not null)
+            {
+                // Navigate to the new dashboard
+                NavigationManager.NavigateTo($"/dashboard/{result.Id}");
+                CloseCreateDashboardModal();
+            }
+        }
+        catch (Exception ex)
+        {
+            // Handle error - you might want to show a message to the user
+            Console.WriteLine($"Error creating dashboard: {ex.Message}");
+        }
+        finally
+        {
+            if (!_disposed)
+            {
+                _isCreatingDashboard = false;
+                StateHasChanged();
+            }
+        }
     }
 
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;

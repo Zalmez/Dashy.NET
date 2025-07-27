@@ -1,4 +1,5 @@
 ﻿@page "/"
+@page "/dashboard/{Id:int?}"
 @using Dashy.Net.Web.Helpers
 @using Dashy.Net.Web.Components.Shared
 @using Dashy.Net.Shared.Models
@@ -138,6 +139,8 @@ else
 }
 
 @code {
+    [Parameter] public int? Id { get; set; }
+    
     private bool _isItemModalOpen = false;
     private string _itemModalTitle = "";
     private ItemEditModel? _currentItemToEdit;
@@ -168,6 +171,19 @@ else
         ViewOptions.OnChange += HandleOptionsChanged;
     }
 
+    protected override async Task OnParametersSetAsync()
+    {
+        // If the ID parameter changes, reload the dashboard config
+        if (DashboardState.Config?.Id != Id)
+        {
+            var config = await DashboardClient.GetConfigAsync(Id);
+            if (!_isDisposed)
+            {
+                await InvokeAsync(() => DashboardState.SetConfig(config));
+            }
+        }
+    }
+
     private void HandleOptionsChanged()
     {
         InvokeAsync(StateHasChanged);
@@ -177,7 +193,7 @@ else
     {
         if (firstRender)
         {
-            var config = await DashboardClient.GetConfigAsync();
+            var config = await DashboardClient.GetConfigAsync(Id);
             if (_isDisposed) return;
             if (config is null && !_isInitializing)
             {
@@ -185,7 +201,7 @@ else
             }
             else
             {
-                DashboardState.SetConfig(config);
+                await InvokeAsync(() => DashboardState.SetConfig(config));
             }
         }
     }
@@ -272,9 +288,9 @@ else
         if (_isDisposed) return;
         if (success)
         {
-            var newConfig = await DashboardClient.GetConfigAsync();
+            var newConfig = await DashboardClient.GetConfigAsync(Id);
             if (_isDisposed) return;
-            DashboardState.SetConfig(newConfig);
+            await InvokeAsync(() => DashboardState.SetConfig(newConfig));
         }
         CloseSectionModal();
     }
@@ -297,9 +313,9 @@ else
         if (_isDisposed) return;
         if (success)
         {
-            var newConfig = await DashboardClient.GetConfigAsync();
+            var newConfig = await DashboardClient.GetConfigAsync(Id);
             if (_isDisposed) return;
-            DashboardState.SetConfig(newConfig);
+            await InvokeAsync(() => DashboardState.SetConfig(newConfig));
         }
 
         CloseItemModal();
@@ -402,9 +418,9 @@ else
             }
             else
             {
-                var config = await DashboardClient.GetConfigAsync();
+                var config = await DashboardClient.GetConfigAsync(Id);
                 if (_isDisposed) return;
-                DashboardState.SetConfig(config);
+                await InvokeAsync(() => DashboardState.SetConfig(config));
             }
         }
         catch (Exception ex)

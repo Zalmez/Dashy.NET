@@ -25,7 +25,7 @@ public class DashboardClient
         HeaderButtons = new HeaderButtonsClient(httpClient, loggerFactory.CreateLogger<HeaderButtonsClient>());
         Settings = new SettingsClient(httpClient, loggerFactory);
     }
-    public async Task<DashboardConfigVm?> GetConfigAsync()
+    public async Task<DashboardConfigVm?> GetConfigAsync(int? dashboardId = null)
     {
         int retryCount = 0;
         const int maxRetries = 3;
@@ -35,47 +35,51 @@ public class DashboardClient
             try
             {
                 retryCount++;
-                var response = await _httpClient.GetFromJsonAsync<DashboardConfigVm>("api/dashboard/config");
+                var url = dashboardId.HasValue ? $"api/dashboard/config?id={dashboardId.Value}" : "api/dashboard/config";
+                var response = await _httpClient.GetFromJsonAsync<DashboardConfigVm>(url);
                 success = response is not null && response.Id >= 0;
                 return response;
             }
             catch (HttpRequestException ex)
             {
                 _logger.LogError(ex, "Failed to fetch dashboard config from the API.");
-                switch (ex.StatusCode.Value)
+                if (ex.StatusCode.HasValue)
                 {
-                    case HttpStatusCode.NotFound:
-                        await SeedDashboardAsync();
-                        break;
-                    case HttpStatusCode.BadGateway:
-                        return new DashboardConfigVm
-                        (
-                            Id: 0,
-                            Title: "Error: Cannot connect to API! (Bad Gateway error)",
-                            Subtitle: null,
-                            Sections: new(),
-                            HeaderButtons: new()
-                        );
-                    case HttpStatusCode.ServiceUnavailable:
-                        return new DashboardConfigVm
-                        (
-                            Id: 0,
-                            Title: "Error: Cannot connect to API! (Service Unavailable)",
-                            Subtitle: null,
-                            Sections: new(),
-                            HeaderButtons: new()
-                        );
-                    case HttpStatusCode.GatewayTimeout:
-                        return new DashboardConfigVm
-                        (
-                            Id: 0,
-                            Title: "Error: Cannot connect to API! (Gateway Timeout)",
-                            Subtitle: null,
-                            Sections: new(),
-                            HeaderButtons: new()
-                        );
-                    default:
-                        break;
+                    switch (ex.StatusCode.Value)
+                    {
+                        case HttpStatusCode.NotFound:
+                            await SeedDashboardAsync();
+                            break;
+                        case HttpStatusCode.BadGateway:
+                            return new DashboardConfigVm
+                            (
+                                Id: 0,
+                                Title: "Error: Cannot connect to API! (Bad Gateway error)",
+                                Subtitle: null,
+                                Sections: new(),
+                                HeaderButtons: new()
+                            );
+                        case HttpStatusCode.ServiceUnavailable:
+                            return new DashboardConfigVm
+                            (
+                                Id: 0,
+                                Title: "Error: Cannot connect to API! (Service Unavailable)",
+                                Subtitle: null,
+                                Sections: new(),
+                                HeaderButtons: new()
+                            );
+                        case HttpStatusCode.GatewayTimeout:
+                            return new DashboardConfigVm
+                            (
+                                Id: 0,
+                                Title: "Error: Cannot connect to API! (Gateway Timeout)",
+                                Subtitle: null,
+                                Sections: new(),
+                                HeaderButtons: new()
+                            );
+                        default:
+                            break;
+                    }
                 }
 
             }
@@ -88,6 +92,30 @@ public class DashboardClient
             Sections: new(),
             HeaderButtons: new()
         );
+    }
+
+    public async Task<DashboardConfigVm?> CreateAsync(CreateDashboardDto createDto)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync("api/dashboard", createDto);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<DashboardConfigVm>();
+                _logger.LogInformation("Successfully created new dashboard '{DashboardTitle}'", createDto.Title);
+                return result;
+            }
+            else
+            {
+                _logger.LogError("Failed to create dashboard '{DashboardTitle}'. Status: {StatusCode}", createDto.Title, response.StatusCode);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception while creating dashboard");
+            return null;
+        }
     }
 
     public async Task<bool> UpdateAsync(int id, UpdateDashboardDto updateDto)

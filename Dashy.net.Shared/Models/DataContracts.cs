@@ -99,12 +99,22 @@ public class UpdateHeaderButtonDto
 }
 public record ReorderHeaderButtonsDto(List<int> OrderedButtonIds);
 
+public class CreateDashboardDto
+{
+    [Required(AllowEmptyStrings = false)]
+    [StringLength(200)]
+    public string Title { get; set; } = string.Empty;
+
+    [StringLength(500)]
+    public string? Subtitle { get; set; }
+}
+
 public class UpdateDashboardDto
 {
     [Required(AllowEmptyStrings = false)]
     [StringLength(200)]
     public string Title { get; set; } = string.Empty;
-    
+
     [StringLength(500)]
     public string? Subtitle { get; set; }
 }
@@ -190,5 +200,5 @@ public class AuthenticationProviderSettingTemplate
     public bool IsEncrypted { get; set; } = false;
     public bool IsSecret { get; set; } = false;
     public string InputType { get; set; } = "text";
-    public List<string>? Options { get; set; } 
+    public List<string>? Options { get; set; }
 }
