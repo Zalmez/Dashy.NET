@@ -5,19 +5,13 @@ WORKDIR /src
 ARG GITHUB_REF_NAME
 ARG GITHUB_REF_TYPE
 
-# Copy all .csproj files and the .sln file.
-# These paths are relative to the solution root, which we will set as the
-# build context in azure.yaml.
-COPY ["Dashy.Net.ApiService/Dashy.Net.ApiService.csproj", "Dashy.Net.ApiService/"]
-COPY ["Dashy.Net.Web/Dashy.Net.Web.csproj", "Dashy.Net.Web/"]
-COPY ["Dashy.Net.MigrationService/Dashy.Net.MigrationService.csproj", "Dashy.Net.MigrationService/"]
-COPY ["Dashy.net.Shared/Dashy.Net.Shared.csproj", "Dashy.net.Shared/"]
-COPY ["Dashy.Net.ServiceDefaults/Dashy.Net.ServiceDefaults.csproj", "Dashy.Net.ServiceDefaults/"]
-COPY ["Dashy.Net.AppHost/Dashy.Net.AppHost.csproj", "Dashy.Net.AppHost/"]
-COPY ["Dashy.Net.sln", "./"]
+# Copy .csproj files needed for the ApiService
+COPY ["Dashy.Net.ApiService/Dashy.Net.ApiService.csproj", "./Dashy.Net.ApiService/"]
+COPY ["Dashy.net.Shared/Dashy.Net.Shared.csproj", "./Dashy.net.Shared/"]
+COPY ["Dashy.Net.ServiceDefaults/Dashy.Net.ServiceDefaults.csproj", "./Dashy.Net.ServiceDefaults/"]
 
-# Restore dependencies for the entire solution
-RUN dotnet restore "Dashy.Net.sln"
+# Restore dependencies for the ApiService project only
+RUN dotnet restore ./Dashy.Net.ApiService/Dashy.Net.ApiService.csproj
 
 # Copy the rest of the application's source code
 COPY . .
