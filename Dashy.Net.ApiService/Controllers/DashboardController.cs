@@ -91,6 +91,22 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
     }
 
     /// <summary>
+    /// Gets a list of all dashboards (id, title, subtitle only).
+    /// This is used for dropdown navigation.
+    /// </summary>
+    [HttpGet("list")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetDashboardList()
+    {
+        var dashboards = await dbContext.Dashboards
+            .Select(d => new DashboardListItemVm(d.Id, d.Title, d.Subtitle))
+            .AsNoTracking()
+            .ToListAsync();
+
+        return Ok(dashboards);
+    }
+
+    /// <summary>
     /// Creates a new dashboard.
     /// </summary>
     /// <param name="dashboardDto">The details of the dashboard to create.</param>

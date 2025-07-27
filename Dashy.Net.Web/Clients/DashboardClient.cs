@@ -132,6 +132,20 @@ public class DashboardClient
         }
     }
 
+    public async Task<IEnumerable<DashboardListItemVm>> GetAllAsync()
+    {
+        try
+        {
+            var response = await _httpClient.GetFromJsonAsync<IEnumerable<DashboardListItemVm>>("api/dashboard/list");
+            return response ?? Enumerable.Empty<DashboardListItemVm>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch dashboard list");
+            return Enumerable.Empty<DashboardListItemVm>();
+        }
+    }
+
     public async Task<bool> SeedDashboardAsync()
     {
         try

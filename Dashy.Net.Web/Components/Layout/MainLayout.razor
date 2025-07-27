@@ -6,6 +6,7 @@
 @using Dashy.Net.Shared.Models
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
 @using System.ComponentModel.DataAnnotations
 @inherits LayoutComponentBase
 @inject ThemeService ThemeService
@@ -24,7 +25,35 @@
         <div class="header-title-section">
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <img src="images/dashynet_logo_notext.png" alt="Dashy.NET Logo" class="header-logo" />
-                <h1>@(DashboardState.Config?.Title ?? "Dashy.NET")</h1>
+                <div class="dashboard-title-dropdown" id="dashboard-title-dropdown">
+                    <button class="dropdown-btn" @onclick="ToggleDashboardDropdown" @onclick:stopPropagation="true">
+                        <h1 style="margin: 0; display: inline;">@(DashboardState.Config?.Title ?? "Dashy.NET")</h1>
+                        <i class="fas fa-chevron-down dropdown-arrow @(_isDashboardDropdownOpen ? "open" : "")"></i>
+                    </button>
+                    @if (_isDashboardDropdownOpen)
+                    {
+                        <div class="dropdown-menu">
+                            @if (_availableDashboards != null && _availableDashboards.Any())
+                            {
+                                @foreach (var dashboard in _availableDashboards)
+                                {
+                                    <div class="dropdown-item @(dashboard.Id == DashboardState.Config?.Id ? "active" : "")" 
+                                         @onclick="() => NavigateToDashboard(dashboard.Id)">
+                                        <div class="dashboard-title">@dashboard.Title</div>
+                                        @if (!string.IsNullOrWhiteSpace(dashboard.Subtitle))
+                                        {
+                                            <div class="dashboard-subtitle">@dashboard.Subtitle</div>
+                                        }
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="dropdown-item disabled">No dashboards available</div>
+                            }
+                        </div>
+                    }
+                </div>
                 @* <div class="header-search">
                     <SearchBar />
                 </div> *@
@@ -74,8 +103,6 @@
                         </button>
                     </div>
                 </div>
-
-                <!-- Theme Toggle -->
                 <div class="control-group">
                     <ThemeToggleButton IsLightMode="isLightMode" OnToggle="HandleThemeToggle" />
                 </div>
@@ -190,10 +217,12 @@
     private bool _isFabMenuOpen = false;
     private bool _isSettingsModalOpen = false;
 
-    // Dashboard creation fields
     private bool _isCreateDashboardModalOpen = false;
     private bool _isCreatingDashboard = false;
     private CreateDashboardDto? _newDashboard;
+
+    private bool _isDashboardDropdownOpen = false;
+    private IEnumerable<DashboardListItemVm>? _availableDashboards;
 
     private bool _disposed = false;
     AuthenticationState authState = default;
@@ -228,7 +257,13 @@
 
     private void OnConfigLoadedHandler()
     {
-        InvokeAsync(StateHasChanged);
+        InvokeAsync(async () => {
+            StateHasChanged();
+            if (_availableDashboards == null)
+            {
+                await LoadAvailableDashboards();
+            }
+        });
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -240,6 +275,8 @@
             var initialThemeClass = savedThemeClass ?? ThemeService.CurrentTheme.CssClass;
             ThemeService.SetCurrentThemeWithoutNotification(initialThemeClass);
             OnThemeChangedHandler();
+            
+            await JSRuntime.InvokeVoidAsync("addClickOutsideHandler", "dashboard-title-dropdown", DotNetObjectReference.Create(this));
         }
     }
 
@@ -249,6 +286,38 @@
         var config = await DashboardClient.GetConfigAsync();
         if (_disposed) return;
         await InvokeAsync(() => DashboardState.SetConfig(config));
+    }
+
+    private async Task LoadAvailableDashboards()
+    {
+        if (_disposed) return;
+        _availableDashboards = await DashboardClient.GetAllAsync();
+        Console.WriteLine($"Loaded {_availableDashboards?.Count() ?? 0} dashboards for dropdown");
+        StateHasChanged();
+    }
+
+    private async Task ToggleDashboardDropdown()
+    {
+        if (_disposed) return;
+        _isDashboardDropdownOpen = !_isDashboardDropdownOpen;
+        if (_isDashboardDropdownOpen && _availableDashboards == null)
+        {
+            await LoadAvailableDashboards();
+        }
+        StateHasChanged();
+    }
+
+    private void NavigateToDashboard(int dashboardId)
+    {
+        _isDashboardDropdownOpen = false;
+        NavigationManager.NavigateTo($"/dashboard/{dashboardId}");
+    }
+
+    [JSInvokable]
+    public void CloseDropdown()
+    {
+        _isDashboardDropdownOpen = false;
+        InvokeAsync(StateHasChanged);
     }
 
     private void OpenButtonManagerModal() => _isButtonManagerOpen = true;
@@ -350,8 +419,8 @@
             await JSRuntime.InvokeVoidAsync("saveToLocalStorage", "dashy-theme", newThemeClass);
             ThemeService.SetTheme(newThemeClass);
         }
-        catch (ObjectDisposedException) { /* Circuit disposed, ignore */ }
-        catch (InvalidOperationException) { /* Circuit disposed, ignore */ }
+        catch (ObjectDisposedException) {  }
+        catch (InvalidOperationException) { }
     }
 
     private void OnThemeChangedHandler()
@@ -365,8 +434,8 @@
             {
                 await JSRuntime.InvokeVoidAsync("setBodyClass", ThemeService.CurrentTheme.CssClass);
             }
-            catch (ObjectDisposedException) { /* Circuit disposed, ignore */ }
-            catch (InvalidOperationException) { /* Circuit disposed, ignore */ }
+            catch (ObjectDisposedException) { }
+            catch (InvalidOperationException) {  }
             StateHasChanged();
         });
     }
@@ -397,7 +466,6 @@
         NavigationManager.NavigateTo("authentication/logout", true);
     }
 
-    // Dashboard creation methods
     private void OpenCreateDashboardModal()
     {
         _newDashboard = new CreateDashboardDto();
@@ -426,14 +494,12 @@
 
             if (result is not null)
             {
-                // Navigate to the new dashboard
                 NavigationManager.NavigateTo($"/dashboard/{result.Id}");
                 CloseCreateDashboardModal();
             }
         }
         catch (Exception ex)
         {
-            // Handle error - you might want to show a message to the user
             Console.WriteLine($"Error creating dashboard: {ex.Message}");
         }
         finally
