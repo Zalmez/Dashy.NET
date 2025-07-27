@@ -173,7 +173,6 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
-        // If the ID parameter changes, reload the dashboard config
         if (DashboardState.Config?.Id != Id)
         {
             var config = await DashboardClient.GetConfigAsync(Id);

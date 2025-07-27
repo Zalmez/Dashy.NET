@@ -201,7 +201,7 @@
     protected override async Task OnInitializedAsync()
     {
         ThemeService.OnThemeChanged += OnThemeChangedHandler;
-        DashboardState.OnConfigLoaded += StateHasChanged;
+        DashboardState.OnConfigLoaded += OnConfigLoadedHandler;
         ViewOptions.OnChange += HandleOptionsChanged;
         _isAuthConfigured = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_authority")) &&
                             !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_clientid")) &&
@@ -213,15 +213,20 @@
     protected override void OnInitialized()
     {
         SubscriptionManager.AddSubscription(() => ThemeService.OnThemeChanged -= OnThemeChangedHandler);
-        SubscriptionManager.AddSubscription(() => DashboardState.OnConfigLoaded -= StateHasChanged);
+        SubscriptionManager.AddSubscription(() => DashboardState.OnConfigLoaded -= OnConfigLoadedHandler);
         SubscriptionManager.AddSubscription(() => ViewOptions.OnChange -= HandleOptionsChanged);
 
         ThemeService.OnThemeChanged += OnThemeChangedHandler;
-        DashboardState.OnConfigLoaded += StateHasChanged;
+        DashboardState.OnConfigLoaded += OnConfigLoadedHandler;
         ViewOptions.OnChange += HandleOptionsChanged;
     }
 
     private void HandleOptionsChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnConfigLoadedHandler()
     {
         InvokeAsync(StateHasChanged);
     }
@@ -448,7 +453,7 @@
         SubscriptionManager.Dispose();
         _disposed = true;
         ThemeService.OnThemeChanged -= OnThemeChangedHandler;
-        DashboardState.OnConfigLoaded -= StateHasChanged;
+        DashboardState.OnConfigLoaded -= OnConfigLoadedHandler;
         ViewOptions.OnChange -= HandleOptionsChanged;
     }
 }
