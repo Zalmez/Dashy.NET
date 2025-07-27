@@ -8,7 +8,7 @@ ARG GITHUB_REF_TYPE
 COPY Dashy.Net.MigrationService/Dashy.Net.MigrationService.csproj ./Dashy.Net.MigrationService/
 COPY Dashy.Net.ApiService/Dashy.Net.ApiService.csproj ./Dashy.Net.ApiService/
 COPY Dashy.Net.Web/Dashy.Net.Web.csproj ./Dashy.Net.Web/
-COPY Dashy.net.Shared/Dashy.Net.Shared.csproj ./Dashy.Net.Shared/
+COPY Dashy.net.Shared/Dashy.Net.Shared.csproj ./Dashy.net.Shared/
 COPY Dashy.Net.ServiceDefaults/Dashy.Net.ServiceDefaults.csproj ./Dashy.Net.ServiceDefaults/
 
 RUN dotnet restore ./Dashy.Net.MigrationService/Dashy.Net.MigrationService.csproj
