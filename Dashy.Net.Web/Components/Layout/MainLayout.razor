@@ -5,6 +5,9 @@
 @using Dashy.Net.Web.Services
 @using Dashy.Net.Shared.Models
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
+@using System.ComponentModel.DataAnnotations
 @inherits LayoutComponentBase
 @inject ThemeService ThemeService
 @inject IJSRuntime JSRuntime
@@ -22,7 +25,35 @@
         <div class="header-title-section">
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <img src="images/dashynet_logo_notext.png" alt="Dashy.NET Logo" class="header-logo" />
-                <h1>@(DashboardState.Config?.Title ?? "Dashy.NET")</h1>
+                <div class="dashboard-title-dropdown" id="dashboard-title-dropdown">
+                    <button class="dropdown-btn" @onclick="ToggleDashboardDropdown" @onclick:stopPropagation="true">
+                        <h1 style="margin: 0; display: inline;">@(DashboardState.Config?.Title ?? "Dashy.NET")</h1>
+                        <i class="fas fa-chevron-down dropdown-arrow @(_isDashboardDropdownOpen ? "open" : "")"></i>
+                    </button>
+                    @if (_isDashboardDropdownOpen)
+                    {
+                        <div class="dropdown-menu">
+                            @if (_availableDashboards != null && _availableDashboards.Any())
+                            {
+                                @foreach (var dashboard in _availableDashboards)
+                                {
+                                    <div class="dropdown-item @(dashboard.Id == DashboardState.Config?.Id ? "active" : "")" 
+                                         @onclick="() => NavigateToDashboard(dashboard.Id)">
+                                        <div class="dashboard-title">@dashboard.Title</div>
+                                        @if (!string.IsNullOrWhiteSpace(dashboard.Subtitle))
+                                        {
+                                            <div class="dashboard-subtitle">@dashboard.Subtitle</div>
+                                        }
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="dropdown-item disabled">No dashboards available</div>
+                            }
+                        </div>
+                    }
+                </div>
                 @* <div class="header-search">
                     <SearchBar />
                 </div> *@
@@ -72,8 +103,6 @@
                         </button>
                     </div>
                 </div>
-
-                <!-- Theme Toggle -->
                 <div class="control-group">
                     <ThemeToggleButton IsLightMode="isLightMode" OnToggle="HandleThemeToggle" />
                 </div>
@@ -107,8 +136,47 @@
         <SettingsModal OnClose="CloseSettingsModal" />
     </Modal>
 
+    <Modal Title="Create New Dashboard" IsOpen="@_isCreateDashboardModalOpen" OnClose="CloseCreateDashboardModal">
+        @if (_newDashboard is not null)
+        {
+            <EditForm Model="_newDashboard" OnValidSubmit="HandleCreateDashboard">
+                <DataAnnotationsValidator />
+                <div class="form-group">
+                    <label for="new-dashboard-title">Dashboard Title</label>
+                    <InputText id="new-dashboard-title" class="form-control" @bind-Value="_newDashboard.Title" />
+                    <ValidationMessage For="@(() => _newDashboard.Title)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="new-dashboard-subtitle">Dashboard Subtitle</label>
+                    <InputText id="new-dashboard-subtitle" class="form-control" @bind-Value="_newDashboard.Subtitle" />
+                    <small class="form-text">Optional subtitle displayed below the main title</small>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseCreateDashboardModal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" disabled="@_isCreatingDashboard">
+                        @if (_isCreatingDashboard)
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            <span>Creating...</span>
+                        }
+                        else
+                        {
+                            <span>Create Dashboard</span>
+                        }
+                    </button>
+                </div>
+            </EditForm>
+        }
+    </Modal>
+
     <div class="fab-container @(_isFabMenuOpen ? "open" : "")">
         <div class="fab-menu">
+            <button class="fab-menu-item" @onclick="OpenCreateDashboardModal">
+                <i class="fas fa-plus"></i>
+                <span class="fab-menu-item-label">New Dashboard</span>
+            </button>
             <button class="fab-menu-item" @onclick="OpenSettingsModal">
                 <i class="fas fa-user-cog"></i>
                 <span class="fab-menu-item-label">User Settings</span>
@@ -149,13 +217,20 @@
     private bool _isFabMenuOpen = false;
     private bool _isSettingsModalOpen = false;
 
+    private bool _isCreateDashboardModalOpen = false;
+    private bool _isCreatingDashboard = false;
+    private CreateDashboardDto? _newDashboard;
+
+    private bool _isDashboardDropdownOpen = false;
+    private IEnumerable<DashboardListItemVm>? _availableDashboards;
+
     private bool _disposed = false;
     AuthenticationState authState = default;
 
     protected override async Task OnInitializedAsync()
     {
         ThemeService.OnThemeChanged += OnThemeChangedHandler;
-        DashboardState.OnConfigLoaded += StateHasChanged;
+        DashboardState.OnConfigLoaded += OnConfigLoadedHandler;
         ViewOptions.OnChange += HandleOptionsChanged;
         _isAuthConfigured = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_authority")) &&
                             !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_clientid")) &&
@@ -167,17 +242,28 @@
     protected override void OnInitialized()
     {
         SubscriptionManager.AddSubscription(() => ThemeService.OnThemeChanged -= OnThemeChangedHandler);
-        SubscriptionManager.AddSubscription(() => DashboardState.OnConfigLoaded -= StateHasChanged);
+        SubscriptionManager.AddSubscription(() => DashboardState.OnConfigLoaded -= OnConfigLoadedHandler);
         SubscriptionManager.AddSubscription(() => ViewOptions.OnChange -= HandleOptionsChanged);
 
         ThemeService.OnThemeChanged += OnThemeChangedHandler;
-        DashboardState.OnConfigLoaded += StateHasChanged;
+        DashboardState.OnConfigLoaded += OnConfigLoadedHandler;
         ViewOptions.OnChange += HandleOptionsChanged;
     }
 
     private void HandleOptionsChanged()
     {
         InvokeAsync(StateHasChanged);
+    }
+
+    private void OnConfigLoadedHandler()
+    {
+        InvokeAsync(async () => {
+            StateHasChanged();
+            if (_availableDashboards == null)
+            {
+                await LoadAvailableDashboards();
+            }
+        });
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -189,6 +275,8 @@
             var initialThemeClass = savedThemeClass ?? ThemeService.CurrentTheme.CssClass;
             ThemeService.SetCurrentThemeWithoutNotification(initialThemeClass);
             OnThemeChangedHandler();
+            
+            await JSRuntime.InvokeVoidAsync("addClickOutsideHandler", "dashboard-title-dropdown", DotNetObjectReference.Create(this));
         }
     }
 
@@ -197,7 +285,39 @@
         if (_disposed) return;
         var config = await DashboardClient.GetConfigAsync();
         if (_disposed) return;
-        DashboardState.SetConfig(config);
+        await InvokeAsync(() => DashboardState.SetConfig(config));
+    }
+
+    private async Task LoadAvailableDashboards()
+    {
+        if (_disposed) return;
+        _availableDashboards = await DashboardClient.GetAllAsync();
+        Console.WriteLine($"Loaded {_availableDashboards?.Count() ?? 0} dashboards for dropdown");
+        StateHasChanged();
+    }
+
+    private async Task ToggleDashboardDropdown()
+    {
+        if (_disposed) return;
+        _isDashboardDropdownOpen = !_isDashboardDropdownOpen;
+        if (_isDashboardDropdownOpen && _availableDashboards == null)
+        {
+            await LoadAvailableDashboards();
+        }
+        StateHasChanged();
+    }
+
+    private void NavigateToDashboard(int dashboardId)
+    {
+        _isDashboardDropdownOpen = false;
+        NavigationManager.NavigateTo($"/dashboard/{dashboardId}");
+    }
+
+    [JSInvokable]
+    public void CloseDropdown()
+    {
+        _isDashboardDropdownOpen = false;
+        InvokeAsync(StateHasChanged);
     }
 
     private void OpenButtonManagerModal() => _isButtonManagerOpen = true;
@@ -299,8 +419,8 @@
             await JSRuntime.InvokeVoidAsync("saveToLocalStorage", "dashy-theme", newThemeClass);
             ThemeService.SetTheme(newThemeClass);
         }
-        catch (ObjectDisposedException) { /* Circuit disposed, ignore */ }
-        catch (InvalidOperationException) { /* Circuit disposed, ignore */ }
+        catch (ObjectDisposedException) {  }
+        catch (InvalidOperationException) { }
     }
 
     private void OnThemeChangedHandler()
@@ -314,8 +434,8 @@
             {
                 await JSRuntime.InvokeVoidAsync("setBodyClass", ThemeService.CurrentTheme.CssClass);
             }
-            catch (ObjectDisposedException) { /* Circuit disposed, ignore */ }
-            catch (InvalidOperationException) { /* Circuit disposed, ignore */ }
+            catch (ObjectDisposedException) { }
+            catch (InvalidOperationException) {  }
             StateHasChanged();
         });
     }
@@ -346,6 +466,52 @@
         NavigationManager.NavigateTo("authentication/logout", true);
     }
 
+    private void OpenCreateDashboardModal()
+    {
+        _newDashboard = new CreateDashboardDto();
+        _isCreateDashboardModalOpen = true;
+        _isFabMenuOpen = false;
+    }
+
+    private void CloseCreateDashboardModal()
+    {
+        _isCreateDashboardModalOpen = false;
+        _newDashboard = null;
+        _isCreatingDashboard = false;
+    }
+
+    private async Task HandleCreateDashboard()
+    {
+        if (_newDashboard is null) return;
+
+        _isCreatingDashboard = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await DashboardClient.CreateAsync(_newDashboard);
+            if (_disposed) return;
+
+            if (result is not null)
+            {
+                NavigationManager.NavigateTo($"/dashboard/{result.Id}");
+                CloseCreateDashboardModal();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating dashboard: {ex.Message}");
+        }
+        finally
+        {
+            if (!_disposed)
+            {
+                _isCreatingDashboard = false;
+                StateHasChanged();
+            }
+        }
+    }
+
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
 
     public void Dispose()
@@ -353,7 +519,7 @@
         SubscriptionManager.Dispose();
         _disposed = true;
         ThemeService.OnThemeChanged -= OnThemeChangedHandler;
-        DashboardState.OnConfigLoaded -= StateHasChanged;
+        DashboardState.OnConfigLoaded -= OnConfigLoadedHandler;
         ViewOptions.OnChange -= HandleOptionsChanged;
     }
 }

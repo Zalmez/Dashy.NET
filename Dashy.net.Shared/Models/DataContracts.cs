@@ -99,12 +99,22 @@ public class UpdateHeaderButtonDto
 }
 public record ReorderHeaderButtonsDto(List<int> OrderedButtonIds);
 
+public class CreateDashboardDto
+{
+    [Required(AllowEmptyStrings = false)]
+    [StringLength(200)]
+    public string Title { get; set; } = string.Empty;
+
+    [StringLength(500)]
+    public string? Subtitle { get; set; }
+}
+
 public class UpdateDashboardDto
 {
     [Required(AllowEmptyStrings = false)]
     [StringLength(200)]
     public string Title { get; set; } = string.Empty;
-    
+
     [StringLength(500)]
     public string? Subtitle { get; set; }
 }
@@ -145,6 +155,7 @@ public class AuthenticationProviderSettingDto
 
 // --- ViewModels (Models for the Blazor UI) ---
 public record DashboardConfigVm(int Id, string Title, string? Subtitle, List<SectionVm> Sections, List<HeaderButtonVm> HeaderButtons);
+public record DashboardListItemVm(int Id, string Title, string? Subtitle);
 public record SectionVm(int Id, string Name, string? Icon, int DashboardId, List<ItemVm> Items);
 public record HeaderButtonVm(int Id, string Text, string? Url, string? Icon);
 public record ItemVm(
@@ -190,5 +201,5 @@ public class AuthenticationProviderSettingTemplate
     public bool IsEncrypted { get; set; } = false;
     public bool IsSecret { get; set; } = false;
     public string InputType { get; set; } = "text";
-    public List<string>? Options { get; set; } 
+    public List<string>? Options { get; set; }
 }

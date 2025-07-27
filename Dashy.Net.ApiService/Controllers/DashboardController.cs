@@ -18,26 +18,47 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
     /// Gets the entire configuration for the dashboard view, including sections and items.
     /// This is the primary endpoint for the frontend to load its initial state.
     /// </summary>
+    /// <param name="id">Optional dashboard ID. If not specified, returns the first dashboard.</param>
     [HttpGet("config")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetConfig()
+    public async Task<IActionResult> GetConfig([FromQuery] int? id = null)
     {
-        // For now, we get the first dashboard. In a multi-dashboard setup, this would take an ID.
-        var dashboard = await dbContext.Dashboards
-            .Include(d => d.Sections.OrderBy(s => s.Position))
-                .ThenInclude(s => s.Items.OrderBy(i => i.Position))
-            .Include(d => d.HeaderButtons.OrderBy(b => b.Position))
-            .AsNoTracking()
-            .FirstOrDefaultAsync();
+        Dashboard? dashboard;
+
+        if (id.HasValue)
+        {
+            dashboard = await dbContext.Dashboards
+                .Include(d => d.Sections.OrderBy(s => s.Position))
+                    .ThenInclude(s => s.Items.OrderBy(i => i.Position))
+                .Include(d => d.HeaderButtons.OrderBy(b => b.Position))
+                .AsNoTracking()
+                .FirstOrDefaultAsync(d => d.Id == id.Value);
+        }
+        else
+        {
+            dashboard = await dbContext.Dashboards
+                .Include(d => d.Sections.OrderBy(s => s.Position))
+                    .ThenInclude(s => s.Items.OrderBy(i => i.Position))
+                .Include(d => d.HeaderButtons.OrderBy(b => b.Position))
+                .AsNoTracking()
+                .FirstOrDefaultAsync();
+        }
 
         if (dashboard is null)
         {
-            logger.LogWarning("No dashboard found in the database. Seeding might be required.");
-            return NotFound(new DashboardConfigVm(0, "No Dashboard Found", "Please seed the database.", new List<SectionVm>(), new List<HeaderButtonVm>()));
+            if (id.HasValue)
+            {
+                logger.LogWarning("Dashboard with ID {DashboardId} not found.", id.Value);
+                return NotFound(new DashboardConfigVm(0, "Dashboard Not Found", $"Dashboard with ID {id.Value} was not found.", new List<SectionVm>(), new List<HeaderButtonVm>()));
+            }
+            else
+            {
+                logger.LogWarning("No dashboard found in the database. Seeding might be required.");
+                return NotFound(new DashboardConfigVm(0, "No Dashboard Found", "Please seed the database.", new List<SectionVm>(), new List<HeaderButtonVm>()));
+            }
         }
 
-        // Map the database entities to the clean ViewModels the frontend expects.
         var configVm = new DashboardConfigVm(
             dashboard.Id,
             dashboard.Title,
@@ -49,7 +70,7 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
                 dbSection.DashboardId,
                 dbSection.Items.Select(dbItem => new ItemVm(
                     dbItem.Id,
-                    dbItem.Title,
+                    dbItem.Title ?? "Untitled Item",
                     dbItem.Icon,
                     dbItem.Widget,
                     dbItem.SectionId,
@@ -67,6 +88,64 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
         );
 
         return Ok(configVm);
+    }
+
+    /// <summary>
+    /// Gets a list of all dashboards (id, title, subtitle only).
+    /// This is used for dropdown navigation.
+    /// </summary>
+    [HttpGet("list")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetDashboardList()
+    {
+        var dashboards = await dbContext.Dashboards
+            .Select(d => new DashboardListItemVm(d.Id, d.Title, d.Subtitle))
+            .AsNoTracking()
+            .ToListAsync();
+
+        return Ok(dashboards);
+    }
+
+    /// <summary>
+    /// Creates a new dashboard.
+    /// </summary>
+    /// <param name="dashboardDto">The details of the dashboard to create.</param>
+    /// <returns>The created dashboard configuration.</returns>
+    [HttpPost]
+    [Consumes("application/json")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> CreateDashboard([FromBody] CreateDashboardDto dashboardDto)
+    {
+        try
+        {
+            var newDashboard = new Dashboard
+            {
+                Title = dashboardDto.Title,
+                Subtitle = dashboardDto.Subtitle
+            };
+
+            dbContext.Dashboards.Add(newDashboard);
+            await dbContext.SaveChangesAsync();
+
+            logger.LogInformation("Created new dashboard '{DashboardTitle}' with ID {DashboardId}", newDashboard.Title, newDashboard.Id);
+
+            var configVm = new DashboardConfigVm(
+                newDashboard.Id,
+                newDashboard.Title,
+                newDashboard.Subtitle,
+                new List<SectionVm>(),
+                new List<HeaderButtonVm>()
+            );
+
+            return CreatedAtAction(nameof(GetConfig), new { id = newDashboard.Id }, configVm);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to create dashboard");
+            return Problem("Failed to create dashboard", statusCode: 500);
+        }
     }
 
     /// <summary>

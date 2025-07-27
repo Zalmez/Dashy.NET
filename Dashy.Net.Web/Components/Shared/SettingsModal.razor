@@ -9,16 +9,20 @@
 @inject DashboardStateService DashboardState
 @inject IJSRuntime JSRuntime
 @inject ILogger<SettingsModal> Logger
+@inject NavigationManager NavigationManager
 
 <div class="settings-modal">
     <div class="settings-tabs">
-        <button type="button" class="settings-tab @(_activeTab == "user" ? "active" : "")" @onclick='() => SetActiveTab("user")'>
+        <button type="button" class="settings-tab @(_activeTab == "user" ? "active" : "")"
+            @onclick='() => SetActiveTab("user")'>
             <i class="fas fa-user-cog"></i> User Settings
         </button>
-        <button type="button" class="settings-tab @(_activeTab == "app" ? "active" : "")" @onclick='() => SetActiveTab("app")'>
+        <button type="button" class="settings-tab @(_activeTab == "app" ? "active" : "")"
+            @onclick='() => SetActiveTab("app")'>
             <i class="fas fa-palette"></i> App Settings
         </button>
-        <button type="button" class="settings-tab @(_activeTab == "auth" ? "active" : "")" @onclick='() => SetActiveTab("auth")'>
+        <button type="button" class="settings-tab @(_activeTab == "auth" ? "active" : "")"
+            @onclick='() => SetActiveTab("auth")'>
             <i class="fas fa-shield-alt"></i> Authentication
         </button>
     </div>
@@ -34,9 +38,9 @@
                     <div class="theme-selector">
                         @foreach (var theme in ThemeService.AvailableThemes)
                         {
-                            <button type="button" 
-                                    class="theme-option @(ThemeService.CurrentTheme.CssClass == theme.CssClass ? "active" : "")"
-                                    @onclick="() => HandleThemeChange(theme.CssClass)">
+                            <button type="button"
+                                class="theme-option @(ThemeService.CurrentTheme.CssClass == theme.CssClass ? "active" : "")"
+                                @onclick="() => HandleThemeChange(theme.CssClass)">
                                 <i class="fas @(theme.CssClass == "theme-light" ? "fa-sun" : "fa-moon")"></i>
                                 @theme.Name
                             </button>
@@ -50,14 +54,14 @@
                 <div class="setting-group">
                     <label>Default Layout</label>
                     <div class="layout-selector">
-                        <button type="button" 
-                                class="layout-option @(ViewOptions.CurrentLayout == LayoutOrientation.Auto ? "active" : "")"
-                                @onclick="() => ViewOptions.SetLayout(LayoutOrientation.Auto)">
+                        <button type="button"
+                            class="layout-option @(ViewOptions.CurrentLayout == LayoutOrientation.Auto ? "active" : "")"
+                            @onclick="() => ViewOptions.SetLayout(LayoutOrientation.Auto)">
                             <i class="fas fa-th-large"></i> Auto
                         </button>
-                        <button type="button" 
-                                class="layout-option @(ViewOptions.CurrentLayout == LayoutOrientation.Vertical ? "active" : "")"
-                                @onclick="() => ViewOptions.SetLayout(LayoutOrientation.Vertical)">
+                        <button type="button"
+                            class="layout-option @(ViewOptions.CurrentLayout == LayoutOrientation.Vertical ? "active" : "")"
+                            @onclick="() => ViewOptions.SetLayout(LayoutOrientation.Vertical)">
                             <i class="fas fa-bars"></i> Vertical
                         </button>
                     </div>
@@ -66,19 +70,19 @@
                 <div class="setting-group">
                     <label>Default Item Size</label>
                     <div class="size-selector">
-                        <button type="button" 
-                                class="size-option @(ViewOptions.CurrentItemSize == ItemSize.Small ? "active" : "")"
-                                @onclick="() => ViewOptions.SetItemSize(ItemSize.Small)">
+                        <button type="button"
+                            class="size-option @(ViewOptions.CurrentItemSize == ItemSize.Small ? "active" : "")"
+                            @onclick="() => ViewOptions.SetItemSize(ItemSize.Small)">
                             <i class="fas fa-compress"></i> Small
                         </button>
-                        <button type="button" 
-                                class="size-option @(ViewOptions.CurrentItemSize == ItemSize.Medium ? "active" : "")"
-                                @onclick="() => ViewOptions.SetItemSize(ItemSize.Medium)">
+                        <button type="button"
+                            class="size-option @(ViewOptions.CurrentItemSize == ItemSize.Medium ? "active" : "")"
+                            @onclick="() => ViewOptions.SetItemSize(ItemSize.Medium)">
                             <i class="fas fa-grip-horizontal"></i> Medium
                         </button>
-                        <button type="button" 
-                                class="size-option @(ViewOptions.CurrentItemSize == ItemSize.Large ? "active" : "")"
-                                @onclick="() => ViewOptions.SetItemSize(ItemSize.Large)">
+                        <button type="button"
+                            class="size-option @(ViewOptions.CurrentItemSize == ItemSize.Large ? "active" : "")"
+                            @onclick="() => ViewOptions.SetItemSize(ItemSize.Large)">
                             <i class="fas fa-expand"></i> Large
                         </button>
                     </div>
@@ -134,8 +138,8 @@
             <div class="settings-section">
                 <h4><i class="fas fa-shield-alt"></i> Authentication Status</h4>
                 @if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_authority")) &&
-                     !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_clientid")) &&
-                     !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_clientsecret")))
+                            !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_clientid")) &&
+                            !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_clientsecret")))
                 {
                     <div class="alert alert-success">
                         <i class="fas fa-check-circle"></i> Authentication is enabled.
@@ -275,7 +279,7 @@
 
         await LoadProviderTemplate();
 
-        if (_isDisposed) return; 
+        if (_isDisposed) return;
         StateHasChanged();
     }
 
@@ -362,7 +366,7 @@
                 var newConfig = await DashboardClient.GetConfigAsync();
                 if (newConfig is not null)
                 {
-                    DashboardState.SetConfig(newConfig);
+                    await InvokeAsync(() => DashboardState.SetConfig(newConfig));
                 }
 
                 _saveMessage = "Dashboard settings saved successfully!";
@@ -394,7 +398,7 @@
 
         try
         {
-            if(_currentTemplate?.ProviderType != "AzureAD")
+            if (_currentTemplate?.ProviderType != "AzureAD")
                 UpdateProviderSettings();
 
             if (_authSettings.IsEnabled)
@@ -409,8 +413,8 @@
                 {
                     foreach (var setting in _currentTemplate.Settings.Where(s => s.Value.IsRequired))
                     {
-                        if (string.IsNullOrWhiteSpace(_providerSettings[setting.Key]) && 
-                            !(_authSettings.Id > 0 && setting.Value.IsSecret))
+                        if (string.IsNullOrWhiteSpace(_providerSettings[setting.Key]) &&
+                        !(_authSettings.Id > 0 && setting.Value.IsSecret))
                         {
                             _saveMessage = $"{setting.Value.DisplayName} is required.";
                             _saveSuccess = false;
@@ -436,23 +440,24 @@
                 if (_providerSettings.ContainsKey("Scopes") && !string.IsNullOrWhiteSpace(_providerSettings["Scopes"]))
                     _authSettings.Scopes = _providerSettings["Scopes"];
                 // Auto-generate Authority for Azure AD if not provided
-                if (_selectedProviderType == "AzureAD" && 
-                    string.IsNullOrWhiteSpace(_authSettings.Authority) && 
-                    !string.IsNullOrWhiteSpace(_authSettings.TenantId))
+                if (_selectedProviderType == "AzureAD" &&
+                string.IsNullOrWhiteSpace(_authSettings.Authority) &&
+                !string.IsNullOrWhiteSpace(_authSettings.TenantId))
                 {
                     _authSettings.Authority = $"https://login.microsoftonline.com/{_authSettings.TenantId}";
                 }
             }
-            if (string.IsNullOrEmpty(_authSettings.ClientId) || string.IsNullOrEmpty(_authSettings.Authority) || string.IsNullOrEmpty(_authSettings.ClientSecret))
+            if (string.IsNullOrEmpty(_authSettings.ClientId) || string.IsNullOrEmpty(_authSettings.Authority) ||
+            string.IsNullOrEmpty(_authSettings.ClientSecret))
                 throw new Exception("Client Configuration was not passed correctly.");
             var success = await DashboardClient.Settings.Auth.UpdateAsync(_authSettings);
-            
+
             if (success)
             {
-                _saveMessage = "Authentication settings saved successfully!" + 
-                    (_authSettings.IsEnabled ? " You may need to restart the application for changes to take effect." : "");
+                _saveMessage = "Authentication settings saved successfully!" +
+                (_authSettings.IsEnabled ? " You may need to restart the application for changes to take effect." : "");
                 _saveSuccess = true;
-                
+
                 // Clear secret fields
                 if (_providerSettings.ContainsKey("ClientSecret"))
                     _providerSettings["ClientSecret"] = string.Empty;
