@@ -48,7 +48,7 @@ var authClientSecret = Environment.GetEnvironmentVariable("auth_clientsecret");
 var loggerFactory = LoggerFactory.Create(logging =>
 {
     logging.AddConsole();
-    logging.SetMinimumLevel(LogLevel.Warning);
+    logging.SetMinimumLevel(LogLevel.Information);
 });
 builder.Services.AddSingleton<ILoggerFactory>(loggerFactory);
 

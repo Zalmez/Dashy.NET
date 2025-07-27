@@ -124,6 +124,7 @@
                 }
                 break;
 
+            case "rss":
             case "rss feed":
                 <div class="form-group">
                     <label for="feed-url">RSS Feed URL</label>
@@ -132,6 +133,11 @@
                 <div class="form-group">
                     <label for="max-items">Maximum Items</label>
                     <InputNumber id="max-items" class="form-control" @bind-Value="EditModel.MaxItems" />
+                </div>
+                <div class="form-group">
+                    <label for="refresh-interval">Refresh Interval (minutes)</label>
+                    <InputNumber id="refresh-interval" class="form-control" @bind-Value="EditModel.RefreshInterval" />
+                    <small class="form-text text-muted">How often to refresh the RSS feed (default is 5 minutes)</small>
                 </div>
 @*                 <div class="form-group">
                     <label for="max-size">Maximum Size (e.g., rem, px, %)</label>

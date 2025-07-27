@@ -1,4 +1,5 @@
 ﻿@using System.Xml
+@using System.Threading
 @inherits WidgetBase
 @inject IJSRuntime JSRuntime
 @inject ILogger<RssWidget> Logger
@@ -96,11 +97,38 @@
     private IEnumerable<RssFeedItem> _rssFeedItems = Enumerable.Empty<RssFeedItem>();
     private int? maxItems => int.TryParse(GetOption("MaxItems"), out var result) ? result : null;
     private string maxWidth => GetOption("maxSize") ?? "100%";
+    private Timer? _refreshTimer;
+    private int refreshIntervalMinutes => int.TryParse(GetOption("RefreshInterval"), out var result) ? result : 5;
 
     protected override async Task OnInitializedAsync()
     {
         base.OnInitialized();
+        await LoadRssFeedItems();
+        StartAutoRefresh();
+    }
+
+    private async Task LoadRssFeedItems()
+    {
         _rssFeedItems = await GetRssFeedItems();
+        Logger.LogInformation($"Loaded {_rssFeedItems.Count()} RSS feed items from {GetOption("FeedUrl")}");
+        if (!IsDisposed)
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void StartAutoRefresh()
+    {
+        if (refreshIntervalMinutes > 0)
+        {
+            _refreshTimer = new Timer(async _ =>
+            {
+                if (!IsDisposed)
+                {
+                    await LoadRssFeedItems();
+                }
+            }, null, TimeSpan.FromMinutes(refreshIntervalMinutes), TimeSpan.FromMinutes(refreshIntervalMinutes));
+        }
     }
 
     private async Task<IEnumerable<RssFeedItem>> GetRssFeedItems()
@@ -191,5 +219,11 @@
         public string Link { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public DateTime PublishDate { get; set; } = DateTime.MinValue;
+    }
+
+    public override void Dispose()
+    {
+        _refreshTimer?.Dispose();
+        base.Dispose();
     }
 }

@@ -1,16 +1,21 @@
 .item-card:hover {
-    transform: none;
-    background-color: var(--card-background-color);
-    border-color: var(--border-color);
-}
-ul {
-    list-style: none;
-}
-a:hover{
-    text-decoration: underline;
-    color: darkblue;
+  transform: none;
+  background-color: var(--card-background-color);
+  border-color: var(--border-color);
 }
 
-.rss-item-header.h6{
-    font-size: 0.5rem;
+.item-card-wrapper:hover .item-edit-controls {
+  opacity: 1;
+}
+
+ul {
+  list-style: none;
+}
+a:hover {
+  text-decoration: underline;
+  color: darkblue;
+}
+
+.rss-item-header.h6 {
+  font-size: 0.5rem;
 }
