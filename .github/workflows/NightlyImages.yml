@@ -57,27 +57,36 @@ jobs:
 
       - name: Build and Push ApiService Image
         if: steps.check_commits.outputs.proceed == 'true'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dashy.Net.ApiService/Dockerfile
           push: true
+          build-args: |
+            GITHUB_REF_NAME=nightly-${{ steps.date.outputs.date }}
+            GITHUB_REF_TYPE=tag
           tags: ${{ env.REGISTRY }}/${{ github.repository }}/apiservice:nightly
 
       - name: Build and Push WebFrontend Image
         if: steps.check_commits.outputs.proceed == 'true'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dashy.Net.Web/Dockerfile
           push: true
+          build-args: |
+            GITHUB_REF_NAME=nightly-${{ steps.date.outputs.date }}
+            GITHUB_REF_TYPE=tag
           tags: ${{ env.REGISTRY }}/${{ github.repository }}/webfrontend:nightly
 
       - name: Build and Push MigrationService Image
         if: steps.check_commits.outputs.proceed == 'true'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dashy.Net.MigrationService/Dockerfile
           push: true
+          build-args: |
+            GITHUB_REF_NAME=nightly-${{ steps.date.outputs.date }}
+            GITHUB_REF_TYPE=tag
           tags: ${{ env.REGISTRY }}/${{ github.repository }}/migrationservice:nightly
