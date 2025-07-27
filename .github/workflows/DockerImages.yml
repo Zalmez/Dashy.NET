@@ -52,8 +52,8 @@ jobs:
             GITHUB_REF_NAME=${{ steps.determine_tag.outputs.PRIMARY_TAG }}
             GITHUB_REF_TYPE=tag
           tags: |
-            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/dashy-net-apiservice:${{ steps.determine_tag.outputs.PRIMARY_TAG }}
-            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/dashy-net-apiservice:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/${{ env.repository }}/apiservice:${{ steps.determine_tag.outputs.PRIMARY_TAG }}
+            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/${{ env.repository }}/apiservice:${{ github.sha }}
 
       - name: Build and Push WebFrontend Image
         uses: docker/build-push-action@v6
@@ -65,8 +65,8 @@ jobs:
             GITHUB_REF_NAME=${{ steps.determine_tag.outputs.PRIMARY_TAG }}
             GITHUB_REF_TYPE=tag
           tags: |
-            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/dashy-net-webfrontend:${{ steps.determine_tag.outputs.PRIMARY_TAG }}
-            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/dashy-net-webfrontend:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/${{ env.repository }}/webfrontend:${{ steps.determine_tag.outputs.PRIMARY_TAG }}
+            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/${{ env.repository }}/webfrontend:${{ github.sha }}
 
       - name: Build and Push MigrationService Image
         uses: docker/build-push-action@v6
@@ -78,5 +78,5 @@ jobs:
             GITHUB_REF_NAME=${{ steps.determine_tag.outputs.PRIMARY_TAG }}
             GITHUB_REF_TYPE=tag
           tags: |
-            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/dashy-net-migrationservice:${{ steps.determine_tag.outputs.PRIMARY_TAG }}
-            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/dashy-net-migrationservice:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/${{ env.repository }}/migrationservice:${{ steps.determine_tag.outputs.PRIMARY_TAG }}
+            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/${{ env.repository }}/migrationservice:${{ github.sha }}

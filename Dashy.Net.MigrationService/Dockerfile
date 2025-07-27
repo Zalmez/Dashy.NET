@@ -1,7 +1,6 @@
 ﻿FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
-# Accept build arguments for version information
 ARG GITHUB_REF_NAME
 ARG GITHUB_REF_TYPE
 
@@ -13,7 +12,6 @@ RUN dotnet restore ./Dashy.Net.MigrationService/Dashy.Net.MigrationService.cspro
 
 COPY . .
 
-# Set environment variables for build
 ENV GITHUB_REF_NAME=${GITHUB_REF_NAME}
 ENV GITHUB_REF_TYPE=${GITHUB_REF_TYPE}
 
