@@ -51,7 +51,6 @@ var authAuthority = Environment.GetEnvironmentVariable("auth_authority");
 var authClientId = Environment.GetEnvironmentVariable("auth_clientid");
 var authClientSecret = Environment.GetEnvironmentVariable("auth_clientsecret");
 
-//build the logger so we can log warnings if auth settings are not provided
 var loggerFactory = LoggerFactory.Create(logging =>
 {
     logging.AddConsole();
