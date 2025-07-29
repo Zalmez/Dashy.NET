@@ -1012,14 +1012,14 @@ h6 {
 }
 
 .time-display {
-  font-size: 2.2rem;
+  font-size: 1.8rem;
   font-weight: 500;
   line-height: 1.1;
   color: var(--accent-color);
 }
 
 .date-display {
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   color: var(--subtle-text-color);
 }
 
@@ -1029,17 +1029,25 @@ h6 {
 }
 
 .item-size-small .time-display {
-  font-size: 1.5rem;
+  font-size: 1rem;
 }
 
 .item-size-small .date-display {
+  font-size: 0.6rem;
+}
+
+.item-size-medium .time-display {
+  font-size: 1.5rem;
+}
+
+.item-size-medium .date-display {
   font-size: 0.75rem;
 }
 
 .item-size-large .time-display {
-  font-size: 3rem;
+  font-size: 2.2rem;
 }
 
 .item-size-large .date-display {
-  font-size: 1rem;
+  font-size: 0.9rem;
 }

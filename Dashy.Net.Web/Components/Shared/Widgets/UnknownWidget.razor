@@ -1,14 +1,17 @@
 @inherits WidgetBase
 
-<div class="item-card unknown-widget @GetItemSizeClass()">
-    <div class="item-icon">
-        <i class="fas fa-question-circle"></i>
-    </div>
-    <div class="item-details">
-        <div class="item-title">Unkown Widget</div>
-        <div class="item-description">
-            The widget type '<code>@Widget</code> is not supported
+<div class="glass-tile @GetTileColorClass() @GetItemSizeClass()">
+    <div class="tile-content">
+        <div class="tile-icon">
+            <i class="fas fa-question-circle"></i>
         </div>
+        <div class="tile-title">Unknown Widget</div>
+        @if (ViewOptions.CurrentItemSize == ItemSize.Large)
+        {
+            <div class="tile-description">
+                The widget type '<code>@Widget</code>' is not supported
+            </div>
+        }
     </div>
 </div>
 
@@ -22,4 +25,9 @@
 @code {
     [Parameter]
     public string? Widget { get; set; }
+
+    private string GetTileColorClass()
+    {
+        return "tile-danger"; // Always use danger color for unknown widgets
+    }
 }
