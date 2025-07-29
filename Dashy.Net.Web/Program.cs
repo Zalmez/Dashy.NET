@@ -11,7 +11,7 @@ using System.IdentityModel.Tokens.Jwt;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.AddServiceDefaults();
+
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
@@ -26,8 +26,14 @@ builder.Services.AddHttpClient<WeatherClient>(opts =>
 {
     opts.BaseAddress = new("https+http://apiservice");
 });
+builder.Services.AddHttpClient<EditLocksClient>(opts =>
+{
+    opts.BaseAddress = new("https+http://apiservice");
+});
 builder.Services.AddSingleton<ThemeService>();
-builder.Services.AddSingleton<ViewOptionsService>();
+builder.Services.AddScoped<ViewOptionsService>();
+builder.Services.AddSingleton<EditLockService>();
+builder.Services.AddSingleton<DashboardSyncService>();
 builder.Services.AddSortableServices();
 builder.Services.AddSingleton<DashboardStateService>();
 builder.Services.AddScoped<FileStorageService>();
@@ -45,7 +51,6 @@ var authAuthority = Environment.GetEnvironmentVariable("auth_authority");
 var authClientId = Environment.GetEnvironmentVariable("auth_clientid");
 var authClientSecret = Environment.GetEnvironmentVariable("auth_clientsecret");
 
-//build the logger so we can log warnings if auth settings are not provided
 var loggerFactory = LoggerFactory.Create(logging =>
 {
     logging.AddConsole();
@@ -103,7 +108,7 @@ else
     if (string.IsNullOrWhiteSpace(authClientSecret))
         logger.LogWarning("Authentication client secret is not set. Please set the environment variable 'auth_clientsecret' to enable authentication.");
 }
-
+builder.AddServiceDefaults();
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())

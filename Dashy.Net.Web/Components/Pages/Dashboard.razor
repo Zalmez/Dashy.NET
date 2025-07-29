@@ -173,9 +173,13 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
-        if (DashboardState.Config?.Id != Id)
+        var dashboardId = Id ?? 1;
+        
+        await ViewOptions.InitializeAsync(dashboardId);
+        
+        if (DashboardState.Config?.Id != dashboardId)
         {
-            var config = await DashboardClient.GetConfigAsync(Id);
+            var config = await DashboardClient.GetConfigAsync(dashboardId);
             if (!_isDisposed)
             {
                 await InvokeAsync(() => DashboardState.SetConfig(config));
@@ -192,7 +196,8 @@ else
     {
         if (firstRender)
         {
-            var config = await DashboardClient.GetConfigAsync(Id);
+            var dashboardId = Id ?? 1;
+            var config = await DashboardClient.GetConfigAsync(dashboardId);
             if (_isDisposed) return;
             if (config is null && !_isInitializing)
             {
@@ -287,7 +292,8 @@ else
         if (_isDisposed) return;
         if (success)
         {
-            var newConfig = await DashboardClient.GetConfigAsync(Id);
+            var dashboardId = Id ?? 1;
+            var newConfig = await DashboardClient.GetConfigAsync(dashboardId);
             if (_isDisposed) return;
             await InvokeAsync(() => DashboardState.SetConfig(newConfig));
         }
@@ -417,7 +423,8 @@ else
             }
             else
             {
-                var config = await DashboardClient.GetConfigAsync(Id);
+                var dashboardId = Id ?? 1;
+                var config = await DashboardClient.GetConfigAsync(dashboardId);
                 if (_isDisposed) return;
                 await InvokeAsync(() => DashboardState.SetConfig(config));
             }

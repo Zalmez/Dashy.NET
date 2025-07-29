@@ -8,7 +8,7 @@ public class DashboardItem
     [Required]
     public string? Title { get; set; }
     public string? Description { get; set; }
-    public string? Url {get; set;}
+    public string? Url { get; set; }
     public string? Icon { get; set; }
     public string Widget { get; set; } = "static-link";
     public string? OptionsJson { get; set; }
@@ -79,7 +79,7 @@ public class AuthenticationProvider
     public int Priority { get; set; } = 0;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-    
+
     public List<AuthenticationProviderSettings> Settings { get; set; } = [];
 }
 
@@ -94,7 +94,7 @@ public class AuthenticationProviderSettings
     public string? Value { get; set; }
     public bool IsEncrypted { get; set; } = false;
     public bool IsRequired { get; set; } = false;
-    
+
     public AuthenticationProvider AuthenticationProvider { get; set; } = null!;
 }
 
@@ -107,3 +107,25 @@ public enum AuthenticationProviderType
     Keycloak,
     Auth0
 }
+
+public class EditLockDto
+{
+    public string UserId { get; set; } = string.Empty;
+    public string UserName { get; set; } = string.Empty;
+    public DateTime LockedAt { get; set; }
+    public DateTime LastActivity { get; set; }
+}
+
+public class AcquireEditLockDto
+{
+    public int DashboardId { get; set; }
+    public bool ForceAcquire { get; set; } = false;
+}
+
+public class EditLockResponse
+{
+    public bool Success { get; set; }
+    public EditLockDto? CurrentLock { get; set; }
+    public string? ErrorMessage { get; set; }
+}
+
