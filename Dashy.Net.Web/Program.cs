@@ -32,6 +32,7 @@ builder.Services.AddHttpClient<EditLocksClient>(opts =>
 });
 builder.Services.AddSingleton<ThemeService>();
 builder.Services.AddScoped<ViewOptionsService>();
+builder.Services.AddScoped<ClientStorageService>();
 builder.Services.AddSingleton<EditLockService>();
 builder.Services.AddSingleton<DashboardSyncService>();
 builder.Services.AddSortableServices();
