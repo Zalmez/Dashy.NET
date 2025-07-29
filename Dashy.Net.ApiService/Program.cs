@@ -11,15 +11,12 @@ using System.IdentityModel.Tokens.Jwt;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add service defaults & Aspire client integrations.
 builder.Services.AddControllers();
 builder.AddServiceDefaults();
 var cnnectionString = Environment.GetEnvironmentVariable("ConnectionStrings__dashy");
 builder.Services.AddNpgsql<AppDbContext>(cnnectionString);
-// Add services to the container.
 builder.Services.AddProblemDetails();
 
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddHttpClient("WeatherApi", client =>
 {
     client.BaseAddress = new Uri("https://api.open-meteo.com/");
@@ -62,6 +59,8 @@ if (!string.IsNullOrWhiteSpace(authAuthority) && !string.IsNullOrWhiteSpace(auth
         options.TokenValidationParameters.NameClaimType = JwtRegisteredClaimNames.Name;
     });
 }
+
+builder.Services.AddSingleton<Dashy.Net.ApiService.Services.ApiEditLockService>();
 
 builder.Services.AddOpenApi();
 var app = builder.Build();

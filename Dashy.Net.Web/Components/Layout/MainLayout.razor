@@ -229,7 +229,7 @@
     private IEnumerable<DashboardListItemVm>? _availableDashboards;
 
     private bool _disposed = false;
-    AuthenticationState authState = default;
+    AuthenticationState? authState = null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -454,9 +454,9 @@
         _isFabMenuOpen = !_isFabMenuOpen;
     }
 
-    private void ToggleEditMode()
+    private async Task ToggleEditMode()
     {
-        ViewOptions.ToggleEditMode();
+        await ViewOptions.TryToggleEditModeAsync();
         _isFabMenuOpen = false;
     }
 

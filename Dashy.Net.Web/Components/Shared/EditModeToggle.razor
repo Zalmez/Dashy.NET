@@ -1,15 +1,132 @@
 ﻿@using Dashy.Net.Web.Services
 @inject ViewOptionsService ViewOptions
+@inject IJSRuntime JSRuntime
+@implements IDisposable
 
-<button class="edit-mode-button @(ViewOptions.IsEditMode ? "active" : "")" @onclick="Toggle" title="Toggle Edit Mode" type="button">
-    <i class="fas fa-pencil-alt"></i>
+<button class="edit-mode-button @(ViewOptions.IsEditMode ? "active" : "")" @onclick="ToggleEditMode"
+    title="Toggle Edit Mode" type="button" disabled="@_isToggling">
+    @if (_isToggling)
+      {
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+    }
+    else
+{
+        <i class="fas fa-pencil-alt"></i>
+    }
     <span>Edit Mode</span>
 </button>
 
+@if (_showLockDialog)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Mode Locked</h5>
+                    <button type="button" class="btn-close" @onclick="() => _showLockDialog = false"></button>
+                </div>
+                <div class="modal-body">
+                    <p>This dashboard is currently being edited by <strong>@ViewOptions.CurrentEditLock?.UserName</strong>.
+                    </p>
+                    <p>You can wait for them to finish or force take control of edit mode.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => _showLockDialog = false">Cancel</button>
+                    <button type="button" class="btn btn-warning" @onclick="ForceAcquireEditMode" disabled="@_isToggling">
+                        @if (_isToggling)
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        }
+                        Force Take Control
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
 @code {
-    private void Toggle()
+    private bool _isToggling = false;
+    private bool _showLockDialog = false;
+    private bool _disposed = false;
+
+    protected override void OnInitialized()
     {
-        ViewOptions.ToggleEditMode();
+        ViewOptions.OnChange += OnViewOptionsChanged;
+        ViewOptions.OnEditLockChanged += OnEditLockChanged;
+    }
+
+    private void OnViewOptionsChanged()
+    {
+        if (_disposed) return;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnEditLockChanged(EditLockInfo? lockInfo)
+    {
+        if (_disposed) return;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ToggleEditMode()
+    {
+        if (_isToggling) return;
+
+        _isToggling = true;
         StateHasChanged();
+
+        try
+        {
+            var success = await ViewOptions.TryToggleEditModeAsync();
+
+            if (!success && !ViewOptions.IsEditMode)
+            {
+                _showLockDialog = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            // Handle error
+            await JSRuntime.InvokeVoidAsync("console.error", "Failed to toggle edit mode", ex.Message);
+        }
+        finally
+        {
+            _isToggling = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ForceAcquireEditMode()
+    {
+        if (_isToggling) return;
+
+        _isToggling = true;
+        _showLockDialog = false;
+        StateHasChanged();
+
+        try
+        {
+            await ViewOptions.TryToggleEditModeAsync(forceAcquire: true);
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", "Failed to force acquire edit mode", ex.Message);
+        }
+        finally
+        {
+            _isToggling = false;
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        ViewOptions.OnChange -= OnViewOptionsChanged;
+        ViewOptions.OnEditLockChanged -= OnEditLockChanged;
     }
 }
+
+
+                    
