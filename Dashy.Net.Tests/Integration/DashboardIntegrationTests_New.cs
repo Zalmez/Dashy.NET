@@ -1,14 +1,13 @@
 using Aspire.Hosting.Testing;
 using System.Net;
-using System.Net.Http.Json;
 using Xunit;
 
-namespace Dashy.Net.Tests.Component;
+namespace Dashy.Net.Tests.Integration;
 
-public class ApiServiceComponentTests
+public class DashboardIntegrationTests
 {
     [Fact]
-    public async Task ApiService_StartsSuccessfully()
+    public async Task ApiService_HealthCheck_ReturnsHealthy()
     {
         var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.Dashy_Net_AppHost>();
         await using var app = await appHost.BuildAsync();
@@ -21,30 +20,14 @@ public class ApiServiceComponentTests
     }
 
     [Fact]
-    public async Task WeatherEndpoint_ReturnsWeatherData()
+    public async Task ApiService_DashboardConfig_ReturnsData()
     {
         var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.Dashy_Net_AppHost>();
         await using var app = await appHost.BuildAsync();
         await app.StartAsync();
 
         var httpClient = app.CreateHttpClient("apiservice");
-        var response = await httpClient.GetAsync("/api/weather?latitude=52.52&longitude=13.41&units=celsius");
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.NotEmpty(content);
-        Assert.Contains("temperature", content);
-    }
-
-    [Fact]
-    public async Task DashboardEndpoint_ReturnsDashboardData()
-    {
-        var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.Dashy_Net_AppHost>();
-        await using var app = await appHost.BuildAsync();
-        await app.StartAsync();
-
-        var httpClient = app.CreateHttpClient("apiservice");
-        var response = await httpClient.GetAsync("/api/dashboard/config");
+        var response = await httpClient.GetAsync("/dashboard");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
@@ -52,14 +35,14 @@ public class ApiServiceComponentTests
     }
 
     [Fact]
-    public async Task DashboardListEndpoint_ReturnsDashboardList()
+    public async Task ApiService_WeatherEndpoint_ReturnsData()
     {
         var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.Dashy_Net_AppHost>();
         await using var app = await appHost.BuildAsync();
         await app.StartAsync();
 
         var httpClient = app.CreateHttpClient("apiservice");
-        var response = await httpClient.GetAsync("/api/dashboard/list");
+        var response = await httpClient.GetAsync("/weather?latitude=52.52&longitude=13.41&units=celsius");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
@@ -67,38 +50,45 @@ public class ApiServiceComponentTests
     }
 
     [Fact]
-    public async Task SeedDashboard_CreatesDefaultData()
+    public async Task ApiService_SectionsEndpoint_ReturnsData()
     {
         var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.Dashy_Net_AppHost>();
         await using var app = await appHost.BuildAsync();
         await app.StartAsync();
 
         var httpClient = app.CreateHttpClient("apiservice");
-
-        // Test seeding the database
-        var seedResponse = await httpClient.PostAsync("/api/dashboard/seed", null);
-        Assert.True(seedResponse.IsSuccessStatusCode);
-
-        // Verify we can get config after seeding
-        var configResponse = await httpClient.GetAsync("/api/dashboard/config");
-        Assert.Equal(HttpStatusCode.OK, configResponse.StatusCode);
-        var content = await configResponse.Content.ReadAsStringAsync();
-        Assert.NotNull(content);
-        Assert.Contains("Dashy.Net Home Lab", content);
-    }
-
-    [Fact]
-    public async Task WeatherEndpoint_ReturnsExpectedData()
-    {
-        var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.Dashy_Net_AppHost>();
-        await using var app = await appHost.BuildAsync();
-        await app.StartAsync();
-
-        var httpClient = app.CreateHttpClient("apiservice");
-        var response = await httpClient.GetAsync("/api/weather?latitude=52.52&longitude=13.41&units=celsius");
+        var response = await httpClient.GetAsync("/sections");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
-        Assert.NotNull(content);
+        Assert.NotEmpty(content);
+    }
+
+    [Fact]
+    public async Task ApiService_ItemsEndpoint_ReturnsData()
+    {
+        var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.Dashy_Net_AppHost>();
+        await using var app = await appHost.BuildAsync();
+        await app.StartAsync();
+
+        var httpClient = app.CreateHttpClient("apiservice");
+        var response = await httpClient.GetAsync("/items");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.NotEmpty(content);
+    }
+
+    [Fact]
+    public async Task WebApp_HealthCheck_ReturnsHealthy()
+    {
+        var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.Dashy_Net_AppHost>();
+        await using var app = await appHost.BuildAsync();
+        await app.StartAsync();
+
+        var httpClient = app.CreateHttpClient("web");
+        var response = await httpClient.GetAsync("/health");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 }

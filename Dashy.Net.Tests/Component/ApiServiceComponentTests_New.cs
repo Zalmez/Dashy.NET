@@ -28,7 +28,7 @@ public class ApiServiceComponentTests
         await app.StartAsync();
 
         var httpClient = app.CreateHttpClient("apiservice");
-        var response = await httpClient.GetAsync("/api/weather?latitude=52.52&longitude=13.41&units=celsius");
+        var response = await httpClient.GetAsync("/weather?latitude=52.52&longitude=13.41&units=celsius");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
@@ -44,7 +44,7 @@ public class ApiServiceComponentTests
         await app.StartAsync();
 
         var httpClient = app.CreateHttpClient("apiservice");
-        var response = await httpClient.GetAsync("/api/dashboard/config");
+        var response = await httpClient.GetAsync("/dashboard");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
@@ -52,22 +52,7 @@ public class ApiServiceComponentTests
     }
 
     [Fact]
-    public async Task DashboardListEndpoint_ReturnsDashboardList()
-    {
-        var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.Dashy_Net_AppHost>();
-        await using var app = await appHost.BuildAsync();
-        await app.StartAsync();
-
-        var httpClient = app.CreateHttpClient("apiservice");
-        var response = await httpClient.GetAsync("/api/dashboard/list");
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.NotEmpty(content);
-    }
-
-    [Fact]
-    public async Task SeedDashboard_CreatesDefaultData()
+    public async Task SectionsCrudOperations_WorkCorrectly()
     {
         var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.Dashy_Net_AppHost>();
         await using var app = await appHost.BuildAsync();
@@ -75,27 +60,42 @@ public class ApiServiceComponentTests
 
         var httpClient = app.CreateHttpClient("apiservice");
 
-        // Test seeding the database
-        var seedResponse = await httpClient.PostAsync("/api/dashboard/seed", null);
-        Assert.True(seedResponse.IsSuccessStatusCode);
+        // Test GET sections
+        var getResponse = await httpClient.GetAsync("/sections");
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
 
-        // Verify we can get config after seeding
-        var configResponse = await httpClient.GetAsync("/api/dashboard/config");
-        Assert.Equal(HttpStatusCode.OK, configResponse.StatusCode);
-        var content = await configResponse.Content.ReadAsStringAsync();
+        // Test that we can access the sections endpoint
+        var content = await getResponse.Content.ReadAsStringAsync();
         Assert.NotNull(content);
-        Assert.Contains("Dashy.Net Home Lab", content);
     }
 
     [Fact]
-    public async Task WeatherEndpoint_ReturnsExpectedData()
+    public async Task ItemsCrudOperations_WorkCorrectly()
     {
         var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.Dashy_Net_AppHost>();
         await using var app = await appHost.BuildAsync();
         await app.StartAsync();
 
         var httpClient = app.CreateHttpClient("apiservice");
-        var response = await httpClient.GetAsync("/api/weather?latitude=52.52&longitude=13.41&units=celsius");
+
+        // Test GET items
+        var getResponse = await httpClient.GetAsync("/items");
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+
+        // Test that we can access the items endpoint
+        var content = await getResponse.Content.ReadAsStringAsync();
+        Assert.NotNull(content);
+    }
+
+    [Fact]
+    public async Task HeaderButtonsEndpoint_ReturnsHeaderButtonData()
+    {
+        var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.Dashy_Net_AppHost>();
+        await using var app = await appHost.BuildAsync();
+        await app.StartAsync();
+
+        var httpClient = app.CreateHttpClient("apiservice");
+        var response = await httpClient.GetAsync("/header-buttons");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();

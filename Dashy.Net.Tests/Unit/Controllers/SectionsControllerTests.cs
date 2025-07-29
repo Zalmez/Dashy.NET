@@ -54,9 +54,9 @@ public class SectionsControllerTests
         _context.Dashboards.Add(dashboard);
         await _context.SaveChangesAsync();
 
-        var section = new DashboardSection 
-        { 
-            Name = "Test Section", 
+        var section = new DashboardSection
+        {
+            Name = "Test Section",
             DashboardId = dashboard.Id,
             Dashboard = dashboard
         };
@@ -79,9 +79,9 @@ public class SectionsControllerTests
         _context.Dashboards.Add(dashboard);
         await _context.SaveChangesAsync();
 
-        var section = new DashboardSection 
-        { 
-            Name = "Original Name", 
+        var section = new DashboardSection
+        {
+            Name = "Original Name",
             DashboardId = dashboard.Id,
             Dashboard = dashboard
         };
@@ -98,7 +98,7 @@ public class SectionsControllerTests
         var result = await controller.UpdateSection(section.Id, updateDto);
 
         Assert.IsType<NoContentResult>(result);
-        
+
         var updatedSection = await _context.Sections.FindAsync(section.Id);
         Assert.NotNull(updatedSection);
         Assert.Equal("Updated Name", updatedSection.Name);
@@ -111,9 +111,9 @@ public class SectionsControllerTests
         _context.Dashboards.Add(dashboard);
         await _context.SaveChangesAsync();
 
-        var section = new DashboardSection 
-        { 
-            Name = "Section to Delete", 
+        var section = new DashboardSection
+        {
+            Name = "Section to Delete",
             DashboardId = dashboard.Id,
             Dashboard = dashboard
         };
@@ -125,7 +125,7 @@ public class SectionsControllerTests
         var result = await controller.DeleteSection(section.Id);
 
         Assert.IsType<NoContentResult>(result);
-        
+
         var deletedSection = await _context.Sections.FindAsync(section.Id);
         Assert.Null(deletedSection);
     }
@@ -154,7 +154,7 @@ public class SectionsControllerTests
         var result = await controller.ReorderSections(reorderDto);
 
         Assert.IsType<OkResult>(result);
-        
+
         var reorderedSections = await _context.Sections.OrderBy(s => s.Position).ToListAsync();
         Assert.Equal("Section 3", reorderedSections[0].Name);
         Assert.Equal("Section 1", reorderedSections[1].Name);

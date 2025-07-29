@@ -7,7 +7,7 @@ public static class TestAppHost
     public static DistributedApplication CreateTestApp()
     {
         var builder = DistributedApplication.CreateBuilder();
-        
+
         var postgres = builder.AddPostgres("testpostgres")
             .WithDataVolume("testdashydb");
 

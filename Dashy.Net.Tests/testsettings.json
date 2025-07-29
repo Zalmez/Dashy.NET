@@ -1,27 +1,27 @@
 {
-  "configProperties": {
-    "DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.ResultsDirectory": "./TestResults"
-  },
-  "faultCollector": {
-    "collector": {
-      "collectDumpOnExit": false,
-      "collectDumpOnTestSessionHang": false
-    }
-  },
-  "runSettings": {
-    "runConfiguration": {
-      "maxCpuCount": 0,
-      "resultDirectory": "./TestResults",
-      "targetPlatform": "x64",
-      "treatTestAdapterErrorsAsWarnings": false
+    "configProperties": {
+        "DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.ResultsDirectory": "./TestResults"
     },
-    "testRunParameters": {
-      "parameter": [
-        {
-          "name": "TestEnvironment",
-          "value": "CI"
+    "faultCollector": {
+        "collector": {
+            "collectDumpOnExit": false,
+            "collectDumpOnTestSessionHang": false
         }
-      ]
+    },
+    "runSettings": {
+        "runConfiguration": {
+            "maxCpuCount": 0,
+            "resultDirectory": "./TestResults",
+            "targetPlatform": "x64",
+            "treatTestAdapterErrorsAsWarnings": false
+        },
+        "testRunParameters": {
+            "parameter": [
+                {
+                    "name": "TestEnvironment",
+                    "value": "CI"
+                }
+            ]
+        }
     }
-  }
 }
