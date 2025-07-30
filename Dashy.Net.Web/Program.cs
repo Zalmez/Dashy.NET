@@ -30,13 +30,13 @@ builder.Services.AddHttpClient<EditLocksClient>(opts =>
 {
     opts.BaseAddress = new("https+http://apiservice");
 });
-builder.Services.AddSingleton<ThemeService>();
+builder.Services.AddScoped<ThemeService>();
 builder.Services.AddScoped<ViewOptionsService>();
 builder.Services.AddScoped<ClientStorageService>();
 builder.Services.AddSingleton<EditLockService>();
 builder.Services.AddSingleton<DashboardSyncService>();
 builder.Services.AddSortableServices();
-builder.Services.AddSingleton<DashboardStateService>();
+builder.Services.AddScoped<DashboardStateService>();
 builder.Services.AddScoped<FileStorageService>();
 builder.Services.AddSingleton<WidgetRegistryService>();
 builder.Services.AddSingleton<IVersionService, VersionService>();

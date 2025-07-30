@@ -3,7 +3,7 @@
 namespace Dashy.Net.Web.Services;
 
 /// <summary>
-/// Manages global dashboard configuration state that should be synchronized across all clients.
+/// Manages client-specific dashboard configuration state. Each client connection has its own instance.
 /// This includes the actual dashboard data (sections, items, etc.) but NOT client-specific UI preferences.
 /// </summary>
 public class DashboardStateService
@@ -13,8 +13,8 @@ public class DashboardStateService
     public event Action? OnConfigLoaded;
 
     /// <summary>
-    /// Updates the dashboard configuration. This will trigger updates across all connected clients
-    /// for the dashboard data, but not for client-specific view preferences.
+    /// Updates the dashboard configuration. This will only affect the current client.
+    /// Dashboard data synchronization across clients is handled separately by DashboardSyncService.
     /// </summary>
     /// <param name="config">The new dashboard configuration</param>
     public void SetConfig(DashboardConfigVm? config)

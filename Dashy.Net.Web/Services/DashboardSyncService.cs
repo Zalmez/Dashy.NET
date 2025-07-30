@@ -9,7 +9,6 @@ namespace Dashy.Net.Web.Services;
 /// </summary>
 public class DashboardSyncService
 {
-    private readonly DashboardStateService _dashboardState;
     private readonly EditLockService _editLockService;
     private readonly ILogger<DashboardSyncService> _logger;
     private readonly Timer _syncTimer;
@@ -19,11 +18,9 @@ public class DashboardSyncService
     private DateTime _lastSyncTime = DateTime.MinValue;
 
     public DashboardSyncService(
-        DashboardStateService dashboardState,
         EditLockService editLockService,
         ILogger<DashboardSyncService> logger)
     {
-        _dashboardState = dashboardState;
         _editLockService = editLockService;
         _logger = logger;
 
@@ -66,24 +63,14 @@ public class DashboardSyncService
     {
         try
         {
-            var currentConfig = _dashboardState.Config;
-            if (currentConfig == null)
-                return;
-
-            var currentLock = _editLockService.GetCurrentLock(currentConfig.Id);
-            if (currentLock != null)
-            {
-                _logger.LogDebug("Skipping configuration sync for dashboard {DashboardId} - currently being edited by {UserId}",
-                    currentConfig.Id, currentLock.UserId);
-                return;
-            }
-
+            // Note: Configuration changes are now handled by individual client DashboardStateService instances
+            // This method is kept for potential future use in cross-client synchronization
             if (DateTime.UtcNow - _lastSyncTime < TimeSpan.FromSeconds(10))
                 return;
 
             _lastSyncTime = DateTime.UtcNow;
 
-            _logger.LogDebug("Configuration sync check completed for dashboard {DashboardId}", currentConfig.Id);
+            _logger.LogDebug("Configuration sync check completed");
         }
         catch (Exception ex)
         {
@@ -102,7 +89,7 @@ public class DashboardSyncService
             LastSyncTime = _lastSyncTime,
             LastConfigVersion = _lastConfigVersion,
             ActiveLocks = _editLockService.GetAllActiveLocks().Count,
-            CurrentDashboardId = _dashboardState.Config?.Id
+            CurrentDashboardId = null // Dashboard ID is now client-specific
         };
     }
 
