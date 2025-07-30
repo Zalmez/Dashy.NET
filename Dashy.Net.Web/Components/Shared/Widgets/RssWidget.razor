@@ -6,7 +6,7 @@
 @inject NavigationManager NavManager
 @implements IDisposable
 
-<div class="item-card-wrapper">
+<div class="item-card-wrapper rss-widget @GetItemSizeClass()" data-widget-type="RssWidget">
     @if (ViewOptions.IsEditMode)
     {
         <div class="item-edit-controls">
