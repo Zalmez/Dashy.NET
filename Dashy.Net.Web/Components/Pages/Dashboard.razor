@@ -48,7 +48,7 @@ else
             @foreach (var currentSection in FilteredSections)
             {
                 <div class="section-item @GetSectionSizeClass(currentSection)" @key="currentSection.Id">
-                    <div class="section-container" id="section-@currentSection.Id">
+                    <div class="section-container @GetLayoutClass()" id="section-@currentSection.Id">
                         <div class="section-header" @onclick="() => ToggleSectionCollapse(currentSection.Id)">
                             <div class="section-header-left">
                                 <i class="fas fa-chevron-down section-chevron @(_collapsedSections.Contains(currentSection.Id) ? "collapsed" : "")"></i>
@@ -362,6 +362,11 @@ else
         if (_collapsedSections.Contains(sectionId))
             return "collapsed";
 
+        return "layout-" + ViewOptions.CurrentLayout.ToString().ToLower();
+    }
+
+    private string GetLayoutClass()
+    {
         return "layout-" + ViewOptions.CurrentLayout.ToString().ToLower();
     }
 

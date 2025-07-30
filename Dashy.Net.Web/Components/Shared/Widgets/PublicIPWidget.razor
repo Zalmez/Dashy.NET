@@ -3,38 +3,49 @@
 @using System.Text.Json
 @using System.Text.Json.Serialization
 
-<div class="item-card-wrapper">
-    <div class="public-ip-widget item-card @GetItemSizeClass()">
-        @if (ViewOptions.IsEditMode)
-        {
-            <div class="item-edit-controls">
-                <button class="edit-btn" title="Edit Item" @onclick="OnEditClick"><i class="fas fa-pencil-alt"></i></button>
-                <button class="delete-btn" title="Delete Item" @onclick="OnDeleteClick"><i class="fas fa-trash-alt"></i></button>
-            </div>
-        }
-        <div class="widget-title" style="text-align: center; font-weight: bold; font-size: 1.5rem; margin-bottom: 0.5rem;">
-            <i class="fas fa-wifi"></i> @Item.Title
+<div class="glass-tile @GetTileColorClass() @GetItemSizeClass()" @onclick:preventDefault="ViewOptions.IsEditMode">
+    @if (ViewOptions.IsEditMode)
+    {
+        <div class="item-edit-controls">
+            <button class="edit-btn" title="Edit Item" @onclick="OnEditClick" @onclick:stopPropagation="true"><i
+                    class="fas fa-pencil-alt"></i></button>
+            <button class="delete-btn" title="Delete Item" @onclick="OnDeleteClick" @onclick:stopPropagation="true"><i
+                    class="fas fa-trash-alt"></i></button>
         </div>
-        <div class="widget-content" style="text-align: center;">
-            @if (_isLoading)
+    }
+
+    <div class="tile-content">
+        @if (_isLoading)
+        {
+            <div class="tile-icon">
+                <i class="fas fa-spinner fa-spin"></i>
+            </div>
+            <div class="tile-title">Loading...</div>
+        }
+        else if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <div class="tile-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="tile-title error-message">@_errorMessage</div>
+        }
+        else
+        {
+            <div class="tile-icon">
+                <i class="fas fa-wifi"></i>
+            </div>
+            <div class="tile-title">@_publicIP</div>
+            @if (ViewOptions.CurrentItemSize == ItemSize.Large || ViewOptions.CurrentItemSize == ItemSize.Medium)
             {
-                <p>Loading...</p>
-            }
-            else if (!string.IsNullOrEmpty(_errorMessage))
-            {
-                <p class="error-message">@_errorMessage</p>
-            }
-            else
-            {
-                <div class="ip-address" style="font-size: 2rem; font-weight: bold; margin-bottom: 0.5rem;">@_publicIP</div>
-                <div class="location" style="display: flex; align-items: center; justify-content: center;">
-                    <img src="@_flagUrl" alt="Country Flag" class="country-flag" style="width: 40px; height: auto; margin-right: 0.5rem;" />
-                    <div>
-                        <div style="font-weight: bold;">@_zipcode, @_location</div>
-                    </div>
+                <div class="tile-description">
+                    @if (!string.IsNullOrEmpty(_flagUrl))
+                    {
+                        <img src="@_flagUrl" alt="Country Flag" style="width: 16px; height: auto; margin-right: 0.25rem;" />
+                    }
+                    @_zipcode, @_location
                 </div>
             }
-        </div>
+        }
     </div>
 </div>
 
@@ -49,7 +60,14 @@
     private string _selectedProvider => GetOption("provider") ?? "ipapi.co";
     private string _apiKey => GetOption("apikey") ?? "";
 
-    private Dictionary<string, Func<Task>> _providers;
+    private Dictionary<string, Func<Task>> _providers = new();
+
+    private string GetTileColorClass()
+    {
+        var hash = Item.Title.GetHashCode();
+        var colors = new[] { "blue", "green", "purple", "orange", "red", "pink", "teal" };
+        return colors[Math.Abs(hash) % colors.Length];
+    }
 
     protected override async Task OnInitializedAsync()
     {

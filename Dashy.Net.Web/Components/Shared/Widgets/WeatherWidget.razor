@@ -2,30 +2,44 @@
 @inject WeatherClient WeatherClient
 @inject IJSRuntime JSRuntime
 
-<div class="weather-widget-container item-card @GetItemSizeClass()">
-    @if (_isLoading)
+<div class="glass-tile @GetTileColorClass() @GetItemSizeClass()" @onclick:preventDefault="ViewOptions.IsEditMode">
+    @if (ViewOptions.IsEditMode)
     {
-        <p>Loading weather...</p>
-    }
-    else if (_weather is not null)
-    {
-        <div class="weather-icon">@GetWeatherIcon(_weather.WeatherCode)</div>
-        <div class="weather-details">
-            <div class="temperature">@_weather.Temperature.ToString("0.0")°@UnitSymbol</div>
-            <div class="location">@LocationName</div>
+        <div class="item-edit-controls">
+            <button class="edit-btn" title="Edit Item" @onclick="OnEditClick" @onclick:stopPropagation="true"><i
+                    class="fas fa-pencil-alt"></i></button>
+            <button class="delete-btn" title="Delete Item" @onclick="OnDeleteClick" @onclick:stopPropagation="true"><i
+                    class="fas fa-trash-alt"></i></button>
         </div>
     }
-    else
-    {
-        <p class="error-message">@_errorMessage</p>
-    }
-    @if (IsEditMode)
-    {
-        <div class="widget-actions">
-            <button class="btn btn-primary" @onclick="OnEditClick">Edit</button>
-            <button class="btn btn-danger" @onclick="OnDeleteClick">Delete</button>
-        </div>
-    }
+
+    <div class="tile-content">
+        @if (_isLoading)
+        {
+            <div class="tile-icon">
+                <i class="fas fa-spinner fa-spin"></i>
+            </div>
+            <div class="tile-title">Loading weather...</div>
+        }
+        else if (_weather is not null)
+        {
+            <div class="tile-icon weather-icon">@GetWeatherIcon(_weather.WeatherCode)</div>
+            <div class="weather-details">
+                <div class="tile-title temperature">@_weather.Temperature.ToString("0.0")°@UnitSymbol</div>
+                @if (ViewOptions.CurrentItemSize == ItemSize.Large || ViewOptions.CurrentItemSize == ItemSize.Medium)
+                {
+                    <div class="tile-description location">@LocationName</div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="tile-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="tile-title error-message">@_errorMessage</div>
+        }
+    </div>
 </div>
 
 @code {
@@ -38,9 +52,6 @@
     private double Longitude => double.TryParse(GetOption("longitude"), out var lon) ? lon : 10.75;
     private string Unit => GetOption("unit") ?? "celsius";
     private string UnitSymbol => Unit.Equals("fahrenheit", StringComparison.OrdinalIgnoreCase) ? "F" : "C";
-
-    [Parameter]
-    public bool IsEditMode { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -82,6 +93,13 @@
         95 or 96 or 99 => "⛈️",
         _ => "❓"
     };
+
+    private string GetTileColorClass()
+    {
+        var hash = Item.Title.GetHashCode();
+        var colors = new[] { "blue", "green", "purple", "orange", "red", "pink", "teal" };
+        return colors[Math.Abs(hash) % colors.Length];
+    }
 
     private async Task OnDeleteClick()
     {

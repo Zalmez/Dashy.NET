@@ -100,6 +100,7 @@
 .main-tiles-section {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(4, minmax(200px, 1fr)); /* Force exactly 4 columns */
   gap: 1.5rem;
   margin-bottom: 3rem;
 }
@@ -115,6 +116,12 @@
   height: 100%;
   display: flex;
   flex-direction: column;
+  background: var(--glass-background);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  backdrop-filter: blur(20px);
+  box-shadow: var(--glass-shadow);
 }
 
 .section-header {
@@ -169,29 +176,115 @@
   overflow: hidden;
   opacity: 1;
   max-height: 1000px;
-  justify-content: flex-start; /* Changed from center to better utilize space */
+  justify-content: flex-start;
+  padding: 0.5rem 0;
 }
 
 .items-wrapper.layout-auto {
-  flex-wrap: wrap;
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(100px, 1fr)); /* Force exactly 4 columns */
+  gap: 1rem;
+  flex-wrap: nowrap;
 }
 
 .items-wrapper.layout-auto .item {
-  flex: 1 1 auto;
-  min-width: 200px;
-  max-width: 350px; /* Slightly increased max-width */
+  flex: none;
+  min-width: auto;
+  max-width: none;
+}
+
+/* RSS Widget special sizing - allows it to break grid constraints for readability */
+.items-wrapper.layout-auto .rss-widget,
+.items-wrapper.layout-auto [data-widget-type="RssWidget"] {
+  grid-column: span 2; /* RSS widgets span at least 2 columns by default */
+  min-width: 400px; /* Ensure minimum width for readability */
+}
+
+/* RSS medium spans more columns */
+.items-wrapper.layout-auto .rss-widget .item-card.item-size-medium,
+.items-wrapper.layout-auto [data-widget-type="RssWidget"] .item-card.item-size-medium {
+  min-width: 500px;
+}
+
+.items-wrapper.layout-auto .rss-widget:has(.item-card.item-size-medium),
+.items-wrapper.layout-auto [data-widget-type="RssWidget"]:has(.item-card.item-size-medium) {
+  grid-column: span 3;
+}
+
+/* RSS large spans full width */
+.items-wrapper.layout-auto .rss-widget .item-card.item-size-large,
+.items-wrapper.layout-auto [data-widget-type="RssWidget"] .item-card.item-size-large {
+  min-width: 600px;
+}
+
+.items-wrapper.layout-auto .rss-widget:has(.item-card.item-size-large),
+.items-wrapper.layout-auto [data-widget-type="RssWidget"]:has(.item-card.item-size-large) {
+  grid-column: span 4;
+}
+
+/* When RSS widget is alone in a section, override the entire grid */
+.items-wrapper.layout-auto:has(.rss-widget:only-child),
+.items-wrapper.layout-auto:has([data-widget-type="RssWidget"]:only-child) {
+  display: block; /* Switch from grid to block layout */
+  width: 100%;
+}
+
+/* When RSS widget is alone in a section, let it span full width */
+.items-wrapper.layout-auto .rss-widget:only-child,
+.items-wrapper.layout-auto [data-widget-type="RssWidget"]:only-child {
+  grid-column: 1 / -1; /* Span all available columns */
+  min-width: unset; /* Remove minimum width constraint */
+  max-width: 100%; /* Allow full width usage */
+  width: 100%; /* Force full width */
+  display: block; /* Ensure block behavior */
+}
+
+/* Also target the inner item-card when RSS is alone */
+.items-wrapper.layout-auto .rss-widget:only-child .item-card,
+.items-wrapper.layout-auto [data-widget-type="RssWidget"]:only-child .item-card {
+  width: 100%;
+  max-width: 100%;
+  min-width: unset;
+}
+
+/* Fallback for browsers that don't support :has() - target containers with only RSS */
+.items-wrapper.layout-auto.rss-only {
+  display: block;
+  width: 100%;
+}
+
+.items-wrapper.layout-auto.rss-only .rss-widget,
+.items-wrapper.layout-auto.rss-only [data-widget-type="RssWidget"] {
+  width: 100%;
+  max-width: 100%;
+  min-width: unset;
+  display: block;
+}
+
+/* Fallback for browsers that don't support :has() */
+.items-wrapper.layout-auto .rss-widget.item-size-medium,
+.items-wrapper.layout-auto [data-widget-type="RssWidget"].item-size-medium {
+  grid-column: span 3;
+}
+
+.items-wrapper.layout-auto .rss-widget.item-size-large,
+.items-wrapper.layout-auto [data-widget-type="RssWidget"].item-size-large {
+  grid-column: span 4;
 }
 
 .items-wrapper.layout-vertical {
   flex-direction: column;
   flex-wrap: nowrap;
+  align-items: flex-start;
+  width: fit-content;
+  max-width: 100%; 
 }
 
 .items-wrapper.layout-vertical .item {
   flex: 0 0 auto;
-  width: 100%;
-  max-width: none;
+  width: auto;
+  max-width: 100%;
+  min-width: 200px;
 }
 
 .items-wrapper .item {
@@ -204,6 +297,13 @@
   margin-top: 0;
   margin-bottom: 0;
   overflow: hidden;
+}
+
+/* Vertical layout specific adjustments */
+.section-container.layout-vertical {
+  width: fit-content;
+  min-width: 320px;
+  max-width: 100%;
 }
 
 .glass-tile {
@@ -260,7 +360,6 @@
   align-items: center;
   gap: 1rem;
   height: 100%;
-  min-height: 120px;
   justify-content: center;
 }
 
@@ -327,71 +426,262 @@
 
 /* Glass tile size variations */
 .glass-tile.item-size-small {
-  padding: 1rem;
-  min-height: 80px;
+  padding: 0.6rem;
+  min-height: 55px;
+  border-radius: 12px;
+  min-width: 100px;
+  max-width: 180px;
+}
+
+.glass-tile.item-size-small .tile-content {
+  gap: 0.4rem;
 }
 
 .glass-tile.item-size-small .tile-icon {
-  font-size: 1.2rem;
-  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+  margin-bottom: 0;
 }
 
 .glass-tile.item-size-small .tile-icon img {
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
 }
 
 .glass-tile.item-size-small .tile-title {
-  font-size: 0.875rem;
-  line-height: 1.2;
+  font-size: 0.75rem;
+  line-height: 1.1;
+  font-weight: 500;
 }
 
 .glass-tile.item-size-medium {
-  padding: 1.5rem;
-  min-height: 120px;
+  padding: 1rem;
+  min-height: 90px;
+  border-radius: 16px;
+}
+
+.glass-tile.item-size-medium .tile-content {
+  gap: 0.75rem;
 }
 
 .glass-tile.item-size-medium .tile-icon {
-  font-size: 1.5rem;
-  margin-bottom: 0.75rem;
+  font-size: 1.75rem;
+  margin-bottom: 0;
 }
 
 .glass-tile.item-size-medium .tile-icon img {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
 }
 
 .glass-tile.item-size-medium .tile-title {
-  font-size: 1rem;
-  line-height: 1.3;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  font-weight: 500;
 }
 
 .glass-tile.item-size-large {
-  padding: 2rem;
-  min-height: 160px;
+  padding: 1.5rem;
+  min-height: 130px;
+  border-radius: 20px;
+}
+
+.glass-tile.item-size-large .tile-content {
+  gap: 1rem;
 }
 
 .glass-tile.item-size-large .tile-icon {
-  font-size: 2rem;
-  margin-bottom: 1rem;
+  font-size: 2.25rem;
+  margin-bottom: 0;
 }
 
 .glass-tile.item-size-large .tile-icon img {
-  width: 48px;
-  height: 48px;
+  width: 36px;
+  height: 36px;
 }
 
 .glass-tile.item-size-large .tile-title {
-  font-size: 1.125rem;
-  line-height: 1.4;
+  font-size: 1.1rem;
+  line-height: 1.3;
   font-weight: 600;
 }
 
 .glass-tile.item-size-large .tile-description {
   font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.8);
-  margin-top: 0.5rem;
+  color: var(--subtle-text-color);
+  margin-top: 0;
   line-height: 1.3;
+}
+
+/* RSS Widget specific styles for better readability */
+.item-card {
+  background: var(--glass-background);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  backdrop-filter: blur(20px);
+  box-shadow: var(--glass-shadow);
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: visible; /* Allow RSS content to expand */
+  cursor: default; /* RSS widgets are not clickable */
+  display: block; /* Override flex to allow better content flow */
+  height: auto; /* Allow natural height expansion */
+  min-height: 200px; /* Minimum height for readability */
+}
+
+.item-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  border-radius: 16px;
+  pointer-events: none;
+}
+
+.item-card .item-icon {
+  display: inline-block;
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+  color: var(--accent-color);
+}
+
+.item-card .item-details {
+  position: relative;
+  z-index: 2;
+}
+
+/* RSS size-specific improvements */
+.item-card.item-size-small {
+  min-height: 150px;
+  padding: 1rem;
+}
+
+.item-card.item-size-medium {
+  min-height: 250px;
+  padding: 1.25rem;
+}
+
+.item-card.item-size-large {
+  min-height: 350px;
+  padding: 1.5rem;
+}
+
+/* RSS Feed specific styling */
+.rss-feed-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: none; /* Remove height constraints */
+}
+
+.rss-feed-items li {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.rss-feed-items li:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.rss-item-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.rss-item-header i {
+  color: var(--accent-color);
+  font-size: 1rem;
+  margin-top: 0.25rem;
+  flex-shrink: 0;
+}
+
+.rss-item-header h4,
+.rss-item-header h5,
+.rss-item-header h6 {
+  margin: 0;
+  color: var(--text-color);
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+.rss-item-header h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.rss-item-header h5 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.rss-item-header h6 {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.rss-publish-date {
+  font-size: 0.8rem;
+  color: var(--subtle-text-color);
+  margin: 0.5rem 0;
+}
+
+.rss-description {
+  font-size: 0.875rem;
+  color: var(--text-color);
+  line-height: 1.5;
+  margin: 0.75rem 0;
+  word-wrap: break-word;
+}
+
+.rss-continue-reading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--accent-color);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.rss-continue-reading:hover {
+  color: var(--accent-color);
+  text-decoration: underline;
+}
+
+.rss-continue-reading i {
+  font-size: 0.75rem;
+  transition: transform 0.2s ease;
+}
+
+.rss-continue-reading:hover i {
+  transform: translateX(2px);
+}
+
+.rss-item-separator {
+  border: none;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 1rem 0;
+}
+
+/* RSS Grid layout for medium size */
+.rss-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
 }
 
 /* Monitoring widgets styles */
@@ -511,13 +801,26 @@
 /* Responsive design */
 @media (max-width: 768px) {
   .main-tiles-section {
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(2, minmax(160px, 1fr)); /* 2 columns on mobile */
     gap: 1rem;
   }
 
-  .items-wrapper {
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  .items-wrapper.layout-auto {
+    grid-template-columns: repeat(2, minmax(160px, 1fr)); /* 2 columns on mobile */
     gap: 1rem;
+  }
+
+  /* RSS widgets always take full width on mobile for readability */
+  .items-wrapper.layout-auto .rss-widget,
+  .items-wrapper.layout-auto [data-widget-type="RssWidget"] {
+    grid-column: span 2; /* RSS always spans full width on mobile */
+    min-width: unset; /* Remove min-width constraint on mobile */
+  }
+
+  /* Make vertical layout sections still responsive on mobile */
+  .section-container.layout-vertical {
+    width: 100%;
+    min-width: unset;
   }
 
   .dashboard-container {
@@ -542,9 +845,19 @@
 }
 
 @media (max-width: 480px) {
-  .main-tiles-section,
-  .items-wrapper {
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  .main-tiles-section {
+    grid-template-columns: repeat(1, minmax(140px, 1fr)); /* 1 column on very small screens */
+  }
+
+  .items-wrapper.layout-auto {
+    grid-template-columns: repeat(1, minmax(140px, 1fr)); /* 1 column on very small screens */
+  }
+
+  /* RSS widgets take full width on very small screens */
+  .items-wrapper.layout-auto .rss-widget,
+  .items-wrapper.layout-auto [data-widget-type="RssWidget"] {
+    grid-column: span 1; /* RSS spans full width (which is 1 column) */
+    min-width: unset; /* Remove min-width constraint */
   }
 
   .header-user-section .user-icons {
@@ -745,8 +1058,8 @@
   border-radius: 0.5rem;
   cursor: pointer;
   height: 100%;
-  min-height: 80px; /* Give it some default height */
-  font-size: 2rem;
+  min-height: 55px;
+  font-size: 1.25rem;
   transition: all 0.2s ease-in-out;
 }
 

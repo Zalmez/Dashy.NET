@@ -1,23 +1,34 @@
 @using Dashy.Net.Shared.Models
 @inherits WidgetBase
 
-<div class="clock-widget-container item-card @GetItemSizeClass()">
-    @if (string.IsNullOrWhiteSpace(_errorMessage))
+<div class="glass-tile @GetTileColorClass() @GetItemSizeClass()" @onclick:preventDefault="ViewOptions.IsEditMode">
+    @if (ViewOptions.IsEditMode)
     {
-        <div class="time-display">@_currentTime.ToString("HH:mm:ss")</div>
-        <div class="date-display">@_currentTime.ToString("dddd, MMMM d")</div>
-    }
-    else
-    {
-        <div class="error-message">@_errorMessage</div>
-    }
-    @if (IsEditMode)
-    {
-        <div class="widget-actions">
-            <button class="btn btn-primary" @onclick="EditWidget">Edit</button>
-            <button class="btn btn-danger" @onclick="DeleteWidget">Delete</button>
+        <div class="item-edit-controls">
+            <button class="edit-btn" title="Edit Item" @onclick="EditWidget" @onclick:stopPropagation="true"><i
+                    class="fas fa-pencil-alt"></i></button>
+            <button class="delete-btn" title="Delete Item" @onclick="DeleteWidget" @onclick:stopPropagation="true"><i
+                    class="fas fa-trash-alt"></i></button>
         </div>
     }
+
+    <div class="tile-content clock-widget-container">
+        @if (string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <div class="time-display">@_currentTime.ToString(TimeFormat)</div>
+            @if (ViewOptions.CurrentItemSize == ItemSize.Large || ViewOptions.CurrentItemSize == ItemSize.Medium)
+            {
+                <div class="date-display">@_currentTime.ToString(DateFormat)</div>
+            }
+        }
+        else
+        {
+            <div class="tile-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="tile-title error-message">@_errorMessage</div>
+        }
+    </div>
 </div>
 
 @code
@@ -28,9 +39,6 @@
 
     private string TimeFormat => GetOption("timeFormat") ?? "HH:mm:ss";
     private string DateFormat => GetOption("dateFormat") ?? "dddd, MMMM d";
-
-    [Parameter]
-    public bool IsEditMode { get; set; }
 
     protected override void OnInitialized()
     {
@@ -52,20 +60,27 @@
         InvokeAsync(StateHasChanged);
     }
 
-    private void EditWidget()
+    private string GetTileColorClass()
     {
-        // Logic to edit the widget
+        var hash = Item.Title.GetHashCode();
+        var colors = new[] { "blue", "green", "purple", "orange", "red", "pink", "teal" };
+        return colors[Math.Abs(hash) % colors.Length];
     }
 
-    private void DeleteWidget()
+    private async Task EditWidget()
     {
-        // Logic to delete the widget
+        await OnItemEdited.InvokeAsync();
     }
 
+    private async Task DeleteWidget()
+    {
+        await OnItemDeleted.InvokeAsync(Item);
+    }
     public override void Dispose()
     {
-        base.Dispose();;
+        base.Dispose();
         _timer?.Dispose();
     }
-    
+
 }
+

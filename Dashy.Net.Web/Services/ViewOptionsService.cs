@@ -16,11 +16,13 @@ public class ViewOptionsService
 {
     private readonly EditLockService _editLockService;
     private readonly AuthenticationStateProvider _authStateProvider;
+    private readonly ClientStorageService _clientStorage;
     private readonly ILogger<ViewOptionsService> _logger;
     private int? _currentDashboardId;
     private string _currentUserId = string.Empty;
     private string _currentUserName = string.Empty;
     private string _connectionId = Guid.NewGuid().ToString();
+    private bool _isInitialized = false;
 
 
     public event Action? OnChange;
@@ -38,10 +40,12 @@ public class ViewOptionsService
     public ViewOptionsService(
         EditLockService editLockService,
         AuthenticationStateProvider authStateProvider,
+        ClientStorageService clientStorage,
         ILogger<ViewOptionsService> logger)
     {
         _editLockService = editLockService;
         _authStateProvider = authStateProvider;
+        _clientStorage = clientStorage;
         _logger = logger;
         _editLockService.OnLockChanged += OnLockChanged;
 
@@ -59,6 +63,13 @@ public class ViewOptionsService
 
         _logger.LogDebug("ViewOptionsService initialized for user {UserId} ({UserName}) on dashboard {DashboardId}",
             _currentUserId, _currentUserName, dashboardId);
+
+        // Load settings from localStorage if not already initialized
+        if (!_isInitialized)
+        {
+            await LoadSettingsFromStorageAsync();
+            _isInitialized = true;
+        }
 
         if (previousDashboardId.HasValue && previousDashboardId != dashboardId && IsEditMode)
         {
@@ -156,23 +167,60 @@ public class ViewOptionsService
     /// <summary>
     /// Sets the item size preference for this client only. This will NOT sync across other clients.
     /// </summary>
-    public void SetItemSize(ItemSize size)
+    public async void SetItemSize(ItemSize size)
     {
         if (CurrentItemSize == size) return;
         CurrentItemSize = size;
         _logger.LogDebug("Item size updated for client {ConnectionId}: {ItemSize}", _connectionId, size);
+        
+        // Save to localStorage
+        await _clientStorage.SetItemAsync("itemSize", size.ToString());
+        
         NotifyStateChanged();
     }
 
     /// <summary>
     /// Sets the layout orientation for this client only. This will NOT sync across other clients.
     /// </summary>
-    public void SetLayout(LayoutOrientation layout)
+    public async void SetLayout(LayoutOrientation layout)
     {
         if (CurrentLayout == layout) return;
         CurrentLayout = layout;
         _logger.LogDebug("Layout orientation updated for client {ConnectionId}: {Layout}", _connectionId, layout);
+        
+        // Save to localStorage
+        await _clientStorage.SetItemAsync("layout", layout.ToString());
+        
         NotifyStateChanged();
+    }
+
+    /// <summary>
+    /// Loads settings from localStorage
+    /// </summary>
+    private async Task LoadSettingsFromStorageAsync()
+    {
+        try
+        {
+            // Load item size
+            var itemSizeString = await _clientStorage.GetItemAsync<string>("itemSize", ItemSize.Medium.ToString());
+            if (Enum.TryParse<ItemSize>(itemSizeString, out var itemSize))
+            {
+                CurrentItemSize = itemSize;
+                _logger.LogDebug("Loaded item size from storage: {ItemSize}", itemSize);
+            }
+
+            // Load layout
+            var layoutString = await _clientStorage.GetItemAsync<string>("layout", LayoutOrientation.Auto.ToString());
+            if (Enum.TryParse<LayoutOrientation>(layoutString, out var layout))
+            {
+                CurrentLayout = layout;
+                _logger.LogDebug("Loaded layout from storage: {Layout}", layout);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load settings from localStorage, using defaults");
+        }
     }
 
     private void NotifyStateChanged()
