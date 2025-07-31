@@ -17,6 +17,8 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject EventSubscriptionManager SubscriptionManager
 @inject IVersionService VersionService
+@inject FileStorageService FileStorageService
+@inject ClientStorageService ClientStorageService
 
 @implements IDisposable
 <CascadingAuthenticationState>
@@ -172,11 +174,62 @@
         }
     </Modal>
 
+    <Modal Title="Upload Custom Logo" IsOpen="@_isCustomLogoModalOpen" OnClose="CloseCustomLogoModal">
+        <div class="form-group">
+            <label for="logo-upload">Choose Logo Image</label>
+            <InputFile id="logo-upload" class="form-control" OnChange="HandleLogoFileSelected" accept=".png,.jpg,.jpeg,.gif" />
+            <small class="form-text text-muted">Accepted formats: PNG, JPG, GIF (max 10MB)</small>
+        </div>
+        
+        @if (!string.IsNullOrEmpty(_logoUploadError))
+        {
+            <div class="alert alert-danger">
+                @_logoUploadError
+            </div>
+        }
+        
+        @if (!string.IsNullOrEmpty(_selectedLogoPreview))
+        {
+            <div class="form-group">
+                <label>Preview:</label>
+                <div style="text-align: center;">
+                    <img src="@_selectedLogoPreview" alt="Logo Preview" style=" border: 1px solid #ddd; border-radius: 4px;" />
+                </div>
+            </div>
+        }
+        
+        <div class="form-actions">
+            <button type="button" class="btn btn-secondary" @onclick="CloseCustomLogoModal">Cancel</button>
+            @if (_selectedLogoFile != null)
+            {
+                <button type="button" class="btn btn-primary" @onclick="SaveCustomLogo" disabled="@_isUploadingLogo">
+                    @if (_isUploadingLogo)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        <span>Uploading...</span>
+                    }
+                    else
+                    {
+                        <span>Save Logo</span>
+                    }
+                </button>
+            }
+            @if (!string.IsNullOrEmpty(_customLogoPath))
+            {
+                <button type="button" class="btn btn-danger" @onclick="RemoveCustomLogo">Remove Current Logo</button>
+            }
+        </div>
+    </Modal>
+
     <div class="fab-container @(_isFabMenuOpen ? "open" : "")">
         <div class="fab-menu">
             <button class="fab-menu-item" @onclick="OpenCreateDashboardModal">
                 <i class="fas fa-plus"></i>
                 <span class="fab-menu-item-label">New Dashboard</span>
+            </button>
+            <button class="fab-menu-item" @onclick="OpenCustomLogoModal">
+                <i class="fas fa-image"></i>
+                <span class="fab-menu-item-label">Upload Logo</span>
             </button>
             <button class="fab-menu-item" @onclick="OpenSettingsModal">
                 <i class="fas fa-user-cog"></i>
@@ -196,7 +249,15 @@
         </button>
     </div>
 
-    <footer class="dashboard-footer" style="position: fixed; left:0;bottom:0;width:100%;text-align:center;">
+    <!-- Custom Logo in Bottom Left Corner -->
+    @if (!string.IsNullOrEmpty(_customLogoPath))
+    {
+        <div class="custom-logo-container">
+            <img src="@_customLogoPath" alt="Custom Logo" class="custom-logo" @onclick="OpenCustomLogoModal" title="Click to change logo" />
+        </div>
+    }
+
+    <footer class="dashboard-footer" style="position: fixed; left:0;bottom:0;width:100%;text-align:center;">>
         <div>
             <strong>Version:</strong> @VersionService.GetVersion() &nbsp;|&nbsp;
             <strong>License:</strong> GNU Affero General Public License &nbsp;|&nbsp;
@@ -231,6 +292,14 @@
     private bool _disposed = false;
     AuthenticationState? authState = null;
 
+    // Custom logo fields
+    private bool _isCustomLogoModalOpen = false;
+    private bool _isUploadingLogo = false;
+    private string? _customLogoPath;
+    private IBrowserFile? _selectedLogoFile;
+    private string? _selectedLogoPreview;
+    private string? _logoUploadError;
+
     protected override async Task OnInitializedAsync()
     {
         ThemeService.OnThemeChanged += OnThemeChangedHandler;
@@ -241,6 +310,8 @@
                             !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_clientsecret"));
         authState = await AuthStateProvider.GetAuthenticationStateAsync();
 
+        // Load custom logo from storage
+        _customLogoPath = await ClientStorageService.GetItemAsync<string>("custom_logo_path");
     }
 
     protected override void OnInitialized()
@@ -514,6 +585,105 @@
                 StateHasChanged();
             }
         }
+    }
+
+    // Custom Logo Methods
+    private void OpenCustomLogoModal()
+    {
+        _isCustomLogoModalOpen = true;
+        _selectedLogoFile = null;
+        _selectedLogoPreview = null;
+        _isFabMenuOpen = false; // Close FAB menu when opening logo modal
+    }
+
+    private void CloseCustomLogoModal()
+    {
+        _isCustomLogoModalOpen = false;
+        _selectedLogoFile = null;
+        _selectedLogoPreview = null;
+        _isUploadingLogo = false;
+        _logoUploadError = null;
+    }
+
+    private async Task HandleLogoFileSelected(InputFileChangeEventArgs e)
+    {
+        _selectedLogoFile = e.File;
+        _logoUploadError = null;
+        
+        if (_selectedLogoFile != null)
+        {
+            // Create preview
+            try
+            {
+                const int maxPreviewSize = 1024 * 1024; // 1MB for preview
+                using var stream = _selectedLogoFile.OpenReadStream(maxPreviewSize);
+                var buffer = new byte[stream.Length];
+                await stream.ReadAsync(buffer);
+                var base64 = Convert.ToBase64String(buffer);
+                _selectedLogoPreview = $"data:{_selectedLogoFile.ContentType};base64,{base64}";
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error creating preview: {ex.Message}");
+                _selectedLogoPreview = null;
+                _logoUploadError = "Error creating preview. Please try a different file.";
+            }
+        }
+        else
+        {
+            _selectedLogoPreview = null;
+        }
+        StateHasChanged();
+    }
+
+    private async Task SaveCustomLogo()
+    {
+        if (_selectedLogoFile == null || _disposed) return;
+
+        _isUploadingLogo = true;
+        _logoUploadError = null;
+        StateHasChanged();
+
+        try
+        {
+            var logoUrl = await FileStorageService.SaveImageAsync(_selectedLogoFile);
+            if (_disposed) return;
+
+            if (!string.IsNullOrEmpty(logoUrl))
+            {
+                _customLogoPath = logoUrl;
+                await ClientStorageService.SetItemAsync("custom_logo_path", _customLogoPath);
+                CloseCustomLogoModal();
+            }
+            else
+            {
+                _logoUploadError = "Failed to upload logo. Please check the file format and try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error uploading logo: {ex.Message}");
+            _logoUploadError = $"Upload error: {ex.Message}";
+        }
+        finally
+        {
+            if (!_disposed)
+            {
+                _isUploadingLogo = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task RemoveCustomLogo()
+    {
+        if (_disposed) return;
+        
+        _customLogoPath = null;
+        await ClientStorageService.RemoveItemAsync("custom_logo_path");
+        CloseCustomLogoModal();
+        StateHasChanged();
     }
 
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
