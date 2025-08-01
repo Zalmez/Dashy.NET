@@ -18,3 +18,19 @@ function addClickOutsideHandler(elementId, dotNetRef) {
     }
   });
 }
+
+function setCustomBackground(imagePath) {
+  const pageElement = document.querySelector('.page');
+  if (pageElement && imagePath) {
+    pageElement.style.setProperty('--custom-background-image', `url(${imagePath})`);
+    pageElement.classList.add('has-custom-background');
+  }
+}
+
+function removeCustomBackground() {
+  const pageElement = document.querySelector('.page');
+  if (pageElement) {
+    pageElement.style.removeProperty('--custom-background-image');
+    pageElement.classList.remove('has-custom-background');
+  }
+}
