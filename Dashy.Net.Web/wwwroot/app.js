@@ -20,17 +20,36 @@ function addClickOutsideHandler(elementId, dotNetRef) {
 }
 
 function setCustomBackground(imagePath) {
-  const pageElement = document.querySelector('.page');
-  if (pageElement && imagePath) {
-    pageElement.style.setProperty('--custom-background-image', `url(${imagePath})`);
-    pageElement.classList.add('has-custom-background');
+  console.log('setCustomBackground called with:', imagePath);
+  const dashboardElement = document.querySelector('.dashboard-layout');
+  console.log('Dashboard layout element found:', dashboardElement);
+  if (dashboardElement && imagePath) {
+    dashboardElement.style.setProperty('--custom-background-image', `url(${imagePath})`);
+    dashboardElement.classList.add('has-custom-background');
+    console.log('Background image applied successfully');
+  } else {
+    console.log('Failed to apply background - missing dashboard element or image path');
   }
 }
 
 function removeCustomBackground() {
-  const pageElement = document.querySelector('.page');
-  if (pageElement) {
-    pageElement.style.removeProperty('--custom-background-image');
-    pageElement.classList.remove('has-custom-background');
+  console.log('removeCustomBackground called');
+  const dashboardElement = document.querySelector('.dashboard-layout');
+  if (dashboardElement) {
+    dashboardElement.style.removeProperty('--custom-background-image');
+    dashboardElement.classList.remove('has-custom-background');
+    console.log('Background image removed successfully');
+  }
+}
+
+// Test function to verify CSS is working
+function testBackground() {
+  console.log('testBackground called');
+  const dashboardElement = document.querySelector('.dashboard-layout');
+  if (dashboardElement) {
+    // Use a simple gradient as a test
+    dashboardElement.style.setProperty('--custom-background-image', 'linear-gradient(45deg, #ff6b6b, #4ecdc4)');
+    dashboardElement.classList.add('has-custom-background');
+    console.log('Test background applied');
   }
 }

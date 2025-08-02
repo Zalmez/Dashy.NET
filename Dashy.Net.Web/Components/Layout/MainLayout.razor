@@ -22,7 +22,7 @@
 
 @implements IDisposable
 <CascadingAuthenticationState>
-<div>
+<div class="dashboard-layout">
     
     <header class="main-header">
         <div class="header-title-section">
@@ -418,6 +418,12 @@
             OnThemeChangedHandler();
             
             await JSRuntime.InvokeVoidAsync("addClickOutsideHandler", "dashboard-title-dropdown", DotNetObjectReference.Create(this));
+            
+            // Apply background image after first render when DOM is ready
+            if (!string.IsNullOrEmpty(_customBackgroundPath))
+            {
+                await ApplyBackgroundImage();
+            }
         }
     }
 
@@ -758,7 +764,9 @@
         if (_disposed || string.IsNullOrEmpty(_customBackgroundPath)) return;
         try
         {
+            Console.WriteLine($"ApplyBackgroundImage called with path: {_customBackgroundPath}");
             await JSRuntime.InvokeVoidAsync("setCustomBackground", _customBackgroundPath);
+            Console.WriteLine("JavaScript setCustomBackground called successfully");
         }
         catch (Exception ex)
         {
@@ -791,23 +799,58 @@
         
         if (_selectedBackgroundFile != null)
         {
-            // Create preview
+            // Validate file first
+            var allowedTypes = new[] { "image/png", "image/jpeg", "image/jpg", "image/gif" };
+            if (!allowedTypes.Contains(_selectedBackgroundFile.ContentType.ToLower()))
+            {
+                _backgroundUploadError = "Invalid file type. Please use PNG, JPG, or GIF images.";
+                _selectedBackgroundFile = null;
+                StateHasChanged();
+                return;
+            }
+
+            // Check file size (10MB limit)
+            const long maxFileSize = 10 * 1024 * 1024; // 10MB
+            if (_selectedBackgroundFile.Size > maxFileSize)
+            {
+                _backgroundUploadError = "File is too large. Maximum size is 10MB.";
+                _selectedBackgroundFile = null;
+                StateHasChanged();
+                return;
+            }
+
+            // Create preview for smaller files
             try
             {
-                const int maxPreviewSize = 1024 * 1024; // 1MB for preview
-                using var stream = _selectedBackgroundFile.OpenReadStream(maxPreviewSize);
-                var buffer = new byte[stream.Length];
-                await stream.ReadAsync(buffer);
-                if (_disposed) return;
-                var base64 = Convert.ToBase64String(buffer);
-                _selectedBackgroundPreview = $"data:{_selectedBackgroundFile.ContentType};base64,{base64}";
+                // Use a smaller preview size for better performance
+                const int maxPreviewSize = 512 * 1024; // 512KB for preview
+                
+                if (_selectedBackgroundFile.Size <= maxPreviewSize)
+                {
+                    using var stream = _selectedBackgroundFile.OpenReadStream(maxPreviewSize);
+                    var buffer = new byte[stream.Length];
+                    await stream.ReadAsync(buffer);
+                    if (_disposed) return;
+                    var base64 = Convert.ToBase64String(buffer);
+                    _selectedBackgroundPreview = $"data:{_selectedBackgroundFile.ContentType};base64,{base64}";
+                }
+                else
+                {
+                    // For larger files, show a placeholder message instead of trying to create preview
+                    _selectedBackgroundPreview = null;
+                    Console.WriteLine($"File too large for preview: {_selectedBackgroundFile.Size} bytes. Preview skipped.");
+                }
                 StateHasChanged();
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error creating background preview: {ex.Message}");
                 _selectedBackgroundPreview = null;
-                _backgroundUploadError = "Error creating preview. Please try a different file.";
+                // Don't show error for preview failure if file is valid
+                if (_selectedBackgroundFile.Size <= 512 * 1024)
+                {
+                    _backgroundUploadError = $"Error creating preview: {ex.Message}. You can still upload the file.";
+                }
                 StateHasChanged();
             }
         }
@@ -828,22 +871,28 @@
         
         try
         {
+            Console.WriteLine("Starting background save process...");
             var savedPath = await FileStorageService.SaveImageAsync(_selectedBackgroundFile);
+            Console.WriteLine($"FileStorageService.SaveImageAsync returned: {savedPath}");
             if (_disposed) return;
             
             if (!string.IsNullOrEmpty(savedPath))
             {
                 _customBackgroundPath = savedPath;
+                Console.WriteLine($"Setting custom background path to: {_customBackgroundPath}");
                 await ClientStorageService.SetItemAsync("custom_background_path", _customBackgroundPath);
                 if (_disposed) return;
                 
+                Console.WriteLine("Applying background image...");
                 await ApplyBackgroundImage();
                 if (_disposed) return;
                 
+                Console.WriteLine("Background saved and applied successfully");
                 CloseBackgroundUploadModal();
             }
             else
             {
+                Console.WriteLine("SaveImageAsync returned null or empty");
                 _backgroundUploadError = "Failed to upload background. Please check the file format and try again.";
             }
         }
