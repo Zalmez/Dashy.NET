@@ -880,12 +880,24 @@ h6 {
 
 .fab-container {
   position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  z-index: 99;
+  right: 0.5rem;
+  z-index: 999;
   display: flex;
   flex-direction: column-reverse;
   align-items: center;
+  transition: bottom 0.3s ease-in-out;
+  margin-right: 2rem;
+}
+
+/* When menu is closed, position close to bottom */
+.fab-container:not(.open) {
+  bottom: 2.5rem;
+  margin-right: 4.3rem;
+}
+
+/* When menu is open, position higher to accommodate menu items */
+.fab-container.open {
+  bottom: 4rem;
 }
 
 .fab-main-button {
@@ -904,6 +916,7 @@ h6 {
   cursor: pointer;
   transition: all 0.3s ease-in-out;
   z-index: 101;
+  margin-bottom: 10px;
 }
 
 .fab-main-button:hover {
