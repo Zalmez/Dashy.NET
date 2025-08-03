@@ -99,10 +99,14 @@
     private string maxWidth => GetOption("maxSize") ?? "100%";
     private Timer? _refreshTimer;
     private int refreshIntervalMinutes => int.TryParse(GetOption("RefreshInterval"), out var result) ? result : 5;
+    private readonly HttpClient _httpClient = new();
 
     protected override async Task OnInitializedAsync()
     {
         base.OnInitialized();
+        
+        _httpClient.Timeout = TimeSpan.FromSeconds(10);
+        
         await LoadRssFeedItems();
         StartAutoRefresh();
     }
@@ -125,7 +129,14 @@
             {
                 if (!IsDisposed)
                 {
-                    await LoadRssFeedItems();
+                    try
+                    {
+                        await LoadRssFeedItems();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex, "Error during RSS feed refresh");
+                    }
                 }
             }, null, TimeSpan.FromMinutes(refreshIntervalMinutes), TimeSpan.FromMinutes(refreshIntervalMinutes));
         }
@@ -139,12 +150,13 @@
             Logger.LogWarning("FeedUrl is not set for RssWidget.");
             return Enumerable.Empty<RssFeedItem>();
         }
+        
         var feedItems = new List<RssFeedItem>();
         try
         {
-            var httpClient = new HttpClient();
-            httpClient.Timeout = TimeSpan.FromSeconds(10);
-            var response = await httpClient.GetStringAsync(feedUrl);
+            var response = await _httpClient.GetStringAsync(feedUrl);
+            if (IsDisposed) return Enumerable.Empty<RssFeedItem>();
+            
             var xmlDoc = new XmlDocument();
             xmlDoc.LoadXml(response);
             var items = xmlDoc.SelectNodes("//item");
@@ -176,22 +188,19 @@
                 Logger.LogWarning($"No items found in RSS feed from {feedUrl}");
             return feedItems;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            Logger.LogError($"Failed to fetch RSS feed from {feedUrl}");
+            Logger.LogError(ex, $"Failed to fetch RSS feed from {feedUrl}");
             return Enumerable.Empty<RssFeedItem>();
         }
     }
 
-    // Utility to strip HTML tags from a string
     private static string StripHtml(string input)
     {
         if (string.IsNullOrEmpty(input)) return string.Empty;
-        // Remove HTML tags
         return System.Text.RegularExpressions.Regex.Replace(input, "<.*?>", string.Empty).Trim();
     }
 
-    // Utility to decode HTML entities
     private static string HtmlDecode(string input)
     {
         if (string.IsNullOrEmpty(input)) return string.Empty;
@@ -224,6 +233,7 @@
     public override void Dispose()
     {
         _refreshTimer?.Dispose();
+        _httpClient?.Dispose();
         base.Dispose();
     }
 }
