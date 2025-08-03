@@ -12,6 +12,37 @@
   min-height: 100vh;
 }
 
+/* Wallboard Mode - Header Hidden */
+.dashboard-layout.header-hidden main {
+  padding-top: 0;
+  margin-top: 0;
+}
+
+/* Wallboard Logo */
+.wallboard-logo {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 50;
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+}
+
+.wallboard-logo:hover {
+  opacity: 1;
+}
+
+.wallboard-logo img {
+  width: 50px;
+  height: 50px;
+  border-radius: 25%;
+  object-fit: cover;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
 /* Custom Background Image */
 .dashboard-layout::before {
   content: '';

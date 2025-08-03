@@ -22,9 +22,11 @@
 
 @implements IDisposable
 <CascadingAuthenticationState>
-<div class="dashboard-layout">
+<div class="dashboard-layout @(_isHeaderVisible ? "" : "header-hidden")">
     
-    <header class="main-header">
+    @if (_isHeaderVisible)
+    {
+        <header class="main-header">
         <div class="header-title-section">
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <img src="images/dashynet_logo_notext.png" alt="Dashy.NET Logo" class="header-logo" />
@@ -112,6 +114,15 @@
             </div>
         </div>
     </header>
+    }
+
+    <!-- Hidden Header Logo for Wallboard Mode -->
+    @if (!_isHeaderVisible)
+    {
+        <div class="wallboard-logo">
+            <img src="images/dashynet_logo_notext.png" alt="Dashy.NET Logo" />
+        </div>
+    }
 
     <main class="content">
         @Body
@@ -284,6 +295,10 @@
                     <i class="fas fa-mountain"></i>
                     <span class="fab-menu-item-label">Background Image</span>
                 </button>
+                <button class="fab-menu-item" @onclick="ToggleHeaderVisibility">
+                    <i class="fas @(_isHeaderVisible ? "fa-eye-slash" : "fa-eye")"></i>
+                    <span class="fab-menu-item-label">@(_isHeaderVisible ? "Hide Header" : "Show Header")</span>
+                </button>
                 <button class="fab-menu-item" @onclick="OpenSettingsModal">
                     <i class="fas fa-user-cog"></i>
                     <span class="fab-menu-item-label">User Settings</span>
@@ -347,6 +362,9 @@
     private bool _disposed = false;
     AuthenticationState? authState = null;
 
+    // Header visibility for wallboard mode
+    private bool _isHeaderVisible = true;
+
     // Custom logo fields
     private bool _isCustomLogoModalOpen = false;
     private bool _isUploadingLogo = false;
@@ -375,6 +393,9 @@
 
         // Load custom logo from storage
         _customLogoPath = await ClientStorageService.GetItemAsync<string>("custom_logo_path");
+        
+        // Load header visibility state
+        _isHeaderVisible = await ClientStorageService.GetItemAsync<bool?>("header_visible") ?? true;
         
         // Load custom background from storage
         _customBackgroundPath = await ClientStorageService.GetItemAsync<string>("custom_background_path");
@@ -599,6 +620,14 @@
     private void ToggleFabMenu()
     {
         _isFabMenuOpen = !_isFabMenuOpen;
+    }
+
+    private async Task ToggleHeaderVisibility()
+    {
+        _isHeaderVisible = !_isHeaderVisible;
+        await ClientStorageService.SetItemAsync("header_visible", _isHeaderVisible);
+        _isFabMenuOpen = false;
+        StateHasChanged();
     }
 
     private async Task ToggleEditMode()
