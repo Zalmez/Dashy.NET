@@ -889,13 +889,11 @@ h6 {
   margin-right: 2rem;
 }
 
-/* When menu is closed, position close to bottom */
 .fab-container:not(.open) {
   bottom: 2.5rem;
   margin-right: 4.3rem;
 }
 
-/* When menu is open, position higher to accommodate menu items */
 .fab-container.open {
   bottom: 4rem;
 }
@@ -945,9 +943,10 @@ h6 {
 }
 
 .fab-menu-item {
-  display: flex;
+  display: grid; /* Use CSS Grid for better alignment */
+  grid-template-columns: auto 1fr; /* Icon column and label column */
   align-items: center;
-  justify-content: flex-end;
+  gap: 0.75rem; /* Consistent gap between icon and text */
   background: var(--glass-background);
   color: var(--text-color);
   border: 1px solid var(--glass-border);
@@ -960,6 +959,9 @@ h6 {
   transition: all 0.2s ease-in-out;
   transform: translateY(10px);
   opacity: 0;
+  width: 200px; 
+  min-width: 200px;
+  padding: 0.75rem 1rem; /* Add consistent padding */
 }
 
 .fab-menu-item:hover {
@@ -993,20 +995,27 @@ h6 {
 }
 
 .fab-menu-item .fab-menu-item-label {
-  padding: 0.5rem 1rem 0.5rem 0.5rem;
   font-weight: 600;
   font-size: 0.9rem;
+  text-align: left; 
+  grid-column: 2; /* Place in the second grid column */
+  padding: 0; /* Remove padding since grid handles spacing */
 }
 
 .fab-menu-item i {
   background-color: var(--card-background-color);
   color: var(--subtle-text-color);
   border-radius: 50%;
-  width: 36px;
+  width: 36px; 
   height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0; 
+  font-size: 1rem; 
+  text-align: center; 
+  line-height: 1;
+  grid-column: 1; /* Place in the first grid column */
 }
 
 .fab-menu-item:hover i {
