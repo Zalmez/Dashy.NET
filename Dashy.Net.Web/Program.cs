@@ -6,6 +6,7 @@ using Dashy.Net.Web.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using System.IdentityModel.Tokens.Jwt;
 
@@ -112,6 +113,40 @@ else
 builder.AddServiceDefaults();
 var app = builder.Build();
 
+// Log Azure File Storage configuration at startup
+var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
+var startupConfig = app.Services.GetRequiredService<IConfiguration>();
+var startupStoragePath = startupConfig["DASHYDOTNET_STORAGE_PATH"];
+
+if (!string.IsNullOrWhiteSpace(startupStoragePath))
+{
+    startupLogger.LogInformation("=== Azure File Storage Configuration ===");
+    startupLogger.LogInformation("DASHYDOTNET_STORAGE_PATH: {StoragePath}", startupStoragePath);
+    startupLogger.LogInformation("Storage path exists: {Exists}", Directory.Exists(startupStoragePath));
+    
+    if (Directory.Exists(startupStoragePath))
+    {
+        try
+        {
+            var files = Directory.GetFiles(startupStoragePath);
+            startupLogger.LogInformation("Files in storage: {FileCount}", files.Length);
+            foreach (var file in files.Take(10)) // Log first 10 files
+            {
+                startupLogger.LogInformation("  - {FileName}", Path.GetFileName(file));
+            }
+        }
+        catch (Exception ex)
+        {
+            startupLogger.LogError(ex, "Error listing files in storage path");
+        }
+    }
+    startupLogger.LogInformation("========================================");
+}
+else
+{
+    startupLogger.LogInformation("Using default wwwroot storage (no DASHYDOTNET_STORAGE_PATH configured)");
+}
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
@@ -128,10 +163,105 @@ if (!string.IsNullOrWhiteSpace(authAuthority) && !string.IsNullOrWhiteSpace(auth
 
 app.UseAntiforgery();
 app.UseOutputCache();
+
+// Configure static file serving for uploaded files from Azure File Storage
+var customStoragePath = Environment.GetEnvironmentVariable("DASHYDOTNET_STORAGE_PATH");
+if (!string.IsNullOrWhiteSpace(customStoragePath) && Directory.Exists(customStoragePath))
+{
+    logger.LogInformation("Configuring static file serving for custom storage path: {StoragePath}", customStoragePath);
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(customStoragePath),
+        RequestPath = "/uploads"
+    });
+}
+
 app.MapStaticAssets();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+# region Health Checks and Diagnostics
+app.MapGet("/debug/storage", (IConfiguration config, ILogger<Program> logger) =>
+{
+    var customStoragePath = config["DASHYDOTNET_STORAGE_PATH"];
+    var diagnostics = new
+    {
+        CustomStoragePath = customStoragePath,
+        CustomStorageExists = !string.IsNullOrWhiteSpace(customStoragePath) && Directory.Exists(customStoragePath),
+        CustomStorageFiles = !string.IsNullOrWhiteSpace(customStoragePath) && Directory.Exists(customStoragePath) 
+            ? Directory.GetFiles(customStoragePath).Select(f => Path.GetFileName(f)).ToArray()
+            : Array.Empty<string>(),
+        WwwRootPath = app.Environment.WebRootPath,
+        ContentRootPath = app.Environment.ContentRootPath,
+        Environment = app.Environment.EnvironmentName
+    };
+    
+    logger.LogInformation("Storage diagnostics requested: {@Diagnostics}", diagnostics);
+    return Results.Json(diagnostics);
+});
+
+app.MapGet("/health/storage", (IConfiguration config) =>
+{
+    var customStoragePath = config["DASHYDOTNET_STORAGE_PATH"];
+    
+    if (string.IsNullOrWhiteSpace(customStoragePath))
+    {
+        return Results.Ok(new { Status = "Healthy", Message = "Using default wwwroot storage" });
+    }
+    
+    if (!Directory.Exists(customStoragePath))
+    {
+        return Results.Problem($"Custom storage path does not exist: {customStoragePath}");
+    }
+    
+    try
+    {
+        var testFile = Path.Combine(customStoragePath, $"health_check_{Guid.NewGuid()}.tmp");
+        File.WriteAllText(testFile, "health check");
+        File.Delete(testFile);
+        
+        return Results.Ok(new { Status = "Healthy", Message = $"Azure File Storage is accessible at {customStoragePath}" });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Cannot write to storage path {customStoragePath}: {ex.Message}");
+    }
+});
+
+app.MapGet("/debug/test-upload", async (IConfiguration config, FileStorageService fileStorage) =>
+{
+    var customStoragePath = config["DASHYDOTNET_STORAGE_PATH"];
+    
+    if (string.IsNullOrWhiteSpace(customStoragePath) || !Directory.Exists(customStoragePath))
+    {
+        return Results.Problem("Azure File Storage not configured or not accessible");
+    }
+    
+    try
+    {
+        var testImageBytes = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==");
+        var testFileName = $"test_{Guid.NewGuid()}.png";
+        var testFilePath = Path.Combine(customStoragePath, testFileName);
+        
+        await File.WriteAllBytesAsync(testFilePath, testImageBytes);
+        
+        return Results.Json(new 
+        { 
+            Status = "Test image created",
+            FileName = testFileName,
+            PublicUrl = $"/uploads/{testFileName}",
+            FilePath = testFilePath,
+            FileExists = File.Exists(testFilePath),
+            FileSize = new FileInfo(testFilePath).Length
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Error creating test image: {ex.Message}");
+    }
+});
+#endregion
 
 if (!string.IsNullOrWhiteSpace(authAuthority) && !string.IsNullOrWhiteSpace(authClientId) && !string.IsNullOrWhiteSpace(authClientSecret))
 {
