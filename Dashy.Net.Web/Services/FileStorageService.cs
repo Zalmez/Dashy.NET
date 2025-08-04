@@ -33,29 +33,55 @@ public class FileStorageService(
         {
             var customStoragePath = configuration["DASHYDOTNET_STORAGE_PATH"];
             string savePath;
+            bool isCustomStorage = !string.IsNullOrWhiteSpace(customStoragePath);
 
-            if (!string.IsNullOrWhiteSpace(customStoragePath))
+            if (isCustomStorage)
             {
-                savePath = customStoragePath;
+                savePath = customStoragePath!;
+                logger.LogInformation("Using custom storage path: {StoragePath}", savePath);
             }
             else
             {
                 var wwwRoot = webHostEnvironment.WebRootPath ?? Path.Combine(AppContext.BaseDirectory, "wwwroot");
                 savePath = Path.Combine(wwwRoot, "uploads");
+                logger.LogInformation("Using default storage path: {StoragePath}", savePath);
             }
 
-            Directory.CreateDirectory(savePath);
+            // Ensure the directory exists
+            if (!Directory.Exists(savePath))
+            {
+                logger.LogInformation("Creating directory: {DirectoryPath}", savePath);
+                Directory.CreateDirectory(savePath);
+            }
+            else
+            {
+                logger.LogInformation("Directory already exists: {DirectoryPath}", savePath);
+            }
 
             var extension = Path.GetExtension(file.Name);
             var uniqueFileName = $"{Guid.NewGuid()}{extension}";
             var filePath = Path.Combine(savePath, uniqueFileName);
 
+            logger.LogInformation("Attempting to save file to: {FilePath}", filePath);
+
             await using var fs = new FileStream(filePath, FileMode.Create);
             await using var stream = file.OpenReadStream(maxFileSize);
             await stream.CopyToAsync(fs);
 
+            // Verify the file was actually saved
+            if (File.Exists(filePath))
+            {
+                var fileInfo = new FileInfo(filePath);
+                logger.LogInformation("File successfully saved. Size: {FileSize} bytes, Path: {FilePath}", fileInfo.Length, filePath);
+            }
+            else
+            {
+                logger.LogError("File was not found after save operation: {FilePath}", filePath);
+                return null;
+            }
+
             var publicUrl = $"/uploads/{uniqueFileName}";
-            logger.LogInformation("Successfully saved file to {FilePath}, accessible at {PublicUrl}", filePath, publicUrl);
+            logger.LogInformation("File accessible at public URL: {PublicUrl}", publicUrl);
 
             return publicUrl;
         }
@@ -72,7 +98,7 @@ public class FileStorageService(
         try
         {
             // Use the full file size limit here, we only read the first 256 bytes
-            await using var stream = file.OpenReadStream(10 * 1024 * 1024); // 10MB limit
+            await using var stream = file.OpenReadStream(10 * 1024 * 1024);
             int read = await stream.ReadAsync(header, 0, 256); // Only read first 256 bytes
             
             logger.LogInformation("File: {FileName}, ContentType: {ContentType}, Size: {Size}, BytesRead: {BytesRead}", 
