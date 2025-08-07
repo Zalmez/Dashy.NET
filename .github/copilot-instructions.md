@@ -52,3 +52,8 @@ The primary goal is to create a modern, performant, and highly customizable dash
 
 ### Avoid as long as possible
 - **Avoid using 3rd party libraries.** If you need to use a library, ensure it is well-maintained and compatible with .NET Aspire. It should also be compliant with the GNU AGPLv3 license.
+
+### Debugging and Testing
+- **Use the built-in .NET logging framework.** Do not use `Console.WriteLine` or other ad-hoc logging methods. Use `ILogger<T>` for structured logging.
+- **When running the application, always use the `dotnet watch` command.** This ensures that changes are automatically reloaded without needing to restart the application manually.
+- **When opening the simple browser, use `https://localhost:7025/` instead of `http://localhost:17276/`.** This ensures that the the correct page is opened instead of the dotnet aspire page.

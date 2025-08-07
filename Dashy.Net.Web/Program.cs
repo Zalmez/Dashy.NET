@@ -12,6 +12,9 @@ using System.IdentityModel.Tokens.Jwt;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.AddServiceDefaults();
+builder.Services.AddOpenTelemetry();
+builder.Services.AddProblemDetails();
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -46,6 +49,10 @@ builder.Services.AddHttpClient("ApiService", opts =>
     opts.BaseAddress = new("https+http://apiservice");
 });
 builder.Services.AddTransient<EventSubscriptionManager>();
+builder.Services.AddHttpClient<AppSettingsClient>(opts =>
+{
+    opts.BaseAddress = new("https+http://apiservice");
+});
 #endregion
 
 
@@ -110,10 +117,8 @@ else
     if (string.IsNullOrWhiteSpace(authClientSecret))
         logger.LogWarning("Authentication client secret is not set. Please set the environment variable 'auth_clientsecret' to enable authentication.");
 }
-builder.AddServiceDefaults();
 var app = builder.Build();
 
-// Log Azure File Storage configuration at startup
 var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
 var startupConfig = app.Services.GetRequiredService<IConfiguration>();
 var startupStoragePath = startupConfig["DASHYDOTNET_STORAGE_PATH"];
@@ -130,7 +135,7 @@ if (!string.IsNullOrWhiteSpace(startupStoragePath))
         {
             var files = Directory.GetFiles(startupStoragePath);
             startupLogger.LogInformation("Files in storage: {FileCount}", files.Length);
-            foreach (var file in files.Take(10)) // Log first 10 files
+            foreach (var file in files.Take(10))
             {
                 startupLogger.LogInformation("  - {FileName}", Path.GetFileName(file));
             }

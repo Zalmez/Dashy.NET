@@ -12,6 +12,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<AuthenticationSettings> AuthenticationSettings { get; set; } = null!;
     public DbSet<AuthenticationProvider> AuthenticationProviders { get; set; } = null!;
     public DbSet<AuthenticationProviderSettings> AuthenticationProviderSettings { get; set; } = null!;
+    public DbSet<AppSettings> AppSettings { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -27,7 +28,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.Property(e => e.UpdatedAt).IsRequired();
         });
 
-        // Configure AuthenticationProviderSettings
         modelBuilder.Entity<AuthenticationProviderSettings>(entity =>
         {
             entity.HasKey(e => e.Id);
@@ -40,7 +40,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // Configure unique index on provider settings key per provider
         modelBuilder.Entity<AuthenticationProviderSettings>()
             .HasIndex(e => new { e.AuthenticationProviderId, e.Key })
             .IsUnique();
