@@ -20,6 +20,7 @@ var migrationService = builder.AddProject<Projects.Dashy_Net_MigrationService>("
     .WithParentRelationship(db);
 
 var apiService = builder.AddProject<Projects.Dashy_Net_ApiService>("apiservice")
+    .WithReference(postgres)
     .WithReference(db)
     .WaitFor(db)
     .WaitFor(migrationService)

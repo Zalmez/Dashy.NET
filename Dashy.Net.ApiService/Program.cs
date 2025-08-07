@@ -68,6 +68,12 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 app.UseExceptionHandler();
 
+// Enable static file serving for uploaded files
+var webRoot = app.Environment.WebRootPath ?? Path.Combine(AppContext.BaseDirectory, "wwwroot");
+if (!Directory.Exists(webRoot))
+    Directory.CreateDirectory(webRoot);
+app.UseStaticFiles();
+
 if (app.Services.GetService<IAuthenticationSchemeProvider>() != null)
 {
     app.UseAuthentication();

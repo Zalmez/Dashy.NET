@@ -19,6 +19,7 @@
 @inject IVersionService VersionService
 @inject FileStorageService FileStorageService
 @inject ClientStorageService ClientStorageService
+@inject AppSettingsClient AppSettingsClient
 
 @implements IDisposable
 <CascadingAuthenticationState>
@@ -319,7 +320,6 @@
         </button>
     </div>
 
-    <!-- Custom Logo in Bottom Left Corner -->
     @if (!string.IsNullOrEmpty(_customLogoPath))
     {
         <div class="custom-logo-container">
@@ -391,13 +391,14 @@
                             !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("auth_clientsecret"));
         authState = await AuthStateProvider.GetAuthenticationStateAsync();
 
-        // Load custom logo from storage
-        _customLogoPath = await ClientStorageService.GetItemAsync<string>("custom_logo_path");
+        // Load custom logo from server
+        var appSettings = await AppSettingsClient.GetAsync();
+        _customLogoPath = appSettings?.CustomLogoPath;
         
-        // Load header visibility state
+        // Load header visibility state (still client-side)
         _isHeaderVisible = await ClientStorageService.GetItemAsync<bool?>("header_visible") ?? true;
         
-        // Load custom background from storage
+        // Load custom background from storage (still client-side)
         _customBackgroundPath = await ClientStorageService.GetItemAsync<string>("custom_background_path");
         if (!string.IsNullOrEmpty(_customBackgroundPath))
         {
@@ -752,14 +753,23 @@
 
         try
         {
+            // Use FileStorageService to upload the file
             var logoUrl = await FileStorageService.SaveImageAsync(_selectedLogoFile);
             if (_disposed) return;
 
             if (!string.IsNullOrEmpty(logoUrl))
             {
-                _customLogoPath = logoUrl;
-                await ClientStorageService.SetItemAsync("custom_logo_path", _customLogoPath);
-                CloseCustomLogoModal();
+                // Save the logo path to the database via API
+                var success = await AppSettingsClient.SetCustomLogoPathAsync(logoUrl);
+                if (success)
+                {
+                    _customLogoPath = logoUrl;
+                    CloseCustomLogoModal();
+                }
+                else
+                {
+                    _logoUploadError = "Failed to save logo settings. Please try again.";
+                }
             }
             else
             {
@@ -784,9 +794,8 @@
     private async Task RemoveCustomLogo()
     {
         if (_disposed) return;
-        
+        await AppSettingsClient.RemoveLogoAsync();
         _customLogoPath = null;
-        await ClientStorageService.RemoveItemAsync("custom_logo_path");
         CloseCustomLogoModal();
         StateHasChanged();
     }
