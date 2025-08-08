@@ -10,6 +10,7 @@
 @inject IJSRuntime JSRuntime
 @inject ILogger<SettingsModal> Logger
 @inject NavigationManager NavigationManager
+@inject IVersionService VersionService
 
 <div class="settings-modal">
     <div class="settings-tabs">
@@ -24,6 +25,10 @@
         <button type="button" class="settings-tab @(_activeTab == "auth" ? "active" : "")"
             @onclick='() => SetActiveTab("auth")'>
             <i class="fas fa-shield-alt"></i> Authentication
+        </button>
+        <button type="button" class="settings-tab @(_activeTab == "version" ? "active" : "")"
+            @onclick='() => SetActiveTab("version")'>
+            <i class="fas fa-info-circle"></i> Version Info
         </button>
     </div>
 
@@ -153,6 +158,94 @@
                 }
             </div>
         }
+        else if (_activeTab == "version")
+        {
+            <div class="settings-section">
+                <h4><i class="fas fa-info-circle"></i> Application Version Information</h4>
+                
+                @if (_applicationVersionInfo != null)
+                {
+                    <div class="version-overview">
+                        <div class="version-item">
+                            <strong>Overall Application Version:</strong>
+                            <span class="version-badge @(_applicationVersionInfo.HasPreReleaseServices ? "pre-release" : "release")">
+                                @_applicationVersionInfo.ApplicationVersion
+                                @if (_applicationVersionInfo.HasPreReleaseServices)
+                                {
+                                    <span class="pre-release-indicator">(Pre-release)</span>
+                                }
+                            </span>
+                        </div>
+                    </div>
+
+                    <h5><i class="fas fa-server"></i> Service Versions</h5>
+                    <div class="services-grid">
+                        @foreach (var service in _applicationVersionInfo.Services)
+                        {
+                            <div class="service-card">
+                                <div class="service-header">
+                                    <h6>
+                                        <i class="fas @GetServiceIcon(service.ServiceName)"></i>
+                                        @service.ServiceName
+                                    </h6>
+                                    <span class="version-badge @(service.IsPreRelease ? "pre-release" : "release")">
+                                        @service.Version
+                                    </span>
+                                </div>
+                                <div class="service-details">
+                                    <div class="detail-item">
+                                        <strong>Full Version:</strong> @service.FullVersion
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(service.CommitHash))
+                                    {
+                                        <div class="detail-item">
+                                            <strong>Commit Hash:</strong> 
+                                            <code class="commit-hash">@service.CommitHash</code>
+                                        </div>
+                                    }
+                                    @if (service.BuildDate.HasValue)
+                                    {
+                                        <div class="detail-item">
+                                            <strong>Build Date:</strong> @service.BuildDate.Value.ToString("yyyy-MM-dd HH:mm") UTC
+                                        </div>
+                                    }
+                                    <div class="detail-item">
+                                        <strong>Status:</strong>
+                                        <span class="status-indicator @(service.IsPreRelease ? "pre-release" : "release")">
+                                            @if (service.IsPreRelease)
+                                            {
+                                                <i class="fas fa-flask"></i> <text>Development</text>
+                                            }
+                                            else
+                                            {
+                                                <i class="fas fa-check-circle"></i> <text>Release</text>
+                                            }
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else if (_loadingVersionInfo)
+                {
+                    <div class="loading-version">
+                        <i class="fas fa-spinner fa-spin"></i> Loading version information...
+                    </div>
+                }
+                else if (_versionLoadError != null)
+                {
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Unable to load complete version information: @_versionLoadError
+                        <br />
+                        <button class="btn btn-sm btn-secondary mt-2" @onclick="LoadVersionInfoAsync">
+                            <i class="fas fa-refresh"></i> Retry
+                        </button>
+                    </div>
+                }
+            </div>
+        }
     </div>
 </div>
 
@@ -168,6 +261,11 @@
 
     private DashboardSettingsModel _dashboardSettings = new();
     private AuthenticationSettings _authSettings = new();
+
+    // Version information fields
+    private ApplicationVersionInfo? _applicationVersionInfo;
+    private bool _loadingVersionInfo = false;
+    private string? _versionLoadError;
 
     private List<AuthenticationProviderTemplate> _providerTemplates = new();
     private string _selectedProviderType = string.Empty;
@@ -196,6 +294,10 @@
     {
         Logger.LogInformation("OnInitializedAsync started");
         _currentTemplate = new();
+
+        // Load version info when initializing
+        _ = LoadVersionInfoAsync(); // Fire and forget
+
         // Load current dashboard settings
         if (DashboardState.Config is not null)
         {
@@ -504,6 +606,39 @@
         _providerSettings["ClientId"] = _tempClientId;
         _providerSettings["ClientSecret"] = _tempClientSecret;
         _providerSettings["Scopes"] = _tempScopes;
+    }
+
+    // Version tab helper methods
+    private async Task LoadVersionInfoAsync()
+    {
+        _loadingVersionInfo = true;
+        _versionLoadError = null;
+        
+        try
+        {
+            _applicationVersionInfo = await VersionService.GetApplicationVersionInfoAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load version information");
+            _versionLoadError = "Failed to retrieve version information from services.";
+        }
+        finally
+        {
+            _loadingVersionInfo = false;
+            StateHasChanged();
+        }
+    }
+
+    private string GetServiceIcon(string serviceName)
+    {
+        return serviceName switch
+        {
+            "WebFrontend" => "fa-globe",
+            "ApiService" => "fa-server", 
+            "MigrationService" => "fa-database",
+            _ => "fa-cog"
+        };
     }
 
     public class DashboardSettingsModel

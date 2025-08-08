@@ -1,4 +1,5 @@
 using System.Reflection;
+using Dashy.Net.Shared.Models;
 
 namespace Dashy.Net.Web.Services;
 
@@ -21,6 +22,16 @@ public interface IVersionService
     /// Indicates whether this is a development/pre-release version.
     /// </summary>
     bool IsPreRelease();
+
+    /// <summary>
+    /// Gets version information for this service (WebFrontend).
+    /// </summary>
+    ServiceVersionInfo GetServiceVersionInfo();
+
+    /// <summary>
+    /// Gets version information for all services in the application.
+    /// </summary>
+    Task<ApplicationVersionInfo> GetApplicationVersionInfoAsync();
 }
 
 /// <summary>
@@ -31,9 +42,13 @@ public class VersionService : IVersionService
     private readonly string _version;
     private readonly string _fullVersion;
     private readonly bool _isPreRelease;
+    private readonly HttpClient _httpClient;
+    private readonly ILogger<VersionService> _logger;
 
-    public VersionService()
+    public VersionService(IHttpClientFactory httpClientFactory, ILogger<VersionService> logger)
     {
+        _httpClient = httpClientFactory.CreateClient("ApiService");
+        _logger = logger;
         var assembly = Assembly.GetExecutingAssembly();
 
         // Get the informational version (includes build metadata)
@@ -89,5 +104,152 @@ public class VersionService : IVersionService
     public bool IsPreRelease()
     {
         return _isPreRelease;
+    }
+
+    public ServiceVersionInfo GetServiceVersionInfo()
+    {
+        var assembly = Assembly.GetExecutingAssembly();
+        var commitHash = GetCommitHashFromAssembly(assembly);
+        var buildDate = GetBuildDateFromAssembly(assembly);
+
+        return new ServiceVersionInfo
+        {
+            ServiceName = "WebFrontend",
+            Version = _version,
+            FullVersion = _fullVersion,
+            IsPreRelease = _isPreRelease,
+            CommitHash = commitHash,
+            BuildDate = buildDate
+        };
+    }
+
+    public async Task<ApplicationVersionInfo> GetApplicationVersionInfoAsync()
+    {
+        var services = new List<ServiceVersionInfo>();
+
+        // Add the current service (WebFrontend)
+        services.Add(GetServiceVersionInfo());
+
+        try
+        {
+            // Try to get version info from API service
+            var apiVersionInfo = await GetApiServiceVersionAsync();
+            if (apiVersionInfo != null)
+            {
+                services.Add(apiVersionInfo);
+            }
+
+            // Try to get version info from Migration service
+            var migrationVersionInfo = await GetMigrationServiceVersionAsync();
+            if (migrationVersionInfo != null)
+            {
+                services.Add(migrationVersionInfo);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to retrieve version information from some services");
+        }
+
+        // Determine the overall application version (use the highest version among services)
+        var applicationVersion = services
+            .Select(s => s.Version)
+            .Where(v => !string.IsNullOrEmpty(v) && v != "Unknown")
+            .OrderByDescending(v => v)
+            .FirstOrDefault() ?? _version;
+
+        return new ApplicationVersionInfo
+        {
+            Services = services,
+            ApplicationVersion = applicationVersion
+        };
+    }
+
+    private async Task<ServiceVersionInfo?> GetApiServiceVersionAsync()
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync("/api/version");
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                // Parse the response and create ServiceVersionInfo
+                // For now, return a basic version info
+                return new ServiceVersionInfo
+                {
+                    ServiceName = "ApiService",
+                    Version = _version, // Will be updated when API endpoint is implemented
+                    FullVersion = _fullVersion,
+                    IsPreRelease = _isPreRelease
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Could not retrieve version from API service");
+        }
+        return null;
+    }
+
+    private Task<ServiceVersionInfo?> GetMigrationServiceVersionAsync()
+    {
+        // Migration service doesn't have an HTTP endpoint, so we'll return a placeholder
+        // In a real implementation, you might check a shared file or database entry
+        try
+        {
+            var result = new ServiceVersionInfo
+            {
+                ServiceName = "MigrationService",
+                Version = _version, // Placeholder - same as current version
+                FullVersion = _fullVersion,
+                IsPreRelease = _isPreRelease
+            };
+            return Task.FromResult<ServiceVersionInfo?>(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Could not retrieve version from Migration service");
+            return Task.FromResult<ServiceVersionInfo?>(null);
+        }
+    }
+
+    private string? GetCommitHashFromAssembly(Assembly assembly)
+    {
+        try
+        {
+            // Try to extract commit hash from informational version
+            var informationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+            if (!string.IsNullOrEmpty(informationalVersion) && informationalVersion.Contains('+'))
+            {
+                var parts = informationalVersion.Split('+');
+                if (parts.Length > 1)
+                {
+                    return parts[1].Split('.')[0]; // Get the first part after '+' which should be commit hash
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Could not extract commit hash from assembly");
+        }
+        return null;
+    }
+
+    private DateTime? GetBuildDateFromAssembly(Assembly assembly)
+    {
+        try
+        {
+            // For now, return the assembly creation time as build date
+            var location = assembly.Location;
+            if (!string.IsNullOrEmpty(location) && File.Exists(location))
+            {
+                return File.GetCreationTimeUtc(location);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Could not determine build date from assembly");
+        }
+        return null;
     }
 }
