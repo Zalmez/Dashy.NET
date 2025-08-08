@@ -41,20 +41,15 @@ public class VersionServiceTests
     [Fact]
     public void VersionService_PreReleaseDetection_ShouldNotThrow()
     {
-        // Arrange
         var httpClientFactory = CreateMockHttpClientFactory();
         var logger = CreateMockLogger();
         var versionService = new VersionService(httpClientFactory, logger);
 
-        // Act & Assert - Should not throw exceptions
         var isPreRelease = versionService.IsPreRelease();
         
-        // Basic type check - should return a boolean
         Assert.IsType<bool>(isPreRelease);
     }
 }
-
-// Simple test implementations
 public class TestHttpClientFactory : IHttpClientFactory
 {
     public HttpClient CreateClient(string name)
