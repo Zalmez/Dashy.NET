@@ -1,0 +1,325 @@
+name: Intelligent Deployment Based on Changes
+
+permissions:
+  contents: read
+  packages: write
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Tag name for the release"
+        required: true
+        default: "latest"
+      force_all:
+        description: "Force deployment of all services"
+        required: false
+        default: false
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  AUTHOR: zalmez
+  repository: dashy.net
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      deploy-apiservice: ${{ steps.changes.outputs.deploy-apiservice }}
+      deploy-webfrontend: ${{ steps.changes.outputs.deploy-webfrontend }}
+      deploy-migrationservice: ${{ steps.changes.outputs.deploy-migrationservice }}
+      deploy-apphost: ${{ steps.changes.outputs.deploy-apphost }}
+      primary-tag: ${{ steps.determine_tag.outputs.PRIMARY_TAG }}
+      apiservice-version: ${{ steps.versions.outputs.apiservice-version }}
+      webfrontend-version: ${{ steps.versions.outputs.webfrontend-version }}
+      migrationservice-version: ${{ steps.versions.outputs.migrationservice-version }}
+      apphost-version: ${{ steps.versions.outputs.apphost-version }}
+
+    steps:
+      - name: Determine Docker Tag
+        id: determine_tag
+        run: |
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            echo "PRIMARY_TAG=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "PRIMARY_TAG=${{ github.event.inputs.tag_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for change detection
+
+      - name: Get previous release tag
+        id: previous_tag
+        run: |
+          # Get the tag before the current one
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            CURRENT_TAG="${{ github.event.release.tag_name }}"
+            PREVIOUS_TAG=$(git tag -l --sort=-version:refname | grep -A1 "^${CURRENT_TAG}$" | tail -n1)
+          else
+            # For manual dispatch, get the latest release tag
+            PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          fi
+          
+          if [[ -z "$PREVIOUS_TAG" ]]; then
+            echo "No previous tag found, will deploy all services"
+            echo "PREVIOUS_TAG=" >> "$GITHUB_OUTPUT"
+          else
+            echo "Previous tag: $PREVIOUS_TAG"
+            echo "PREVIOUS_TAG=$PREVIOUS_TAG" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Detect changes and determine deployments
+        id: changes
+        run: |
+          PREVIOUS_TAG="${{ steps.previous_tag.outputs.PREVIOUS_TAG }}"
+          FORCE_ALL="${{ github.event.inputs.force_all }}"
+          
+          # Default to deploying all if no previous tag or force_all is true
+          DEPLOY_APISERVICE="true"
+          DEPLOY_WEBFRONTEND="true"
+          DEPLOY_MIGRATIONSERVICE="true"
+          DEPLOY_APPHOST="true"
+          
+          if [[ -n "$PREVIOUS_TAG" && "$FORCE_ALL" != "true" ]]; then
+            echo "Analyzing changes since $PREVIOUS_TAG..."
+            
+            # Get list of changed files
+            CHANGED_FILES=$(git diff --name-only ${PREVIOUS_TAG}..HEAD)
+            echo "Changed files:"
+            echo "$CHANGED_FILES"
+            
+            # Check for changes affecting each service
+            DEPLOY_APISERVICE="false"
+            DEPLOY_WEBFRONTEND="false"
+            DEPLOY_MIGRATIONSERVICE="false"
+            DEPLOY_APPHOST="false"
+            
+            # Check ApiService changes
+            if echo "$CHANGED_FILES" | grep -E "(Dashy\.Net\.ApiService/|Dashy\.net\.Shared/|Directory\.Build\.props|\.github/workflows/)" > /dev/null; then
+              DEPLOY_APISERVICE="true"
+              echo "✅ ApiService: Changes detected"
+            else
+              echo "⏭️ ApiService: No changes detected"
+            fi
+            
+            # Check WebFrontend changes
+            if echo "$CHANGED_FILES" | grep -E "(Dashy\.Net\.Web/|Dashy\.net\.Shared/|Directory\.Build\.props|\.github/workflows/)" > /dev/null; then
+              DEPLOY_WEBFRONTEND="true"
+              echo "✅ WebFrontend: Changes detected"
+            else
+              echo "⏭️ WebFrontend: No changes detected"
+            fi
+            
+            # Check MigrationService changes
+            if echo "$CHANGED_FILES" | grep -E "(Dashy\.Net\.MigrationService/|Dashy\.net\.Shared/|Directory\.Build\.props|\.github/workflows/)" > /dev/null; then
+              DEPLOY_MIGRATIONSERVICE="true"
+              echo "✅ MigrationService: Changes detected"
+            else
+              echo "⏭️ MigrationService: No changes detected"
+            fi
+            
+            # Check AppHost changes
+            if echo "$CHANGED_FILES" | grep -E "(Dashy\.Net\.AppHost/|Directory\.Build\.props|\.github/workflows/)" > /dev/null; then
+              DEPLOY_APPHOST="true"
+              echo "✅ AppHost: Changes detected"
+            else
+              echo "⏭️ AppHost: No changes detected"
+            fi
+          else
+            echo "Deploying all services (no previous tag found or force_all=true)"
+          fi
+          
+          echo "deploy-apiservice=$DEPLOY_APISERVICE" >> "$GITHUB_OUTPUT"
+          echo "deploy-webfrontend=$DEPLOY_WEBFRONTEND" >> "$GITHUB_OUTPUT"
+          echo "deploy-migrationservice=$DEPLOY_MIGRATIONSERVICE" >> "$GITHUB_OUTPUT"
+          echo "deploy-apphost=$DEPLOY_APPHOST" >> "$GITHUB_OUTPUT"
+
+      - name: Generate service versions
+        id: versions
+        run: |
+          PRIMARY_TAG="${{ steps.determine_tag.outputs.PRIMARY_TAG }}"
+          
+          # Generate unique versions for each service based on changes
+          # This helps with independent versioning of services
+          
+          if [[ "${{ steps.changes.outputs.deploy-apiservice }}" == "true" ]]; then
+            APISERVICE_VERSION="$PRIMARY_TAG"
+          else
+            # Try to get the current ApiService version from the registry or use a placeholder
+            APISERVICE_VERSION="$PRIMARY_TAG-nochange"
+          fi
+          
+          if [[ "${{ steps.changes.outputs.deploy-webfrontend }}" == "true" ]]; then
+            WEBFRONTEND_VERSION="$PRIMARY_TAG"
+          else
+            WEBFRONTEND_VERSION="$PRIMARY_TAG-nochange"
+          fi
+          
+          if [[ "${{ steps.changes.outputs.deploy-migrationservice }}" == "true" ]]; then
+            MIGRATIONSERVICE_VERSION="$PRIMARY_TAG"
+          else
+            MIGRATIONSERVICE_VERSION="$PRIMARY_TAG-nochange"
+          fi
+          
+          if [[ "${{ steps.changes.outputs.deploy-apphost }}" == "true" ]]; then
+            APPHOST_VERSION="$PRIMARY_TAG"
+          else
+            APPHOST_VERSION="$PRIMARY_TAG-nochange"
+          fi
+          
+          echo "apiservice-version=$APISERVICE_VERSION" >> "$GITHUB_OUTPUT"
+          echo "webfrontend-version=$WEBFRONTEND_VERSION" >> "$GITHUB_OUTPUT"
+          echo "migrationservice-version=$MIGRATIONSERVICE_VERSION" >> "$GITHUB_OUTPUT"
+          echo "apphost-version=$APPHOST_VERSION" >> "$GITHUB_OUTPUT"
+          
+          echo "Service versions:"
+          echo "  ApiService: $APISERVICE_VERSION"
+          echo "  WebFrontend: $WEBFRONTEND_VERSION"
+          echo "  MigrationService: $MIGRATIONSERVICE_VERSION"
+          echo "  AppHost: $APPHOST_VERSION"
+
+  build-apiservice:
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.deploy-apiservice == 'true'
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push ApiService Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dashy.Net.ApiService/Dockerfile
+          push: true
+          build-args: |
+            GITHUB_REF_NAME=${{ needs.detect-changes.outputs.apiservice-version }}
+            GITHUB_REF_TYPE=tag
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/${{ env.repository }}/apiservice:${{ needs.detect-changes.outputs.apiservice-version }}
+            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/${{ env.repository }}/apiservice:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/${{ env.repository }}/apiservice:latest
+
+  build-webfrontend:
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.deploy-webfrontend == 'true'
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push WebFrontend Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dashy.Net.Web/Dockerfile
+          push: true
+          build-args: |
+            GITHUB_REF_NAME=${{ needs.detect-changes.outputs.webfrontend-version }}
+            GITHUB_REF_TYPE=tag
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/${{ env.repository }}/webfrontend:${{ needs.detect-changes.outputs.webfrontend-version }}
+            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/${{ env.repository }}/webfrontend:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/${{ env.repository }}/webfrontend:latest
+
+  build-migrationservice:
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.deploy-migrationservice == 'true'
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push MigrationService Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dashy.Net.MigrationService/Dockerfile
+          push: true
+          build-args: |
+            GITHUB_REF_NAME=${{ needs.detect-changes.outputs.migrationservice-version }}
+            GITHUB_REF_TYPE=tag
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/${{ env.repository }}/migrationservice:${{ needs.detect-changes.outputs.migrationservice-version }}
+            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/${{ env.repository }}/migrationservice:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/${{ env.repository }}/migrationservice:latest
+
+  deployment-summary:
+    runs-on: ubuntu-latest
+    needs: [detect-changes, build-apiservice, build-webfrontend, build-migrationservice]
+    if: always()
+    
+    steps:
+      - name: Generate Deployment Summary
+        run: |
+          echo "# 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Release Tag:** ${{ needs.detect-changes.outputs.primary-tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Services Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.detect-changes.outputs.deploy-apiservice }}" == "true" ]]; then
+            if [[ "${{ needs.build-apiservice.result }}" == "success" ]]; then
+              echo "- ✅ **ApiService** (v${{ needs.detect-changes.outputs.apiservice-version }}) - Successfully deployed" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- ❌ **ApiService** (v${{ needs.detect-changes.outputs.apiservice-version }}) - Deployment failed" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "- ⏭️ **ApiService** - No changes detected, skipped" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [[ "${{ needs.detect-changes.outputs.deploy-webfrontend }}" == "true" ]]; then
+            if [[ "${{ needs.build-webfrontend.result }}" == "success" ]]; then
+              echo "- ✅ **WebFrontend** (v${{ needs.detect-changes.outputs.webfrontend-version }}) - Successfully deployed" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- ❌ **WebFrontend** (v${{ needs.detect-changes.outputs.webfrontend-version }}) - Deployment failed" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "- ⏭️ **WebFrontend** - No changes detected, skipped" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [[ "${{ needs.detect-changes.outputs.deploy-migrationservice }}" == "true" ]]; then
+            if [[ "${{ needs.build-migrationservice.result }}" == "success" ]]; then
+              echo "- ✅ **MigrationService** (v${{ needs.detect-changes.outputs.migrationservice-version }}) - Successfully deployed" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- ❌ **MigrationService** (v${{ needs.detect-changes.outputs.migrationservice-version }}) - Deployment failed" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "- ⏭️ **MigrationService** - No changes detected, skipped" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Docker Images" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All deployed images are available at:" >> $GITHUB_STEP_SUMMARY
+          echo "- 📦 [GitHub Container Registry](https://github.com/${{ env.AUTHOR }}/${{ env.repository }}/pkgs/container/${{ env.repository }}%2F{service})" >> $GITHUB_STEP_SUMMARY

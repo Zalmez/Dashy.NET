@@ -1,14 +1,28 @@
 ﻿using Dashy.Net.Web.Services;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Http;
 
 namespace Dashy.Net.Tests;
 
 public class VersionServiceTests
 {
+    private static IHttpClientFactory CreateMockHttpClientFactory()
+    {
+        return new TestHttpClientFactory();
+    }
+
+    private static ILogger<VersionService> CreateMockLogger()
+    {
+        return new TestLogger<VersionService>();
+    }
+
     [Fact]
     public void VersionService_ShouldNotReturnUnknownVersion()
     {
         // Arrange
-        var versionService = new VersionService();
+        var httpClientFactory = CreateMockHttpClientFactory();
+        var logger = CreateMockLogger();
+        var versionService = new VersionService(httpClientFactory, logger);
 
         // Act
         var version = versionService.GetVersion();
@@ -27,13 +41,31 @@ public class VersionServiceTests
     [Fact]
     public void VersionService_PreReleaseDetection_ShouldNotThrow()
     {
-        // Arrange
-        var versionService = new VersionService();
+        var httpClientFactory = CreateMockHttpClientFactory();
+        var logger = CreateMockLogger();
+        var versionService = new VersionService(httpClientFactory, logger);
 
-        // Act & Assert - Should not throw exceptions
         var isPreRelease = versionService.IsPreRelease();
         
-        // Basic type check - should return a boolean
         Assert.IsType<bool>(isPreRelease);
     }
+}
+public class TestHttpClientFactory : IHttpClientFactory
+{
+    public HttpClient CreateClient(string name)
+    {
+        return new HttpClient();
+    }
+}
+
+public class TestLogger<T> : ILogger<T>
+{
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull => new TestScope();
+    public bool IsEnabled(LogLevel logLevel) => false;
+    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) { }
+}
+
+public class TestScope : IDisposable
+{
+    public void Dispose() { }
 }
