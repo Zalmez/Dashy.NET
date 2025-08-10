@@ -1,1 +1,43 @@
-﻿
+﻿services:
+  db:
+    image: postgres:16
+    hostname: dashy
+    container_name: dashy
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  migrationservice:
+    image: ghcr.io/zalmez/dashy.net/migrationservice:latest
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      - db
+
+  apiservice:
+    image: ghcr.io/zalmez/dashy.net/apiservice:latest
+    container_name: dashy_apiservice
+    restart: unless-stopped
+    env_file: .env
+    depends_on: 
+      - migrationservice
+    ports:
+      - "8082:80"
+      - "8443:443"
+
+  webfrontend:
+    image: ghcr.io/zalmez/dashy.net/webfrontend:latest
+    container_name: dashy_webfrontend
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      - apiservice
+    ports:
+      - "5000:8080"
+      - "5443:443"
+
+volumes:
+  db_data:

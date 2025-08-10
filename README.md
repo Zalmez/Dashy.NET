@@ -43,6 +43,17 @@ This will launch the .NET Aspire dashboard, which will start the Blazor frontend
 
 Unlike the original Dashy's YAML-based configuration, Dashy.Net is configured entirely through the UI in **Edit Mode**. All configuration data is stored in a PostgreSQL database, which is automatically managed by the application.
 
+## Documentation
+
+📚 **[View Full Documentation](https://zalmez.github.io/Dashy.NET/)**
+
+The complete documentation includes:
+- Installation guides
+- Docker deployment instructions
+- Configuration tutorials
+- Widget development guides
+- API references
+
 ## License
 
 Dashy.Net is free and open-source software licensed under the **GNU AGPLv3**. The full license text is available in the `LICENSE` file in the root of this repository.
