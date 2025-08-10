@@ -1,5 +1,6 @@
 using Dashy.Net.Shared.Data;
 using Dashy.Net.Shared.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,6 +8,7 @@ namespace Dashy.Net.ApiService.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class AppSettingsController : ControllerBase
 {
     private readonly AppDbContext _dbContext;

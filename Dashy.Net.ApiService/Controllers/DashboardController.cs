@@ -1,5 +1,6 @@
 using Dashy.Net.Shared.Data;
 using Dashy.Net.Shared.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
@@ -10,6 +11,7 @@ namespace Dashy.Net.ApiService.Controllers;
 [ApiController]
 [Route("api/dashboard")]
 [Produces("application/json")]
+[Authorize]
 public class DashboardController(AppDbContext dbContext, ILogger<DashboardController> logger) : ControllerBase
 {
     private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };

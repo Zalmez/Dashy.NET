@@ -51,7 +51,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history for change detection
+          fetch-depth: 0 
 
       - name: Get previous release tag
         id: previous_tag
@@ -322,4 +322,4 @@ jobs:
           echo "## Docker Images" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "All deployed images are available at:" >> $GITHUB_STEP_SUMMARY
-          echo "- 📦 [GitHub Container Registry](https://github.com/${{ env.AUTHOR }}/${{ env.repository }}/pkgs/container/${{ env.repository }}%2F{service})" >> $GITHUB_STEP_SUMMARY
+          echo "- 📦 [GitHub Container Registry](https://github.com/${{ env.AUTHOR }}/${{ env.repository }}?tab=packages&repo_name=${{ env.repository }})" >> $GITHUB_STEP_SUMMARY
