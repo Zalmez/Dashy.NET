@@ -2,11 +2,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Dashy.Net.Shared.Data;
 using Dashy.Net.Shared.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Dashy.Net.ApiService.Controllers;
 
 [ApiController]
 [Route("api")]
+[Authorize]
 public class AuthenticationController : ControllerBase
 {
     private readonly AppDbContext _context;

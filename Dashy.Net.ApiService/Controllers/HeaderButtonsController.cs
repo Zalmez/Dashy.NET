@@ -1,5 +1,6 @@
 ﻿using Dashy.Net.Shared.Data;
 using Dashy.Net.Shared.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http;
@@ -9,6 +10,7 @@ namespace Dashy.Net.ApiService.Controllers;
 [ApiController]
 [Route("api/header-buttons")]
 [Produces("application/json")]
+[Authorize]
 public class HeaderButtonsController(AppDbContext dbContext, ILogger<HeaderButtonsController> logger) : ControllerBase
 {
     /// <summary>

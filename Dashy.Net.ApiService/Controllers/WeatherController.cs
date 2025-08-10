@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using System.Globalization;
 using System.Text.Json.Serialization;
 
@@ -6,6 +7,7 @@ namespace Dashy.Net.ApiService.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class WeatherController : ControllerBase
     {
         private readonly IHttpClientFactory _httpClientFactory;

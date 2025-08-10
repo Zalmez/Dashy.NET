@@ -11,14 +11,23 @@ public class TokenHandler(IHttpContextAccessor httpContextAccessor) :
     {
         if (httpContextAccessor.HttpContext is null)
         {
-            throw new Exception("HttpContext not available");
+            return await base.SendAsync(request, cancellationToken);
         }
 
-        var accessToken = await httpContextAccessor.HttpContext
-            .GetTokenAsync("access_token");
+        try
+        {
+            var accessToken = await httpContextAccessor.HttpContext
+                .GetTokenAsync("access_token");
 
-        request.Headers.Authorization =
-            new AuthenticationHeaderValue("Bearer", accessToken);
+            if (!string.IsNullOrEmpty(accessToken))
+            {
+                request.Headers.Authorization =
+                    new AuthenticationHeaderValue("Bearer", accessToken);
+            }
+        }
+        catch (InvalidOperationException)
+        {
+        }
 
         return await base.SendAsync(request, cancellationToken);
     }

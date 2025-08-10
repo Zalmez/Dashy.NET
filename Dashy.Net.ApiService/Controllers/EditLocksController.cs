@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using Dashy.Net.Shared.Models;
 using Dashy.Net.ApiService.Services;
@@ -7,6 +8,7 @@ namespace Dashy.Net.ApiService.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class EditLocksController : ControllerBase
 {
     private readonly ApiEditLockService _editLockService;

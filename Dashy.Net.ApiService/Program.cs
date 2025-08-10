@@ -1,7 +1,10 @@
 using Dashy.Net.ApiService.Services;
+using Dashy.Net.ApiService.Authorization;
 using Dashy.Net.Shared.Data;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Scalar.AspNetCore;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication;
@@ -25,6 +28,9 @@ builder.Services.AddHttpClient("WeatherApi", client =>
 var authAuthority = Environment.GetEnvironmentVariable("auth_authority");
 var authClientId = Environment.GetEnvironmentVariable("auth_clientid");
 var authClientSecret = Environment.GetEnvironmentVariable("auth_clientsecret");
+var isAuthConfigured = !string.IsNullOrWhiteSpace(authAuthority) && 
+                      !string.IsNullOrWhiteSpace(authClientId) && 
+                      !string.IsNullOrWhiteSpace(authClientSecret);
 
 if (!string.IsNullOrWhiteSpace(authAuthority) && !string.IsNullOrWhiteSpace(authClientId) && !string.IsNullOrWhiteSpace(authClientSecret))
 {
@@ -57,21 +63,58 @@ if (!string.IsNullOrWhiteSpace(authAuthority) && !string.IsNullOrWhiteSpace(auth
 
         options.MapInboundClaims = false;
         options.TokenValidationParameters.NameClaimType = JwtRegisteredClaimNames.Name;
+    })
+    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+    {
+        options.Authority = authAuthority;
+        options.Audience = authClientId;
+        options.RequireHttpsMetadata = true;
+        options.SaveToken = true;
+        options.MapInboundClaims = false;
+        options.TokenValidationParameters.NameClaimType = JwtRegisteredClaimNames.Name;
+        options.TokenValidationParameters.RoleClaimType = "roles";
     });
 }
 
 builder.Services.AddSingleton<Dashy.Net.ApiService.Services.ApiEditLockService>();
 
+builder.Services.AddSingleton<IAuthorizationHandler>(provider => 
+    new ConditionalAuthorizationHandler());
+
+builder.Services.AddAuthorization(options =>
+{
+    options.DefaultPolicy = new AuthorizationPolicyBuilder()
+        .AddRequirements(new ConditionalAuthorizationRequirement(isAuthConfigured))
+        .Build();
+    
+    options.AddPolicy("Admin", policy =>
+        policy.AddRequirements(new ConditionalAuthorizationRequirement(isAuthConfigured)));
+});
+
 builder.Services.AddOpenApi();
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+if (isAuthConfigured)
+{
+    logger.LogInformation("Authentication is ENABLED. API endpoints require valid JWT Bearer tokens.");
+}
+else
+{
+    logger.LogWarning("Authentication is DISABLED. All API endpoints are accessible without authentication.");
+    if (string.IsNullOrWhiteSpace(authAuthority))
+        logger.LogWarning("To enable authentication, set the 'auth_authority' environment variable.");
+    if (string.IsNullOrWhiteSpace(authClientId))
+        logger.LogWarning("To enable authentication, set the 'auth_clientid' environment variable.");
+    if (string.IsNullOrWhiteSpace(authClientSecret))
+        logger.LogWarning("To enable authentication, set the 'auth_clientsecret' environment variable.");
+}
 app.UseExceptionHandler();
 
-// Enable static file serving for uploaded files
 var webRoot = app.Environment.WebRootPath ?? Path.Combine(AppContext.BaseDirectory, "wwwroot");
 if (!Directory.Exists(webRoot))
     Directory.CreateDirectory(webRoot);
+
 app.UseStaticFiles();
 
 if (app.Services.GetService<IAuthenticationSchemeProvider>() != null)
@@ -83,7 +126,6 @@ if (app.Services.GetService<IAuthenticationSchemeProvider>() != null)
 app.MapOpenApi();
 app.MapScalarApiReference();
 app.MapControllers();
-
 app.MapDefaultEndpoints();
 
 app.Run();

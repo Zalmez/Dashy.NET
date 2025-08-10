@@ -1,5 +1,6 @@
 ﻿using Dashy.Net.Shared.Data;
 using Dashy.Net.Shared.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
@@ -10,6 +11,7 @@ namespace Dashy.Net.ApiService.Controllers;
 [ApiController]
 [Route("api/sections")]
 [Produces("application/json")]
+[Authorize]
 public class SectionsController(AppDbContext dbContext, ILogger<SectionsController> logger) : ControllerBase
 {
     [HttpPost]
