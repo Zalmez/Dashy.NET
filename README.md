@@ -23,7 +23,7 @@ Dashy.Net helps you organize your applications, services, and bookmarks into a s
 
 ## Getting Started
 
-To get Dashy.Net up and running on your local machine, you'll need the .NET 9 SDK installed.
+To get Dashy.Net up and running on your local machine, you'll need the .NET 10 SDK installed.
 
 1.  **Clone the repository:**
 
@@ -63,3 +63,4 @@ This license ensures that the project and any derivatives will always remain fre
 ## Acknowledgements
 
 This project would not exist without the incredible work done by **Alicia Sykes (Lissy93)** and it's contributors on the original [Dashy](https://github.com/Lissy93/dashy). Dashy.Net is proud to be inspired by dashy's original vision and contributions to the open-source community. The original Dashy project is licensed under the MIT license.
+
