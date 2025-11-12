@@ -45,7 +45,6 @@ builder.Services.AddScoped<ViewOptionsService>();
 builder.Services.AddScoped<ClientStorageService>();
 builder.Services.AddSingleton<EditLockService>();
 builder.Services.AddSingleton<DashboardSyncService>();
-builder.Services.AddSortableServices();
 builder.Services.AddScoped<DashboardStateService>();
 builder.Services.AddScoped<FileStorageService>();
 builder.Services.AddSingleton<WidgetRegistryService>();

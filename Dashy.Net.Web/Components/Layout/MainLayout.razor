@@ -27,94 +27,127 @@
     
     @if (_isHeaderVisible)
     {
-        <header class="main-header">
-        <div class="header-title-section">
-            <div style="display: flex; align-items: center; gap: 1rem;">
-                <img src="images/dashynet_logo_notext.png" alt="Dashy.NET Logo" class="header-logo" />
-                <div class="dashboard-title-dropdown" id="dashboard-title-dropdown">
-                    <button class="dropdown-btn" @onclick="ToggleDashboardDropdown" @onclick:stopPropagation="true">
-                        <h1 style="margin: 0; display: inline;">@(DashboardState.Config?.Title ?? "Dashy.NET")</h1>
-                        <i class="fas fa-chevron-down dropdown-arrow @(_isDashboardDropdownOpen ? "open" : "")"></i>
-                    </button>
-                    @if (_isDashboardDropdownOpen)
-                    {
-                        <div class="dropdown-menu">
-                            @if (_availableDashboards != null && _availableDashboards.Any())
-                            {
-                                @foreach (var dashboard in _availableDashboards)
+        <header class="main-header" role="banner" aria-label="Dashboard header">
+            <div class="header-title-section">
+                <div class="header-brand">
+                    <img src="images/dashynet_logo_notext.png" alt="Dashy.NET Logo" class="header-logo" />
+                    <div class="dashboard-title-dropdown" id="dashboard-title-dropdown">
+                        <button type="button"
+                                class="dropdown-btn"
+                                aria-haspopup="listbox"
+                                aria-expanded="@(_isDashboardDropdownOpen ? "true" : "false")"
+                                aria-controls="dashboard-switcher-menu"
+                                @onclick="ToggleDashboardDropdown"
+                                @onclick:stopPropagation="true">
+                            <span class="dashboard-title-text">@(DashboardState.Config?.Title ?? "Dashy.NET")</span>
+                            <span class="dropdown-icon" aria-hidden="true">
+                                <i class="fas fa-chevron-down dropdown-arrow @(_isDashboardDropdownOpen ? "open" : "")"></i>
+                            </span>
+                        </button>
+                        @if (_isDashboardDropdownOpen)
+                        {
+                            <ul id="dashboard-switcher-menu"
+                                class="dropdown-menu"
+                                role="listbox"
+                                aria-label="Available dashboards">
+                                @if (_availableDashboards != null && _availableDashboards.Any())
                                 {
-                                    <div class="dropdown-item @(dashboard.Id == DashboardState.Config?.Id ? "active" : "")" 
-                                         @onclick="() => NavigateToDashboard(dashboard.Id)">
-                                        <div class="dashboard-title">@dashboard.Title</div>
-                                        @if (!string.IsNullOrWhiteSpace(dashboard.Subtitle))
-                                        {
-                                            <div class="dashboard-subtitle">@dashboard.Subtitle</div>
-                                        }
-                                    </div>
+                                    @foreach (var dashboard in _availableDashboards)
+                                    {
+                                        <li>
+                                            <button type="button"
+                                                    class="dropdown-item @(dashboard.Id == DashboardState.Config?.Id ? "active" : "")"
+                                                    role="option"
+                                                    aria-selected="@(dashboard.Id == DashboardState.Config?.Id ? "true" : "false")"
+                                                    @onclick="() => NavigateToDashboard(dashboard.Id)"
+                                                    @onclick:stopPropagation="true">
+                                                <span class="dashboard-title">@dashboard.Title</span>
+                                                @if (!string.IsNullOrWhiteSpace(dashboard.Subtitle))
+                                                {
+                                                    <span class="dashboard-subtitle">@dashboard.Subtitle</span>
+                                                }
+                                            </button>
+                                        </li>
+                                    }
                                 }
-                            }
-                            else
-                            {
-                                <div class="dropdown-item disabled">No dashboards available</div>
-                            }
+                                else
+                                {
+                                    <li>
+                                        <span class="dropdown-item disabled"
+                                              role="option"
+                                              aria-disabled="true">No dashboards available</span>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="header-user-section" role="region" aria-label="View options">
+                <div class="header-controls">
+                    <div class="control-group">
+                        <span id="layout-control-label" class="control-label">Layout</span>
+                        <div class="button-group" role="radiogroup" aria-labelledby="layout-control-label">
+                            <button type="button"
+                                    class="control-btn @(IsLayout(LayoutOrientation.Auto) ? "active" : "")"
+                                    role="radio"
+                                    aria-checked="@(IsLayout(LayoutOrientation.Auto) ? "true" : "false")"
+                                    aria-label="Auto layout"
+                                    title="Auto layout"
+                                    @onclick="() => SetLayout(LayoutOrientation.Auto)">
+                                <i class="fas fa-th-large" aria-hidden="true"></i>
+                            </button>
+                            <button type="button"
+                                    class="control-btn @(IsLayout(LayoutOrientation.Vertical) ? "active" : "")"
+                                    role="radio"
+                                    aria-checked="@(IsLayout(LayoutOrientation.Vertical) ? "true" : "false")"
+                                    aria-label="Vertical layout"
+                                    title="Vertical layout"
+                                    @onclick="() => SetLayout(LayoutOrientation.Vertical)">
+                                <i class="fas fa-bars" aria-hidden="true"></i>
+                            </button>
                         </div>
-                    }
-                </div>
-                @* <div class="header-search">
-                    <SearchBar />
-                </div> *@
-            </div>
-        </div>
-        <div class="header-user-section">
-            <div class="header-controls">
-                <div class="control-group">
-                    <span class="control-label">Layout</span>
-                    <div class="button-group">
-                        <button type="button" 
-                                class="control-btn @(IsLayout(LayoutOrientation.Auto) ? "active" : "")" 
-                                title="Auto Layout" 
-                                @onclick="() => SetLayout(LayoutOrientation.Auto)">
-                            <i class="fas fa-th-large"></i>
-                        </button>
-                        <button type="button" 
-                                class="control-btn @(IsLayout(LayoutOrientation.Vertical) ? "active" : "")" 
-                                title="Vertical Layout" 
-                                @onclick="() => SetLayout(LayoutOrientation.Vertical)">
-                            <i class="fas fa-bars"></i>
-                        </button>
+                    </div>
+
+                    <div class="control-group">
+                        <span id="item-size-label" class="control-label">Size</span>
+                        <div class="button-group" role="radiogroup" aria-labelledby="item-size-label">
+                            <button type="button"
+                                    class="control-btn @(IsItemSize(ItemSize.Small) ? "active" : "")"
+                                    role="radio"
+                                    aria-checked="@(IsItemSize(ItemSize.Small) ? "true" : "false")"
+                                    aria-label="Small items"
+                                    title="Small items"
+                                    @onclick="() => SetItemSize(ItemSize.Small)">
+                                <i class="fas fa-compress" aria-hidden="true"></i>
+                            </button>
+                            <button type="button"
+                                    class="control-btn @(IsItemSize(ItemSize.Medium) ? "active" : "")"
+                                    role="radio"
+                                    aria-checked="@(IsItemSize(ItemSize.Medium) ? "true" : "false")"
+                                    aria-label="Medium items"
+                                    title="Medium items"
+                                    @onclick="() => SetItemSize(ItemSize.Medium)">
+                                <i class="fas fa-grip-horizontal" aria-hidden="true"></i>
+                            </button>
+                            <button type="button"
+                                    class="control-btn @(IsItemSize(ItemSize.Large) ? "active" : "")"
+                                    role="radio"
+                                    aria-checked="@(IsItemSize(ItemSize.Large) ? "true" : "false")"
+                                    aria-label="Large items"
+                                    title="Large items"
+                                    @onclick="() => SetItemSize(ItemSize.Large)">
+                                <i class="fas fa-expand" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="control-group theme-toggle-group">
+                        <ThemeToggleButton IsLightMode="isLightMode" OnToggle="HandleThemeToggle" />
                     </div>
                 </div>
-                
-                <!-- Item Size Controls -->
-                <div class="control-group">
-                    <span class="control-label">Size</span>
-                    <div class="button-group">
-                        <button type="button" 
-                                class="control-btn @(IsItemSize(ItemSize.Small) ? "active" : "")" 
-                                title="Small Items" 
-                                @onclick="() => SetItemSize(ItemSize.Small)">
-                            <i class="fas fa-compress"></i>
-                        </button>
-                        <button type="button" 
-                                class="control-btn @(IsItemSize(ItemSize.Medium) ? "active" : "")" 
-                                title="Medium Items" 
-                                @onclick="() => SetItemSize(ItemSize.Medium)">
-                            <i class="fas fa-grip-horizontal"></i>
-                        </button>
-                        <button type="button" 
-                                class="control-btn @(IsItemSize(ItemSize.Large) ? "active" : "")" 
-                                title="Large Items" 
-                                @onclick="() => SetItemSize(ItemSize.Large)">
-                            <i class="fas fa-expand"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <ThemeToggleButton IsLightMode="isLightMode" OnToggle="HandleThemeToggle" />
-                </div>
             </div>
-        </div>
-    </header>
+        </header>
     }
 
     <!-- Hidden Header Logo for Wallboard Mode -->
@@ -125,7 +158,7 @@
         </div>
     }
 
-    <main class="content">
+    <main class="content" role="main">
         @Body
     </main>
 
@@ -327,13 +360,15 @@
         </div>
     }
 
-    <footer class="dashboard-footer" style="position: fixed; left:0;bottom:0;width:100%;text-align:center;">
-        <div>
-            <strong>Version:</strong> @VersionService.GetVersion() &nbsp;|&nbsp;
-            <strong>License:</strong> GNU Affero General Public License &nbsp;|&nbsp;
+    <footer class="dashboard-footer" role="contentinfo">
+        <div class="footer-inner">
+            <span class="footer-item"><strong>Version:</strong> @VersionService.GetVersion()</span>
+            <span class="footer-separator" aria-hidden="true">•</span>
+            <span class="footer-item"><strong>License:</strong> GNU Affero General Public License</span>
             @if (VersionService.IsPreRelease())
             {
-                <strong>Disclaimer:</strong> <span>This is a pre-release version. Features and functionality may change or be missing.</span>
+                <span class="footer-separator" aria-hidden="true">•</span>
+                <span class="footer-item"><strong>Disclaimer:</strong> <span>This is a pre-release version. Features and functionality may change or be missing.</span></span>
             }
         </div>
     </footer>

@@ -1,17 +1,21 @@
 /* Modern Glassmorphism Dashboard Styles */
 
+
 .dashboard-container {
-  padding: 2rem;
-  max-width: 1920px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: var(--header-max-width);
+  margin: 0 var(--layout-gutter);
+  padding: var(--space-4) 0 var(--space-6);
+  box-sizing: border-box;
 }
 
 .dashboard-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 2rem;
+  gap: var(--space-4);
   align-items: flex-start;
-  justify-content: stretch;
+  justify-content: flex-start;
+  align-content: flex-start;
 }
 
 .section-item {
@@ -66,8 +70,10 @@
   .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    gap: 2rem;
+    gap: var(--space-4);
+    justify-content: stretch;
     align-items: start;
+    align-content: start;
   }
 
   .section-item {
@@ -120,6 +126,7 @@
   border: 1px solid var(--glass-border);
   border-radius: 16px;
   padding: 1.5rem;
+  -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
   box-shadow: var(--glass-shadow);
 }
@@ -310,6 +317,7 @@
   background: var(--glass-background);
   border: 1px solid var(--glass-border);
   border-radius: 20px;
+  -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
   box-shadow: var(--glass-shadow);
   padding: 1.5rem;
@@ -517,6 +525,7 @@
   background: var(--glass-background);
   border: 1px solid var(--glass-border);
   border-radius: 16px;
+  -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
   box-shadow: var(--glass-shadow);
   padding: 1.5rem;
@@ -689,6 +698,7 @@
   background: var(--glass-background);
   border: 1px solid var(--glass-border);
   border-radius: 16px;
+  -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
   box-shadow: var(--glass-shadow);
   padding: 1.5rem;
@@ -739,6 +749,7 @@
   background: var(--glass-background);
   border: 1px solid var(--glass-border);
   border-radius: 16px;
+  -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
   box-shadow: var(--glass-shadow);
   padding: 1.5rem;
