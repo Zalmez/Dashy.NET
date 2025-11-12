@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using System.Text.Json;
 
 namespace Dashy.Net.Shared.Models;
 
@@ -164,7 +165,7 @@ public record ItemVm(
     string? Icon,
     string? Widget,
     int SectionId,
-    Dictionary<string, object>? Options
+    JsonElement? Options
 );
 
 public record AuthenticationProviderVm(

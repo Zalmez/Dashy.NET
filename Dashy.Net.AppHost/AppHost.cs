@@ -14,22 +14,16 @@ var postgres = builder.AddPostgres("postgresdb")
 
 var db = postgres.AddDatabase("dashy");
 
-var migrationService = builder.AddProject<Projects.Dashy_Net_MigrationService>("migrationservice")
-    .WaitFor(db)
-    .WithReference(db)
-    .WithParentRelationship(db);
-
 var apiService = builder.AddProject<Projects.Dashy_Net_ApiService>("apiservice")
     .WithReference(postgres)
     .WithReference(db)
     .WaitFor(db)
-    .WaitFor(migrationService)
     .WithHttpHealthCheck("/health");
 
 builder.AddProject<Projects.Dashy_Net_Web>("webfrontend")
     .WithExternalHttpEndpoints()
     .WithHttpHealthCheck("/health")
-    //.WithEnvironment("auth_authority", authAuthority).WithEnvironment("auth_clientid", authClientId).WithEnvironment("auth_clientsecret", authClientSecret)
+    .WithEnvironment("auth_authority", authAuthority).WithEnvironment("auth_clientid", authClientId).WithEnvironment("auth_clientsecret", authClientSecret)
     .WithReference(apiService)
     .WaitFor(apiService);
 
