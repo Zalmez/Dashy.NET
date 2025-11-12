@@ -77,8 +77,8 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
                     dbItem.Widget,
                     dbItem.SectionId,
                     string.IsNullOrWhiteSpace(dbItem.OptionsJson)
-                        ? null
-                        : JsonSerializer.Deserialize<Dictionary<string, object>>(dbItem.OptionsJson, _jsonOptions)
+                        ? (JsonElement?)null
+                        : JsonDocument.Parse(dbItem.OptionsJson).RootElement.Clone()
                 )).ToList()
             )).ToList(),
             dashboard.HeaderButtons.Select(dbButton => new HeaderButtonVm(

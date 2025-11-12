@@ -23,29 +23,29 @@ builder.Services.AddOutputCache();
 
 #region Dashy.Net required services
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddTransient<Dashy.Net.Web.Helpers.TokenHandler>();
+//builder.Services.AddTransient<TokenHandler>();
 
 builder.Services.AddHttpClient<DashboardClient>(opts =>
 {
     opts.BaseAddress = new("https+http://apiservice");
-}).AddHttpMessageHandler<Dashy.Net.Web.Helpers.TokenHandler>();
+});//.AddHttpMessageHandler<TokenHandler>();
 
 builder.Services.AddHttpClient<WeatherClient>(opts =>
 {
     opts.BaseAddress = new("https+http://apiservice");
-}).AddHttpMessageHandler<Dashy.Net.Web.Helpers.TokenHandler>();
+});//.AddHttpMessageHandler<TokenHandler>();
 
 builder.Services.AddHttpClient<EditLocksClient>(opts =>
 {
     opts.BaseAddress = new("https+http://apiservice");
-}).AddHttpMessageHandler<Dashy.Net.Web.Helpers.TokenHandler>();
+});//.AddHttpMessageHandler<TokenHandler>();
 
 builder.Services.AddScoped<ThemeService>();
 builder.Services.AddScoped<ViewOptionsService>();
 builder.Services.AddScoped<ClientStorageService>();
 builder.Services.AddSingleton<EditLockService>();
 builder.Services.AddSingleton<DashboardSyncService>();
-builder.Services.AddSortableServices();
+builder.Services.AddSortable();
 builder.Services.AddScoped<DashboardStateService>();
 builder.Services.AddScoped<FileStorageService>();
 builder.Services.AddSingleton<WidgetRegistryService>();
@@ -53,13 +53,13 @@ builder.Services.AddSingleton<IVersionService, VersionService>();
 builder.Services.AddHttpClient("ApiService", opts =>
 {
     opts.BaseAddress = new("https+http://apiservice");
-}).AddHttpMessageHandler<Dashy.Net.Web.Helpers.TokenHandler>();
+});//.AddHttpMessageHandler<TokenHandler>();
 
 builder.Services.AddTransient<EventSubscriptionManager>();
 builder.Services.AddHttpClient<AppSettingsClient>(opts =>
 {
     opts.BaseAddress = new("https+http://apiservice");
-}).AddHttpMessageHandler<Dashy.Net.Web.Helpers.TokenHandler>();
+});//.AddHttpMessageHandler<TokenHandler>();
 #endregion
 
 
@@ -165,7 +165,11 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// Avoid redirecting health endpoints so Aspire HTTP health checks work
+app.UseWhen(ctx => !(ctx.Request.Path.StartsWithSegments("/health") || ctx.Request.Path.StartsWithSegments("/alive")), branch =>
+{
+    branch.UseHttpsRedirection();
+});
 
 if (!string.IsNullOrWhiteSpace(authAuthority) && !string.IsNullOrWhiteSpace(authClientId) && !string.IsNullOrWhiteSpace(authClientSecret))
 {

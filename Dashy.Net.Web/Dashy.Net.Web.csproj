@@ -20,7 +20,7 @@
     <None Remove="wwwroot\**\*.razor.js" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="BlazorSortable" Version="3.1.2" />
+    <PackageReference Include="BlazorSortable" Version="5.1.4" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.0" />
     <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.12.1" />
   </ItemGroup>

@@ -1,3 +1,6 @@
 {
-  "appHostPath": "../Dashy.Net.AppHost/Dashy.Net.AppHost.csproj"
+  "appHostPath": "../Dashy.Net.AppHost/Dashy.Net.AppHost.csproj",
+  "features": {
+    "execCommandEnabled": "true"
+  }
 }

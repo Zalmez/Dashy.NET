@@ -14,16 +14,10 @@ var postgres = builder.AddPostgres("postgresdb")
 
 var db = postgres.AddDatabase("dashy");
 
-var migrationService = builder.AddProject<Projects.Dashy_Net_MigrationService>("migrationservice")
-    .WaitFor(db)
-    .WithReference(db)
-    .WithParentRelationship(db);
-
 var apiService = builder.AddProject<Projects.Dashy_Net_ApiService>("apiservice")
     .WithReference(postgres)
     .WithReference(db)
     .WaitFor(db)
-    .WaitFor(migrationService)
     .WithHttpHealthCheck("/health");
 
 builder.AddProject<Projects.Dashy_Net_Web>("webfrontend")

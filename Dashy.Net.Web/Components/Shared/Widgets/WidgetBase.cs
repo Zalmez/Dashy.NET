@@ -2,6 +2,7 @@
 using Dashy.Net.Web.Services;
 using Dashy.Net.Web.Helpers;
 using Microsoft.AspNetCore.Components;
+using System.Text.Json;
 
 namespace Dashy.Net.Web.Components.Shared.Widgets;
 
@@ -41,11 +42,36 @@ public abstract class WidgetBase : ComponentBase, IDisposable
     /// <returns>The option value as a string, or null if not found.</returns>
     protected string? GetOption(string key)
     {
-        if (Item.Options is null) return null;
+        if (Item.Options is not JsonElement element || element.ValueKind != JsonValueKind.Object)
+            return null;
 
-        var dictKey = Item.Options.Keys.FirstOrDefault(k => k.Equals(key, StringComparison.OrdinalIgnoreCase));
+        if (TryGetPropertyIgnoreCase(element, key, out var prop))
+        {
+            return prop.ValueKind switch
+            {
+                JsonValueKind.String => prop.GetString(),
+                JsonValueKind.Number => prop.ToString(),
+                JsonValueKind.True => "true",
+                JsonValueKind.False => "false",
+                JsonValueKind.Null => null,
+                _ => prop.ToString()
+            };
+        }
+        return null;
+    }
 
-        return dictKey is not null ? Item.Options[dictKey]?.ToString() : null;
+    private static bool TryGetPropertyIgnoreCase(JsonElement element, string name, out JsonElement value)
+    {
+        foreach (var prop in element.EnumerateObject())
+        {
+            if (string.Equals(prop.Name, name, StringComparison.OrdinalIgnoreCase))
+            {
+                value = prop.Value;
+                return true;
+            }
+        }
+        value = default;
+        return false;
     }
 
     protected override void OnInitialized()

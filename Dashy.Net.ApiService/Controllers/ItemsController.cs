@@ -72,9 +72,12 @@ public class ItemsController(AppDbContext dbContext, ILogger<ItemsController> lo
 
     private static ItemVm MapToVm(DashboardItem dbItem)
     {
-        var options = string.IsNullOrWhiteSpace(dbItem.OptionsJson)
-            ? null
-            : JsonSerializer.Deserialize<Dictionary<string, object>>(dbItem.OptionsJson, _jsonOptions);
+        JsonElement? options = null;
+        if (!string.IsNullOrWhiteSpace(dbItem.OptionsJson))
+        {
+            using var doc = JsonDocument.Parse(dbItem.OptionsJson);
+            options = doc.RootElement.Clone();
+        }
 
         return new ItemVm(dbItem.Id, dbItem.Title, dbItem.Icon, dbItem.Widget, dbItem.SectionId, options);
     }
