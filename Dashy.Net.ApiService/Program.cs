@@ -1,6 +1,7 @@
 using Dashy.Net.ApiService.Services;
 using Dashy.Net.ApiService.Authorization;
 using Dashy.Net.Shared.Data;
+using Dashy.Net.Shared.Serialization;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -14,7 +15,11 @@ using System.IdentityModel.Tokens.Jwt;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(o =>
+    {
+        o.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonContext.Default);
+    });
 builder.AddServiceDefaults();
 var cnnectionString = Environment.GetEnvironmentVariable("ConnectionStrings__dashy");
 builder.Services.AddNpgsql<AppDbContext>(cnnectionString);
