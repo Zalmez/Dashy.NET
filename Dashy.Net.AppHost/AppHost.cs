@@ -23,7 +23,7 @@ var apiService = builder.AddProject<Projects.Dashy_Net_ApiService>("apiservice")
 builder.AddProject<Projects.Dashy_Net_Web>("webfrontend")
     .WithExternalHttpEndpoints()
     .WithHttpHealthCheck("/health")
-    //.WithEnvironment("auth_authority", authAuthority).WithEnvironment("auth_clientid", authClientId).WithEnvironment("auth_clientsecret", authClientSecret)
+    .WithEnvironment("auth_authority", authAuthority).WithEnvironment("auth_clientid", authClientId).WithEnvironment("auth_clientsecret", authClientSecret)
     .WithReference(apiService)
     .WaitFor(apiService);
 

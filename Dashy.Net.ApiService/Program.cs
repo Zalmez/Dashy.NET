@@ -81,7 +81,7 @@ if (!string.IsNullOrWhiteSpace(authAuthority) && !string.IsNullOrWhiteSpace(auth
     });
 }
 
-builder.Services.AddSingleton<Dashy.Net.ApiService.Services.ApiEditLockService>();
+builder.Services.AddSingleton<ApiEditLockService>();
 
 builder.Services.AddSingleton<IAuthorizationHandler>(provider => 
     new ConditionalAuthorizationHandler());
