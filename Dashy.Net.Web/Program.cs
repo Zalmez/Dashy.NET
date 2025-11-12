@@ -23,22 +23,22 @@ builder.Services.AddOutputCache();
 
 #region Dashy.Net required services
 builder.Services.AddHttpContextAccessor();
-//builder.Services.AddTransient<TokenHandler>();
+builder.Services.AddTransient<TokenHandler>();
 
 builder.Services.AddHttpClient<DashboardClient>(opts =>
 {
     opts.BaseAddress = new("https+http://apiservice");
-});//.AddHttpMessageHandler<TokenHandler>();
+}).AddHttpMessageHandler<TokenHandler>();
 
 builder.Services.AddHttpClient<WeatherClient>(opts =>
 {
     opts.BaseAddress = new("https+http://apiservice");
-});//.AddHttpMessageHandler<TokenHandler>();
+}).AddHttpMessageHandler<TokenHandler>();
 
 builder.Services.AddHttpClient<EditLocksClient>(opts =>
 {
     opts.BaseAddress = new("https+http://apiservice");
-});//.AddHttpMessageHandler<TokenHandler>();
+}).AddHttpMessageHandler<TokenHandler>();
 
 builder.Services.AddScoped<ThemeService>();
 builder.Services.AddScoped<ViewOptionsService>();
@@ -53,13 +53,13 @@ builder.Services.AddSingleton<IVersionService, VersionService>();
 builder.Services.AddHttpClient("ApiService", opts =>
 {
     opts.BaseAddress = new("https+http://apiservice");
-});//.AddHttpMessageHandler<TokenHandler>();
+}).AddHttpMessageHandler<TokenHandler>();
 
 builder.Services.AddTransient<EventSubscriptionManager>();
 builder.Services.AddHttpClient<AppSettingsClient>(opts =>
 {
     opts.BaseAddress = new("https+http://apiservice");
-});//.AddHttpMessageHandler<TokenHandler>();
+}).AddHttpMessageHandler<TokenHandler>();
 #endregion
 
 
