@@ -7,7 +7,7 @@
 @inject WidgetRegistryService WidgetRegistry
 @inject FileStorageService FileStorageService
 
-<EditForm Model="@EditModel" OnValidSubmit="@HandleValidSubmit">
+<EditForm Model="@EditModel" FormName="@FormName" OnValidSubmit="@HandleValidSubmit">
     <DataAnnotationsValidator />
 
     <div class="form-group">
@@ -82,6 +82,10 @@
                         <option value="24-hour">24-Hour</option>
                         <option value="12-hour">12-Hour</option>
                     </InputSelect>
+                </div>
+                <div class="form-group">
+                    <InputCheckbox id="hide-title" class="form-check-input" @bind-Value="EditModel.HideTitle" />
+                    <label for="hide-title" class="form-check-label" style="margin-left: .5rem;">Hide title</label>
                 </div>
                 break;
 
@@ -184,6 +188,8 @@
     private string? _uploadStatus;
     private bool _uploadSuccess = false;
 
+    private string FormName => $"item-editor-{(EditModel?.Id > 0 ? EditModel.Id.ToString() : $"new-{EditModel?.SectionId}")}";
+
     protected override void OnInitialized()
     {
         _availableWidgets = WidgetRegistry.AvailableWidgets;
@@ -220,13 +226,14 @@
                 }
                 if (!string.IsNullOrEmpty(EditModel.LinkTarget))
                 {
-                    EditModel.Options["linkTarget"] = EditModel.LinkTarget;
+                    EditModel.Options["target"] = EditModel.LinkTarget;
                 }
                 break;
 
             case "clock":
                 EditModel.Options["timezone"] = EditModel.Timezone ?? "UTC";
                 EditModel.Options["format"] = EditModel.TimeFormat ?? "24-hour";
+                EditModel.Options["hideTitle"] = EditModel.HideTitle;
                 break;
 
             case "weather":

@@ -7,90 +7,63 @@
 @implements IDisposable
 
 <div class="item-card-wrapper rss-widget @GetItemSizeClass()" data-widget-type="RssWidget">
-    @if (ViewOptions.IsEditMode)
-    {
-        <div class="item-edit-controls">
-            <button class="edit-btn" title="Edit Item" @onclick="OnEditClick"><i class="fas fa-pencil-alt"></i></button>
-            <button class="delete-btn" title="Delete Item" @onclick="OnDeleteClick"><i
-                    class="fas fa-trash-alt"></i></button>
-        </div>
-    }
-    <div class="item-card @GetItemSizeClass()">
-        <div class="item-icon">
-            @if (!string.IsNullOrWhiteSpace(Item.Icon))
-            {
-                @if (Item.Icon.StartsWith("/") || Item.Icon.StartsWith("http"))
-                {
-                    <img src="@Item.Icon" alt="@Item.Title" class="item-img-icon" />
-                }
-                else
-                {
-                    <i class="@Item.Icon"></i>
-                }
-            }
-        </div>
-        <div class="item-details">
-            @switch (ViewOptions.CurrentItemSize)
-            {
-                case ItemSize.Small:
-                    <ul class="rss-feed-items">
-                        @foreach (var feedItem in _rssFeedItems)
-                        {
-                            <li>
-                                <div class="rss-item-header">
-                                    <i class="@Item.Icon"></i>
-                                    <h6>@feedItem.Title</h6>
-                                </div>
-                                <a href="@feedItem.Link" target="_blank" rel="noopener noreferrer"
-                                    class="rss-continue-reading">Continue Reading <i
-                                        class="fa-solid fa-arrow-up-right-from-square"></i></a>
-                            </li>
-                        }
-                    </ul>
-                    break;
+    <WidgetChrome Title="@Item.Title"
+                  Icon="@Item.Icon"
+                  SizeClass="@GetItemSizeClass()"
+                  ColorClass=""
+                  IsEditMode="@ViewOptions.IsEditMode"
+                  OnEdit="OnEditClick"
+                  OnDelete="OnDeleteClick">
+        @switch (ViewOptions.CurrentItemSize)
+        {
+            case ItemSize.Small:
+                <ul class="rss-feed-items">
+                    @foreach (var feedItem in _rssFeedItems)
+                    {
+                        <li>
+                            <div class="rss-item-header">
+                                <h6>@feedItem.Title</h6>
+                            </div>
+                            <a href="@feedItem.Link" target="_blank" rel="noopener noreferrer" class="rss-continue-reading">Continue Reading <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                        </li>
+                    }
+                </ul>
+                break;
 
-                case ItemSize.Medium:
-                    <ul class="rss-feed-items rss-grid">
-                        @foreach (var feedItem in _rssFeedItems)
-                        {
-                            <li>
-                                <div class="rss-item-header">
-                                    <i class="@Item.Icon"></i>
-                                    <h5>@feedItem.Title</h5>
-                                </div>
-                                <p class="rss-publish-date">@feedItem.PublishDate.ToString("ddd, MMM dd yyyy")</p>
-                                <p class="rss-description">@feedItem.Description.Substring(0, Math.Min(feedItem.Description.Length,
-                                                            100))...</p>
-                    <a href="@feedItem.Link" target="_blank" rel="noopener noreferrer"
-                        class="rss-continue-reading">Continue Reading <i
-                            class="fa-solid fa-arrow-up-right-from-square"></i></a>
-                </li>
-                                }
-                    </ul>
-                    break;
+            case ItemSize.Medium:
+                <ul class="rss-feed-items rss-grid">
+                    @foreach (var feedItem in _rssFeedItems)
+                    {
+                        <li>
+                            <div class="rss-item-header">
+                                <h5>@feedItem.Title</h5>
+                            </div>
+                            <p class="rss-publish-date">@feedItem.PublishDate.ToString("ddd, MMM dd yyyy")</p>
+                            <p class="rss-description">@feedItem.Description.Substring(0, Math.Min(feedItem.Description.Length, 100))...</p>
+                            <a href="@feedItem.Link" target="_blank" rel="noopener noreferrer" class="rss-continue-reading">Continue Reading <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                        </li>
+                    }
+                </ul>
+                break;
 
-                case ItemSize.Large:
-                    <ul class="rss-feed-items">
-                        @foreach (var feedItem in _rssFeedItems)
-                        {
-                            <li>
-                                <div class="rss-item-header">
-                                    <i class="@Item.Icon"></i>
-                                    <h4>@feedItem.Title</h4>
-                                </div>
-                                <p class="rss-publish-date">@feedItem.PublishDate.ToString("ddd, MMM dd yyyy")</p>
-                                <p class="rss-description">@feedItem.Description</p>
-                                <a href="@feedItem.Link" target="_blank" rel="noopener noreferrer"
-                                    class="rss-continue-reading">Continue Reading <i
-                                        class="fa-solid fa-arrow-up-right-from-square"></i></a>
-                                <hr class="rss-item-separator" />
-                            </li>
-                        }
-                    </ul>
-                    break;
-            }
-        </div>
-    </div>
+            case ItemSize.Large:
+                <ul class="rss-feed-items">
+                    @foreach (var feedItem in _rssFeedItems)
+                    {
+                        <li>
+                            <div class="rss-item-header">
+                                <h4>@feedItem.Title</h4>
+                            </div>
+                            <p class="rss-publish-date">@feedItem.PublishDate.ToString("ddd, MMM dd yyyy")</p>
+                            <p class="rss-description">@feedItem.Description</p>
+                            <a href="@feedItem.Link" target="_blank" rel="noopener noreferrer" class="rss-continue-reading">Continue Reading <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                            <hr class="rss-item-separator" />
+                        </li>
+                    }
+                </ul>
+                break;
+        }
+    </WidgetChrome>
 </div>
 
 @code {
@@ -104,9 +77,7 @@
     protected override async Task OnInitializedAsync()
     {
         base.OnInitialized();
-        
         _httpClient.Timeout = TimeSpan.FromSeconds(10);
-        
         await LoadRssFeedItems();
         StartAutoRefresh();
     }
@@ -114,7 +85,7 @@
     private async Task LoadRssFeedItems()
     {
         _rssFeedItems = await GetRssFeedItems();
-        Logger.LogInformation($"Loaded {_rssFeedItems.Count()} RSS feed items from {GetOption("FeedUrl")}");
+        Logger.LogInformation($"Loaded {@_rssFeedItems.Count()} RSS feed items from {GetOption("FeedUrl")}");
         if (!IsDisposed)
         {
             await InvokeAsync(StateHasChanged);
@@ -129,14 +100,8 @@
             {
                 if (!IsDisposed)
                 {
-                    try
-                    {
-                        await LoadRssFeedItems();
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.LogError(ex, "Error during RSS feed refresh");
-                    }
+                    try { await LoadRssFeedItems(); }
+                    catch (Exception ex) { Logger.LogError(ex, "Error during RSS feed refresh"); }
                 }
             }, null, TimeSpan.FromMinutes(refreshIntervalMinutes), TimeSpan.FromMinutes(refreshIntervalMinutes));
         }
@@ -145,18 +110,12 @@
     private async Task<IEnumerable<RssFeedItem>> GetRssFeedItems()
     {
         var feedUrl = GetOption("FeedUrl");
-        if (string.IsNullOrWhiteSpace(feedUrl))
-        {
-            Logger.LogWarning("FeedUrl is not set for RssWidget.");
-            return Enumerable.Empty<RssFeedItem>();
-        }
-        
+        if (string.IsNullOrWhiteSpace(feedUrl)) { Logger.LogWarning("FeedUrl is not set for RssWidget."); return Enumerable.Empty<RssFeedItem>(); }
         var feedItems = new List<RssFeedItem>();
         try
         {
             var response = await _httpClient.GetStringAsync(feedUrl);
             if (IsDisposed) return Enumerable.Empty<RssFeedItem>();
-            
             var xmlDoc = new XmlDocument();
             xmlDoc.LoadXml(response);
             var items = xmlDoc.SelectNodes("//item");
@@ -165,8 +124,7 @@
                 var count = 0;
                 foreach (XmlNode item in items)
                 {
-                    if (count >= maxItems)
-                        break;
+                    if (count >= maxItems) break;
                     count++;
                     var titleNode = item.SelectSingleNode("title");
                     var linkNode = item.SelectSingleNode("link");
@@ -178,62 +136,30 @@
                             Title = HtmlDecode(StripHtml(titleNode.InnerText)),
                             Link = linkNode.InnerText,
                             Description = HtmlDecode(StripHtml(descriptionNode?.InnerText ?? string.Empty)),
-                            PublishDate = DateTime.TryParse(item.SelectSingleNode("pubDate")?.InnerText, out var pubDate) ? pubDate :
-                        DateTime.MinValue
+                            PublishDate = DateTime.TryParse(item.SelectSingleNode("pubDate")?.InnerText, out var pubDate) ? pubDate : DateTime.MinValue
                         });
                     }
                 }
             }
-            if (feedItems.Count == 0)
-                Logger.LogWarning($"No items found in RSS feed from {feedUrl}");
+            if (feedItems.Count == 0) Logger.LogWarning($"No items found in RSS feed from {feedUrl}");
             return feedItems;
         }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, $"Failed to fetch RSS feed from {feedUrl}");
-            return Enumerable.Empty<RssFeedItem>();
-        }
+        catch (Exception ex) { Logger.LogError(ex, $"Failed to fetch RSS feed from {feedUrl}"); return Enumerable.Empty<RssFeedItem>(); }
     }
 
-    private static string StripHtml(string input)
-    {
-        if (string.IsNullOrEmpty(input)) return string.Empty;
-        return System.Text.RegularExpressions.Regex.Replace(input, "<.*?>", string.Empty).Trim();
-    }
-
-    private static string HtmlDecode(string input)
-    {
-        if (string.IsNullOrEmpty(input)) return string.Empty;
-        return System.Net.WebUtility.HtmlDecode(input);
-    }
+    private static string StripHtml(string input) => string.IsNullOrEmpty(input) ? string.Empty : System.Text.RegularExpressions.Regex.Replace(input, "<.*?>", string.Empty).Trim();
+    private static string HtmlDecode(string input) => string.IsNullOrEmpty(input) ? string.Empty : System.Net.WebUtility.HtmlDecode(input);
 
     private async Task OnDeleteClick()
     {
         var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{Item.Title}'?");
         if (IsDisposed) return;
-        if (confirmed)
-        {
-            await OnItemDeleted.InvokeAsync(Item);
-        }
+        if (confirmed) { await OnItemDeleted.InvokeAsync(Item); }
     }
 
-    private async Task OnEditClick()
-    {
-        await OnItemEdited.InvokeAsync();
-    }
+    private async Task OnEditClick() { await OnItemEdited.InvokeAsync(); }
 
-    private class RssFeedItem
-    {
-        public string Title { get; set; } = string.Empty;
-        public string Link { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
-        public DateTime PublishDate { get; set; } = DateTime.MinValue;
-    }
+    private class RssFeedItem { public string Title { get; set; } = string.Empty; public string Link { get; set; } = string.Empty; public string Description { get; set; } = string.Empty; public DateTime PublishDate { get; set; } = DateTime.MinValue; }
 
-    public override void Dispose()
-    {
-        _refreshTimer?.Dispose();
-        _httpClient?.Dispose();
-        base.Dispose();
-    }
+    public override void Dispose() { _refreshTimer?.Dispose(); _httpClient?.Dispose(); base.Dispose(); }
 }

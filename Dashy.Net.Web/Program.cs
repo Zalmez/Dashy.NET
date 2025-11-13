@@ -111,7 +111,6 @@ if (!string.IsNullOrWhiteSpace(authAuthority) && !string.IsNullOrWhiteSpace(auth
         options.SlidingExpiration = true;
         options.ReturnUrlParameter = "ReturnUrl";
     });
-
 }
 else
 {

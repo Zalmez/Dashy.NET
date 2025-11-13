@@ -1,0 +1,17 @@
+:root {
+  /* Shared semantic tokens consumed across themes */
+  --focus-ring: #2563eb;
+  --hover-bg: rgba(0,0,0,0.04);
+  --surface-1: #fff;
+  --surface-2: #f3f4f6;
+  --accent-border: #4f46e5;
+}
+
+/* These CSS variables are meant to be overridden by theme packs */
+body.theme-dark {
+  --focus-ring: #93c5fd;
+  --hover-bg: rgba(255,255,255,0.08);
+  --surface-1: rgba(255,255,255,0.08);
+  --surface-2: rgba(255,255,255,0.14);
+  --accent-border: #6366f1;
+}

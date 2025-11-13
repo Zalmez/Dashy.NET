@@ -1,0 +1,118 @@
+@namespace Dashy.Net.Web.Components.Shared.Widgets
+@inherits LayoutComponentBase
+
+<div class="widget-card @ColorClass @SizeClass" @onclick="HandleClick" @onclick:preventDefault="(DisableClickWhileEdit && IsEditMode)">
+    @if (IsEditMode)
+    {
+        <div class="item-edit-controls">
+            @if (OnEdit.HasDelegate)
+            {
+                <button type="button" class="edit-btn" title="Edit Item" @onclick="HandleEdit" @onclick:stopPropagation="true">
+                    <i class="fas fa-pencil-alt" aria-hidden="true"></i>
+                    <span class="visually-hidden">Edit</span>
+                </button>
+            }
+            @if (OnDelete.HasDelegate)
+            {
+                <button type="button" class="delete-btn" title="Delete Item" @onclick="HandleDelete" @onclick:stopPropagation="true">
+                    <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                    <span class="visually-hidden">Delete</span>
+                </button>
+            }
+        </div>
+    }
+    <div class="widget-content">
+        <div class="widget-body @BodyClass">
+            @if (!string.IsNullOrWhiteSpace(Title) || !string.IsNullOrWhiteSpace(Icon))
+            {
+                <div class="widget-header">
+                    @if (!string.IsNullOrWhiteSpace(Icon))
+                    {
+                        <div class="widget-icon">
+                            @if (Icon!.StartsWith("/") || Icon!.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <img src="@Icon" alt="@Title" />
+                            }
+                            else
+                            {
+                                <i class="@Icon" aria-hidden="true"></i>
+                            }
+                        </div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(Title))
+                    {
+                        <div class="widget-title">@Title</div>
+                    }
+                </div>
+            }
+
+            @if (IsLoading)
+            {
+                @if (LoadingContent is not null)
+                {
+                    @LoadingContent
+                }
+                else
+                {
+                    <div class="widget-status status-loading"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i><span>Loading...</span></div>
+                }
+            }
+            else if (HasError)
+            {
+                @if (ErrorContent is not null)
+                {
+                    @ErrorContent
+                }
+                else
+                {
+                    <div class="widget-status status-error"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i><span>@(ErrorMessage ?? "Something went wrong")</span></div>
+                }
+            }
+            else if (IsEmpty)
+            {
+                @if (EmptyContent is not null)
+                {
+                    @EmptyContent
+                }
+                else
+                {
+                    <div class="widget-status status-empty"><i class="fas fa-inbox" aria-hidden="true"></i><span>No data</span></div>
+                }
+            }
+            else
+            {
+                @ChildContent
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public string SizeClass { get; set; } = string.Empty;
+    [Parameter] public string ColorClass { get; set; } = string.Empty;
+    [Parameter] public bool IsEditMode { get; set; }
+    [Parameter] public bool DisableClickWhileEdit { get; set; } = true;
+    [Parameter] public bool ShowHeader { get; set; } = false; // retained for compatibility, header now renders inline
+    [Parameter] public string BodyClass { get; set; } = string.Empty;
+
+    // Standard state slots
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public bool HasError { get; set; }
+    [Parameter] public string? ErrorMessage { get; set; }
+    [Parameter] public bool IsEmpty { get; set; }
+    [Parameter] public RenderFragment? LoadingContent { get; set; }
+    [Parameter] public RenderFragment? ErrorContent { get; set; }
+    [Parameter] public RenderFragment? EmptyContent { get; set; }
+
+    [Parameter] public EventCallback OnEdit { get; set; }
+    [Parameter] public EventCallback OnDelete { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private Task HandleEdit() => OnEdit.HasDelegate ? OnEdit.InvokeAsync() : Task.CompletedTask;
+    private Task HandleDelete() => OnDelete.HasDelegate ? OnDelete.InvokeAsync() : Task.CompletedTask;
+    private Task HandleClick() => OnClick.HasDelegate ? OnClick.InvokeAsync() : Task.CompletedTask;
+}

@@ -1,6 +1,7 @@
+/* Align RSS styles to WidgetChrome */
 .item-card:hover {
   transform: none;
-  background-color: var(--card-background-color);
+  background-color: var(--surface-1);
   border-color: var(--border-color);
 }
 
@@ -10,12 +11,41 @@
 
 ul {
   list-style: none;
-}
-a:hover {
-  text-decoration: underline;
-  color: darkblue;
+  padding-left: 0;
+  margin: 0;
 }
 
-.rss-item-header.h6 {
-  font-size: 0.5rem;
+a:hover {
+  text-decoration: underline;
+  color: inherit;
+}
+
+.rss-item-header h6,
+.rss-item-header h5,
+.rss-item-header h4 {
+  margin: 0;
+}
+
+.rss-feed-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.rss-feed-items.rss-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.rss-publish-date {
+  color: var(--subtle-text-color);
+  margin: 0.15rem 0;
+}
+
+.rss-item-separator {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  opacity: 0.4;
+  margin: 0.35rem 0;
 }

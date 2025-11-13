@@ -2,28 +2,24 @@
 @inject WeatherClient WeatherClient
 @inject IJSRuntime JSRuntime
 
-<div class="glass-tile @GetTileColorClass() @GetItemSizeClass()" @onclick:preventDefault="ViewOptions.IsEditMode">
-    @if (ViewOptions.IsEditMode)
+<WidgetChrome Title=""  
+              Icon="" 
+              SizeClass="@GetItemSizeClass()"
+              ColorClass="@GetTileColorClass()"
+              IsEditMode="@ViewOptions.IsEditMode"
+              OnEdit="OnEditClick"
+              OnDelete="OnDeleteClick">
+    @if (_isLoading)
     {
-        <div class="item-edit-controls">
-            <button class="edit-btn" title="Edit Item" @onclick="OnEditClick" @onclick:stopPropagation="true"><i
-                    class="fas fa-pencil-alt"></i></button>
-            <button class="delete-btn" title="Delete Item" @onclick="OnDeleteClick" @onclick:stopPropagation="true"><i
-                    class="fas fa-trash-alt"></i></button>
+        <div class="weather-layout loading-state">
+            <div class="weather-icon"><span class="weather-emoji spinner"><i class="fas fa-spinner fa-spin"></i></span></div>
+            <div class="weather-details"><div class="tile-title">Loading weather...</div></div>
         </div>
     }
-
-    <div class="tile-content">
-        @if (_isLoading)
-        {
-            <div class="tile-icon">
-                <i class="fas fa-spinner fa-spin"></i>
-            </div>
-            <div class="tile-title">Loading weather...</div>
-        }
-        else if (_weather is not null)
-        {
-            <div class="tile-icon weather-icon">@GetWeatherIcon(_weather.WeatherCode)</div>
+    else if (_weather is not null)
+    {
+        <div class="weather-layout">
+            <div class="weather-icon"><span class="weather-emoji">@GetWeatherIcon(_weather.WeatherCode)</span></div>
             <div class="weather-details">
                 <div class="tile-title temperature">@_weather.Temperature.ToString("0.0")°@UnitSymbol</div>
                 @if (ViewOptions.CurrentItemSize == ItemSize.Large || ViewOptions.CurrentItemSize == ItemSize.Medium)
@@ -31,16 +27,16 @@
                     <div class="tile-description location">@LocationName</div>
                 }
             </div>
-        }
-        else
-        {
-            <div class="tile-icon">
-                <i class="fas fa-exclamation-triangle"></i>
-            </div>
-            <div class="tile-title error-message">@_errorMessage</div>
-        }
-    </div>
-</div>
+        </div>
+    }
+    else
+    {
+        <div class="weather-layout error-state">
+            <div class="weather-icon"><span class="weather-emoji error"><i class="fas fa-exclamation-triangle"></i></span></div>
+            <div class="weather-details"><div class="tile-title error-message">@_errorMessage</div></div>
+        </div>
+    }
+</WidgetChrome>
 
 @code {
     private CurrentWeather? _weather;

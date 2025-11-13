@@ -24,97 +24,110 @@
 @implements IDisposable
 <CascadingAuthenticationState>
 <div class="dashboard-layout @(_isHeaderVisible ? "" : "header-hidden")">
-    
     @if (_isHeaderVisible)
     {
-        <header class="main-header">
-        <div class="header-title-section">
-            <div style="display: flex; align-items: center; gap: 1rem;">
-                <img src="images/dashynet_logo_notext.png" alt="Dashy.NET Logo" class="header-logo" />
-                <div class="dashboard-title-dropdown" id="dashboard-title-dropdown">
-                    <button class="dropdown-btn" @onclick="ToggleDashboardDropdown" @onclick:stopPropagation="true">
-                        <h1 style="margin: 0; display: inline;">@(DashboardState.Config?.Title ?? "Dashy.NET")</h1>
-                        <i class="fas fa-chevron-down dropdown-arrow @(_isDashboardDropdownOpen ? "open" : "")"></i>
-                    </button>
-                    @if (_isDashboardDropdownOpen)
-                    {
-                        <div class="dropdown-menu">
-                            @if (_availableDashboards != null && _availableDashboards.Any())
-                            {
-                                @foreach (var dashboard in _availableDashboards)
+        <header class="main-header" role="banner">
+            <div class="header-title-section">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <img src="images/dashynet_logo_notext.png" alt="Dashy.NET Logo" class="header-logo" />
+                    <div class="dashboard-title-dropdown" id="dashboard-title-dropdown">
+                        <button class="dropdown-btn"
+                                type="button"
+                                aria-haspopup="true"
+                                aria-expanded="@_isDashboardDropdownOpen"
+                                aria-controls="dashboard-menu"
+                                @onclick="ToggleDashboardDropdown"
+                                @onclick:stopPropagation="true">
+                            <h1 style="margin: 0; display: inline;">@(DashboardState.Config?.Title ?? "Dashy.NET")</h1>
+                            <i class="fas fa-chevron-down dropdown-arrow @(_isDashboardDropdownOpen ? "open" : "")" aria-hidden="true"></i>
+                            <span class="visually-hidden">Toggle dashboard list</span>
+                        </button>
+                        @if (_isDashboardDropdownOpen)
+                        {
+                            <div class="dropdown-menu" id="dashboard-menu" role="menu" aria-label="Dashboards">
+                                @if (_availableDashboards != null && _availableDashboards.Any())
                                 {
-                                    <div class="dropdown-item @(dashboard.Id == DashboardState.Config?.Id ? "active" : "")" 
-                                         @onclick="() => NavigateToDashboard(dashboard.Id)">
-                                        <div class="dashboard-title">@dashboard.Title</div>
-                                        @if (!string.IsNullOrWhiteSpace(dashboard.Subtitle))
-                                        {
-                                            <div class="dashboard-subtitle">@dashboard.Subtitle</div>
-                                        }
-                                    </div>
+                                    @foreach (var dashboard in _availableDashboards)
+                                    {
+                                        <div class="dropdown-item @(dashboard.Id == DashboardState.Config?.Id ? "active" : "")"
+                                             role="menuitem"
+                                             tabindex="0"
+                                             @onclick="() => NavigateToDashboard(dashboard.Id)">
+                                            <div class="dashboard-title">@dashboard.Title</div>
+                                            @if (!string.IsNullOrWhiteSpace(dashboard.Subtitle))
+                                            {
+                                                <div class="dashboard-subtitle">@dashboard.Subtitle</div>
+                                            }
+                                        </div>
+                                    }
                                 }
-                            }
-                            else
-                            {
-                                <div class="dropdown-item disabled">No dashboards available</div>
-                            }
+                                else
+                                {
+                                    <div class="dropdown-item disabled" role="menuitem" aria-disabled="true">No dashboards available</div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="header-user-section" role="navigation" aria-label="Layout and view controls">
+                <div class="header-controls">
+                    <div class="control-group" aria-label="Layout selection">
+                        <span class="control-label">Layout</span>
+                        <div class="button-group" role="group" aria-label="Layout options">
+                            <button type="button"
+                                    class="control-btn @(IsLayout(LayoutOrientation.Auto) ? "active" : "")"
+                                    title="Auto Layout"
+                                    aria-pressed="@IsLayout(LayoutOrientation.Auto)"
+                                    @onclick="() => SetLayout(LayoutOrientation.Auto)">
+                                <i class="fas fa-th-large" aria-hidden="true"></i>
+                                <span class="visually-hidden">Auto layout</span>
+                            </button>
+                            <button type="button"
+                                    class="control-btn @(IsLayout(LayoutOrientation.Vertical) ? "active" : "")"
+                                    title="Vertical Layout"
+                                    aria-pressed="@IsLayout(LayoutOrientation.Vertical)"
+                                    @onclick="() => SetLayout(LayoutOrientation.Vertical)">
+                                <i class="fas fa-bars" aria-hidden="true"></i>
+                                <span class="visually-hidden">Vertical layout</span>
+                            </button>
                         </div>
-                    }
-                </div>
-                @* <div class="header-search">
-                    <SearchBar />
-                </div> *@
-            </div>
-        </div>
-        <div class="header-user-section">
-            <div class="header-controls">
-                <div class="control-group">
-                    <span class="control-label">Layout</span>
-                    <div class="button-group">
-                        <button type="button" 
-                                class="control-btn @(IsLayout(LayoutOrientation.Auto) ? "active" : "")" 
-                                title="Auto Layout" 
-                                @onclick="() => SetLayout(LayoutOrientation.Auto)">
-                            <i class="fas fa-th-large"></i>
-                        </button>
-                        <button type="button" 
-                                class="control-btn @(IsLayout(LayoutOrientation.Vertical) ? "active" : "")" 
-                                title="Vertical Layout" 
-                                @onclick="() => SetLayout(LayoutOrientation.Vertical)">
-                            <i class="fas fa-bars"></i>
-                        </button>
+                    </div>
+                    <div class="control-group" aria-label="Item size selection">
+                        <span class="control-label">Size</span>
+                        <div class="button-group" role="group" aria-label="Item size options">
+                            <button type="button"
+                                    class="control-btn @(IsItemSize(ItemSize.Small) ? "active" : "")"
+                                    title="Small Items"
+                                    aria-pressed="@IsItemSize(ItemSize.Small)"
+                                    @onclick="() => SetItemSize(ItemSize.Small)">
+                                <i class="fas fa-compress" aria-hidden="true"></i>
+                                <span class="visually-hidden">Small items</span>
+                            </button>
+                            <button type="button"
+                                    class="control-btn @(IsItemSize(ItemSize.Medium) ? "active" : "")"
+                                    title="Medium Items"
+                                    aria-pressed="@IsItemSize(ItemSize.Medium)"
+                                    @onclick="() => SetItemSize(ItemSize.Medium)">
+                                <i class="fas fa-grip-horizontal" aria-hidden="true"></i>
+                                <span class="visually-hidden">Medium items</span>
+                            </button>
+                            <button type="button"
+                                    class="control-btn @(IsItemSize(ItemSize.Large) ? "active" : "")"
+                                    title="Large Items"
+                                    aria-pressed="@IsItemSize(ItemSize.Large)"
+                                    @onclick="() => SetItemSize(ItemSize.Large)">
+                                <i class="fas fa-expand" aria-hidden="true"></i>
+                                <span class="visually-hidden">Large items</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="control-group theme-toggle-group" aria-label="Theme toggle">
+                        <ThemeToggleButton IsLightMode="isLightMode" OnToggle="HandleThemeToggle" />
                     </div>
                 </div>
-                
-                <!-- Item Size Controls -->
-                <div class="control-group">
-                    <span class="control-label">Size</span>
-                    <div class="button-group">
-                        <button type="button" 
-                                class="control-btn @(IsItemSize(ItemSize.Small) ? "active" : "")" 
-                                title="Small Items" 
-                                @onclick="() => SetItemSize(ItemSize.Small)">
-                            <i class="fas fa-compress"></i>
-                        </button>
-                        <button type="button" 
-                                class="control-btn @(IsItemSize(ItemSize.Medium) ? "active" : "")" 
-                                title="Medium Items" 
-                                @onclick="() => SetItemSize(ItemSize.Medium)">
-                            <i class="fas fa-grip-horizontal"></i>
-                        </button>
-                        <button type="button" 
-                                class="control-btn @(IsItemSize(ItemSize.Large) ? "active" : "")" 
-                                title="Large Items" 
-                                @onclick="() => SetItemSize(ItemSize.Large)">
-                            <i class="fas fa-expand"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <ThemeToggleButton IsLightMode="isLightMode" OnToggle="HandleThemeToggle" />
-                </div>
             </div>
-        </div>
-    </header>
+        </header>
     }
 
     <!-- Hidden Header Logo for Wallboard Mode -->
@@ -125,7 +138,7 @@
         </div>
     }
 
-    <main class="content">
+    <main class="content" role="main">
         @Body
     </main>
 
@@ -192,14 +205,10 @@
             <InputFile id="logo-upload" class="form-control" OnChange="HandleLogoFileSelected" accept=".png,.jpg,.jpeg,.gif" />
             <small class="form-text text-muted">Accepted formats: PNG, JPG, GIF (max 10MB)</small>
         </div>
-        
         @if (!string.IsNullOrEmpty(_logoUploadError))
         {
-            <div class="alert alert-danger">
-                @_logoUploadError
-            </div>
+            <div class="alert alert-danger">@_logoUploadError</div>
         }
-        
         @if (!string.IsNullOrEmpty(_selectedLogoPreview))
         {
             <div class="form-group">
@@ -209,7 +218,6 @@
                 </div>
             </div>
         }
-        
         <div class="form-actions">
             <button type="button" class="btn btn-secondary" @onclick="CloseCustomLogoModal">Cancel</button>
             @if (_selectedLogoFile != null)
@@ -239,14 +247,10 @@
             <InputFile id="background-upload" class="form-control" OnChange="HandleBackgroundFileSelected" accept=".png,.jpg,.jpeg,.gif" />
             <small class="form-text text-muted">Accepted formats: PNG, JPG, GIF (max 10MB). Recommended: 1920x1080 or higher resolution</small>
         </div>
-        
         @if (!string.IsNullOrEmpty(_backgroundUploadError))
         {
-            <div class="alert alert-danger">
-                @_backgroundUploadError
-            </div>
+            <div class="alert alert-danger">@_backgroundUploadError</div>
         }
-        
         @if (!string.IsNullOrEmpty(_selectedBackgroundPreview))
         {
             <div class="form-group">
@@ -256,7 +260,6 @@
                 </div>
             </div>
         }
-        
         <div class="form-actions">
             <button type="button" class="btn btn-secondary" @onclick="CloseBackgroundUploadModal">Cancel</button>
             @if (_selectedBackgroundFile != null)
@@ -283,40 +286,40 @@
     <div class="fab-container @(_isFabMenuOpen ? "open" : "")">
         @if(_isFabMenuOpen)
         {
-            <div class="fab-menu">
-                <button class="fab-menu-item" @onclick="OpenCreateDashboardModal">
-                    <i class="fas fa-plus"></i>
+            <div class="fab-menu" role="menu" aria-label="Quick actions">
+                <button class="fab-menu-item" type="button" @onclick="OpenCreateDashboardModal">
+                    <i class="fas fa-plus" aria-hidden="true"></i>
                     <span class="fab-menu-item-label">New Dashboard</span>
                 </button>
-                <button class="fab-menu-item" @onclick="OpenCustomLogoModal">
-                    <i class="fas fa-image"></i>
+                <button class="fab-menu-item" type="button" @onclick="OpenCustomLogoModal">
+                    <i class="fas fa-image" aria-hidden="true"></i>
                     <span class="fab-menu-item-label">Upload Logo</span>
                 </button>
-                <button class="fab-menu-item" @onclick="OpenBackgroundUploadModal">
-                    <i class="fas fa-mountain"></i>
+                <button class="fab-menu-item" type="button" @onclick="OpenBackgroundUploadModal">
+                    <i class="fas fa-mountain" aria-hidden="true"></i>
                     <span class="fab-menu-item-label">Background Image</span>
                 </button>
-                <button class="fab-menu-item" @onclick="ToggleHeaderVisibility">
-                    <i class="fas @(_isHeaderVisible ? "fa-eye-slash" : "fa-eye")"></i>
+                <button class="fab-menu-item" type="button" @onclick="ToggleHeaderVisibility">
+                    <i class="fas @(_isHeaderVisible ? "fa-eye-slash" : "fa-eye")" aria-hidden="true"></i>
                     <span class="fab-menu-item-label">@(_isHeaderVisible ? "Hide Header" : "Show Header")</span>
                 </button>
-                <button class="fab-menu-item" @onclick="OpenSettingsModal">
-                    <i class="fas fa-user-cog"></i>
+                <button class="fab-menu-item" type="button" @onclick="OpenSettingsModal">
+                    <i class="fas fa-user-cog" aria-hidden="true"></i>
                     <span class="fab-menu-item-label">User Settings</span>
                 </button>
-                <button class="fab-menu-item" @onclick="OpenSettingsModal">
-                    <i class="fas fa-palette"></i>
+                <button class="fab-menu-item" type="button" @onclick="OpenSettingsModal">
+                    <i class="fas fa-palette" aria-hidden="true"></i>
                     <span class="fab-menu-item-label">App Settings</span>
                 </button>
-                <button class="fab-menu-item" @onclick="ToggleEditMode">
-                    <i class="fas fa-pencil-alt"></i>
+                <button class="fab-menu-item" type="button" @onclick="ToggleEditMode">
+                    <i class="fas fa-pencil-alt" aria-hidden="true"></i>
                     <span class="fab-menu-item-label">Toggle Edit Mode</span>
                 </button>
             </div>
-
         }
-        <button class="fab-main-button" @onclick="ToggleFabMenu" title="Open Settings">
-            <i class="fas @(_isFabMenuOpen ? "fa-times" : "fa-cog")"></i>
+        <button class="fab-main-button" type="button" @onclick="ToggleFabMenu" title="Open Settings" aria-haspopup="true" aria-expanded="@_isFabMenuOpen">
+            <i class="fas @(_isFabMenuOpen ? "fa-times" : "fa-cog")" aria-hidden="true"></i>
+            <span class="visually-hidden">Toggle quick actions menu</span>
         </button>
     </div>
 
@@ -327,7 +330,7 @@
         </div>
     }
 
-    <footer class="dashboard-footer" style="position: fixed; left:0;bottom:0;width:100%;text-align:center;">
+    <footer class="dashboard-footer" style="position: fixed; left:0;bottom:0;width:100%;text-align:center;" role="contentinfo">
         <div>
             <strong>Version:</strong> @VersionService.GetVersion() &nbsp;|&nbsp;
             <strong>License:</strong> GNU Affero General Public License &nbsp;|&nbsp;
@@ -441,6 +444,7 @@
             var savedThemeClass = await JSRuntime.InvokeAsync<string?>("getFromLocalStorage", "dashy-theme");
             var initialThemeClass = savedThemeClass ?? ThemeService.CurrentTheme.CssClass;
             ThemeService.SetCurrentThemeWithoutNotification(initialThemeClass);
+            await ApplyThemePackAsync();
             OnThemeChangedHandler();
             
             await JSRuntime.InvokeVoidAsync("addClickOutsideHandler", "dashboard-title-dropdown", DotNetObjectReference.Create(this));
@@ -451,6 +455,21 @@
                 await ApplyBackgroundImage();
             }
         }
+    }
+
+    private async Task ApplyThemePackAsync()
+    {
+        try
+        {
+            var href = ThemeService.CurrentTheme.CssHref;
+            if (!string.IsNullOrWhiteSpace(href))
+            {
+                // mark current href so setBodyClass can also apply it
+                await JSRuntime.InvokeVoidAsync("setThemePack", href);
+                await JSRuntime.InvokeVoidAsync("document.body.setAttribute", "data-theme-href", href);
+            }
+        }
+        catch { }
     }
 
     private async Task ReloadDashboard()
@@ -591,8 +610,9 @@
         {
             await JSRuntime.InvokeVoidAsync("saveToLocalStorage", "dashy-theme", newThemeClass);
             ThemeService.SetTheme(newThemeClass);
+            await ApplyThemePackAsync();
         }
-        catch (ObjectDisposedException) {  }
+        catch (ObjectDisposedException) { }
         catch (InvalidOperationException) { }
     }
 

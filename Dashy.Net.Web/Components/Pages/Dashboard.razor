@@ -177,6 +177,17 @@ else
         
         await ViewOptions.InitializeAsync(dashboardId);
         
+        // Responsive density: default small on small screens
+        try
+        {
+            var width = await JSRuntime.InvokeAsync<int>("getViewportWidth");
+            if (width > 0 && width < 640 && ViewOptions.CurrentItemSize != ItemSize.Small)
+            {
+                ViewOptions.SetItemSize(ItemSize.Small);
+            }
+        }
+        catch { }
+        
         if (DashboardState.Config?.Id != dashboardId)
         {
             var config = await DashboardClient.GetConfigAsync(dashboardId);

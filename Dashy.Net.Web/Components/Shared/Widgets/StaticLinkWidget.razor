@@ -4,50 +4,25 @@
 @inject NavigationManager NavManager
 @implements IDisposable
 
-<div class="glass-tile @GetTileColorClass() @GetItemSizeClass()" @onclick="HandleTileClick"
-    @onclick:preventDefault="ViewOptions.IsEditMode">
-    @if (ViewOptions.IsEditMode)
+<WidgetChrome Title="@Item.Title"
+              Icon="@Item.Icon"
+              SizeClass="@GetItemSizeClass()"
+              ColorClass="@GetTileColorClass()"
+              IsEditMode="@ViewOptions.IsEditMode"
+              OnEdit="OnEditClick"
+              OnDelete="OnDeleteClick"
+              OnClick="HandleTileClick">
+    @if (ViewOptions.CurrentItemSize == ItemSize.Large && !string.IsNullOrWhiteSpace(Description))
     {
-        <div class="item-edit-controls">
-            <button class="edit-btn" title="Edit Item" @onclick="OnEditClick" @onclick:stopPropagation="true"><i
-                    class="fas fa-pencil-alt"></i></button>
-            <button class="delete-btn" title="Delete Item" @onclick="OnDeleteClick" @onclick:stopPropagation="true"><i
-                    class="fas fa-trash-alt"></i></button>
-        </div>
+        <div class="tile-description">@Description</div>
     }
-
-    <div class="tile-content">
-        <div class="tile-icon">
-            @if (!string.IsNullOrWhiteSpace(Item.Icon))
-            {
-                @if (Item.Icon.StartsWith("/") || Item.Icon.StartsWith("http"))
-                {
-                    <img src="@Item.Icon" alt="@Item.Title" />
-                }
-                else
-                {
-                    <i class="@Item.Icon"></i>
-                }
-            }
-        </div>
-        <div class="tile-title">@Item.Title</div>
-        @if (ViewOptions.CurrentItemSize == ItemSize.Large && !string.IsNullOrWhiteSpace(Description))
-        {
-            <div class="tile-description">@Description</div>
-        }
-    </div>
-</div>
+</WidgetChrome>
 
 @code {
 
     private string? Url => GetOption("url");
     private string? Description => GetOption("Description");
     private string LinkTarget => GetOption("target") ?? "_self";
-
-    protected override void OnInitialized()
-    {
-        base.OnInitialized();
-    }
 
     private void HandleTileClick()
     {

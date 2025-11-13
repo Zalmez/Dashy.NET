@@ -1,18 +1,17 @@
 @using Dashy.Net.Shared.Models
 @inherits WidgetBase
+@inject IJSRuntime JSRuntime
+@inject ILogger<ClockWidget> Logger
 
-<div class="glass-tile @GetTileColorClass() @GetItemSizeClass()" @onclick:preventDefault="ViewOptions.IsEditMode">
-    @if (ViewOptions.IsEditMode)
-    {
-        <div class="item-edit-controls">
-            <button class="edit-btn" title="Edit Item" @onclick="EditWidget" @onclick:stopPropagation="true"><i
-                    class="fas fa-pencil-alt"></i></button>
-            <button class="delete-btn" title="Delete Item" @onclick="DeleteWidget" @onclick:stopPropagation="true"><i
-                    class="fas fa-trash-alt"></i></button>
-        </div>
-    }
-
-    <div class="tile-content clock-widget-container">
+<WidgetChrome Title="@(!HideTitle ? Item.Title : null)"
+              Icon="@Item.Icon"
+              SizeClass="@GetItemSizeClass()"
+              ColorClass="@GetTileColorClass()"
+              IsEditMode="@ViewOptions.IsEditMode"
+              ShowHeader="@(!HideTitle)"
+              OnEdit="OnEditClick"
+              OnDelete="OnDeleteClick">
+    <div class="clock-widget-container">
         @if (string.IsNullOrWhiteSpace(_errorMessage))
         {
             <div class="time-display">@_currentTime.ToString(TimeFormat)</div>
@@ -23,13 +22,10 @@
         }
         else
         {
-            <div class="tile-icon">
-                <i class="fas fa-exclamation-triangle"></i>
-            </div>
-            <div class="tile-title error-message">@_errorMessage</div>
+            <div class="widget-status status-error"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i><span>@_errorMessage</span></div>
         }
     </div>
-</div>
+</WidgetChrome>
 
 @code
 {
@@ -39,18 +35,12 @@
 
     private string TimeFormat => GetOption("timeFormat") ?? "HH:mm:ss";
     private string DateFormat => GetOption("dateFormat") ?? "dddd, MMMM d";
+    private bool HideTitle => bool.TryParse(GetOption("hideTitle"), out var b) && b;
 
     protected override void OnInitialized()
     {
         base.OnInitialized();
-
         _timer = new Timer(UpdateTime, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
-    }
-
-    private async void OnTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
-    {
-        _currentTime = DateTime.Now;
-        await InvokeAsync(StateHasChanged);
     }
 
     private void UpdateTime(object? state)
@@ -67,20 +57,25 @@
         return colors[Math.Abs(hash) % colors.Length];
     }
 
-    private async Task EditWidget()
+    private async Task OnEditClick()
     {
         await OnItemEdited.InvokeAsync();
     }
 
-    private async Task DeleteWidget()
+    private async Task OnDeleteClick()
     {
-        await OnItemDeleted.InvokeAsync(Item);
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{Item.Title}'?");
+        if (IsDisposed) return;
+        if (confirmed)
+        {
+            await OnItemDeleted.InvokeAsync(Item);
+        }
     }
+
     public override void Dispose()
     {
         base.Dispose();
         _timer?.Dispose();
     }
-
 }
 

@@ -1,0 +1,11 @@
+.weather-layout { display:flex; align-items:center; justify-content:center; gap:.75rem; width:100%; }
+.weather-icon { flex:0 0 auto; display:flex; align-items:center; justify-content:center; }
+.weather-emoji { display:inline-flex; align-items:center; justify-content:center; width:42px; height:42px; font-size:32px; line-height:1; }
+.item-size-small .weather-emoji { width:28px; height:28px; font-size:20px; }
+.item-size-medium .weather-emoji { width:36px; height:36px; font-size:26px; }
+.item-size-large .weather-emoji { width:48px; height:48px; font-size:36px; }
+.weather-details { display:flex; flex-direction:column; align-items:flex-start; justify-content:center; }
+.temperature { font-weight:600; }
+.location { font-size:.7rem; color: var(--subtle-text-color); }
+.spinner i { font-size:20px; }
+.error i { font-size:20px; color: var(--danger-color); }

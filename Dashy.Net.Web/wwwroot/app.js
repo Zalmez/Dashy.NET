@@ -42,6 +42,23 @@ function removeCustomBackground() {
   }
 }
 
+// Dynamically add/replace a theme stylesheet. Useful for theme packs.
+function setThemePack(href) {
+  if (!href) return;
+  let link = document.getElementById('dashy-theme-pack');
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.id = 'dashy-theme-pack';
+    document.head.appendChild(link);
+  }
+  link.href = href;
+}
+
+function getViewportWidth() {
+  return window.innerWidth || document.documentElement.clientWidth || 0;
+}
+
 // Test function to verify CSS is working
 function testBackground() {
   console.log('testBackground called');

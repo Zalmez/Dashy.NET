@@ -1,33 +1,16 @@
 @inherits WidgetBase
 
-<div class="glass-tile @GetTileColorClass() @GetItemSizeClass()">
-    <div class="tile-content">
-        <div class="tile-icon">
-            <i class="fas fa-question-circle"></i>
-        </div>
-        <div class="tile-title">Unknown Widget</div>
-        @if (ViewOptions.CurrentItemSize == ItemSize.Large)
-        {
-            <div class="tile-description">
-                The widget type '<code>@Widget</code>' is not supported
-            </div>
-        }
-    </div>
-</div>
-
-<style>
-    .unknown-widget {
-        background-color: #712b2b;
-        border: 1px solid #ff8a8a;
-    }
-</style>
+<WidgetChrome Title="Unknown Widget"
+              Icon="fas fa-question-circle"
+              SizeClass="@GetItemSizeClass()"
+              ColorClass="red"
+              IsEditMode="@ViewOptions.IsEditMode"
+              IsEmpty="true">
+    <EmptyContent>
+        <div class="tile-description">The widget type '<code>@Widget</code>' is not supported</div>
+    </EmptyContent>
+</WidgetChrome>
 
 @code {
-    [Parameter]
-    public string? Widget { get; set; }
-
-    private string GetTileColorClass()
-    {
-        return "tile-danger"; // Always use danger color for unknown widgets
-    }
+    [Parameter] public string? Widget { get; set; }
 }

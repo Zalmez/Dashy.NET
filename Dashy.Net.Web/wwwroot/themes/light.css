@@ -1,0 +1,53 @@
+/* Theme tokens and overrides for the light theme */
+:root {
+  /* Core palette */
+  --color-bg: #f7f9fc;
+  --color-fg: #111827;
+  --color-muted: #6b7280;
+  --color-surface: #ffffff;
+  --color-surface-2: #f3f4f6;
+  --color-border: #e5e7eb;
+  --color-accent: #4f46e5;
+  --color-accent-strong: #4338ca;
+  --color-danger: #ef4444;
+  --color-danger-strong: #dc2626;
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  /* Shadows */
+  --shadow-1: 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-2: 0 4px 10px rgba(0,0,0,0.08);
+  --shadow-3: 0 12px 32px rgba(0,0,0,0.12);
+}
+
+/* Map to existing custom properties to minimize code churn */
+body.theme-light {
+  --background-color: var(--color-bg);
+  --text-color: var(--color-fg);
+  --accent-text-color: #111827;
+  --card-background-color: var(--color-surface);
+  --card-hover-background-color: var(--color-surface-2);
+  --border-color: var(--color-border);
+  --subtle-text-color: var(--color-muted);
+  --accent-color: var(--color-accent);
+  --accent-color-darker: var(--color-accent-strong);
+  --danger-color: var(--color-danger);
+  --danger-hover-color: var(--color-danger-strong);
+  --header-bg: rgba(255, 255, 255, 0.85);
+  --header-shadow: var(--shadow-1);
+  --card-shadow: var(--shadow-1);
+  --card-hover-shadow: var(--shadow-2);
+  --glass-background: rgba(255, 255, 255, 0.2);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-shadow: var(--shadow-2);
+  --glass-hover-background: rgba(255, 255, 255, 0.3);
+  /* New tokens used by polished shell */
+  --surface-1: var(--color-surface);
+  --surface-2: var(--color-surface-2);
+  --hover-bg: rgba(0,0,0,0.04);
+  --focus-ring: #2563eb; /* Blue-600 for accessible focus */
+  --accent-border: var(--color-accent);
+}

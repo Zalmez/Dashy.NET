@@ -3,54 +3,41 @@
 @using System.Text.Json
 @using System.Text.Json.Serialization
 
-<div class="glass-tile @GetTileColorClass() @GetItemSizeClass()" @onclick:preventDefault="ViewOptions.IsEditMode">
-    @if (ViewOptions.IsEditMode)
+<WidgetChrome Title="@Item.Title"
+              Icon="@Item.Icon"
+              SizeClass="@GetItemSizeClass()"
+              ColorClass="@GetTileColorClass()"
+              IsEditMode="@ViewOptions.IsEditMode"
+              OnEdit="OnEditClick"
+              OnDelete="OnDeleteClick">
+    @if (_isLoading)
     {
-        <div class="item-edit-controls">
-            <button class="edit-btn" title="Edit Item" @onclick="OnEditClick" @onclick:stopPropagation="true"><i
-                    class="fas fa-pencil-alt"></i></button>
-            <button class="delete-btn" title="Delete Item" @onclick="OnDeleteClick" @onclick:stopPropagation="true"><i
-                    class="fas fa-trash-alt"></i></button>
-        </div>
+        <div class="tile-icon"><i class="fas fa-spinner fa-spin"></i></div>
+        <div class="tile-title">Loading...</div>
     }
-
-    <div class="tile-content">
-        @if (_isLoading)
+    else if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="tile-icon"><i class="fas fa-exclamation-triangle"></i></div>
+        <div class="tile-title error-message">@_errorMessage</div>
+    }
+    else
+    {
+        <div class="tile-icon"><i class="fas fa-wifi"></i></div>
+        <div class="tile-title">@_publicIP</div>
+        @if (ViewOptions.CurrentItemSize == ItemSize.Large || ViewOptions.CurrentItemSize == ItemSize.Medium)
         {
-            <div class="tile-icon">
-                <i class="fas fa-spinner fa-spin"></i>
+            <div class="tile-description">
+                @if (!string.IsNullOrEmpty(_flagUrl))
+                {
+                    <img src="@_flagUrl" alt="Country Flag" style="width: 16px; height: auto; margin-right: 0.25rem;" />
+                }
+                @_zipcode, @_location
             </div>
-            <div class="tile-title">Loading...</div>
         }
-        else if (!string.IsNullOrEmpty(_errorMessage))
-        {
-            <div class="tile-icon">
-                <i class="fas fa-exclamation-triangle"></i>
-            </div>
-            <div class="tile-title error-message">@_errorMessage</div>
-        }
-        else
-        {
-            <div class="tile-icon">
-                <i class="fas fa-wifi"></i>
-            </div>
-            <div class="tile-title">@_publicIP</div>
-            @if (ViewOptions.CurrentItemSize == ItemSize.Large || ViewOptions.CurrentItemSize == ItemSize.Medium)
-            {
-                <div class="tile-description">
-                    @if (!string.IsNullOrEmpty(_flagUrl))
-                    {
-                        <img src="@_flagUrl" alt="Country Flag" style="width: 16px; height: auto; margin-right: 0.25rem;" />
-                    }
-                    @_zipcode, @_location
-                </div>
-            }
-        }
-    </div>
-</div>
+    }
+</WidgetChrome>
 
 @code {
-
     private string? _publicIP;
     private string? _location;
     private int? _zipcode;
@@ -78,6 +65,8 @@
             { "ipgeolocation.io", FetchFromIpGeolocation }
         };
         await FetchData();
+        if (IsDisposed) return;
+        _isLoading = false;
     }
 
     private async Task FetchData()
@@ -91,28 +80,21 @@
         if (_providers.TryGetValue(_selectedProvider, out var fetchMethod))
         {
             await fetchMethod();
+            if (IsDisposed) return;
         }
         else
         {
             _errorMessage = "Invalid provider selected.";
         }
-
-        _isLoading = false;
     }
 
-    private async Task OnEditClick()
-    {
-        await OnItemEdited.InvokeAsync();
-    }
+    private async Task OnEditClick() => await OnItemEdited.InvokeAsync();
 
     private async Task OnDeleteClick()
     {
         var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{Item.Title}'?");
         if (IsDisposed) return;
-        if (confirmed)
-        {
-            await OnItemDeleted.InvokeAsync(Item);
-        }
+        if (confirmed) { await OnItemDeleted.InvokeAsync(Item); }
     }
 
     private async Task FetchFromIpApi()
@@ -122,68 +104,46 @@
             var httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.Add("User-Agent", "ipapi.co/#c-sharp-v1.03");
             var response = await httpClient.GetFromJsonAsync<PublicIPResponse>("https://ipapi.co/json/");
-
+            if (IsDisposed) return;
             if (response is not null)
             {
                 _publicIP = response.Ip;
                 _location = $"{response.City}, {response.CountryName}";
                 _flagUrl = $"https://flagcdn.com/{response.CountryCode.ToLower()}.svg";
             }
-            else
-            {
-                _errorMessage = "Failed to fetch IP details from ipapi.co.";
-            }
+            else { _errorMessage = "Failed to fetch IP details from ipapi.co."; }
         }
         catch (Exception)
         {
-
+            if (IsDisposed) return;
+            _errorMessage = "Error fetching IP";
         }
     }
 
     private async Task FetchFromIpGeolocation()
     {
-        var httpClient = new HttpClient();
-        var response = await httpClient.GetFromJsonAsync<IpGeolocationResponse>($"https://api.ipgeolocation.io/v2/ipgeo?apiKey={_apiKey}&fields=location");
-
-        if (response is not null)
+        try
         {
-            _publicIP = response.Ip;
-            _location = $"{response.location.City}, {response.location.CountryName}";
-            _flagUrl = $"https://flagcdn.com/{response.location.CountryCode.ToLower()}.svg";
-            _zipcode = response.location.ZipCode;
+            var httpClient = new HttpClient();
+            var response = await httpClient.GetFromJsonAsync<IpGeolocationResponse>($"https://api.ipgeolocation.io/v2/ipgeo?apiKey={_apiKey}&fields=location");
+            if (IsDisposed) return;
+            if (response is not null)
+            {
+                _publicIP = response.Ip;
+                _location = $"{response.location.City}, {response.location.CountryName}";
+                _flagUrl = $"https://flagcdn.com/{response.location.CountryCode.ToLower()}.svg";
+                _zipcode = response.location.ZipCode;
+            }
+            else { _errorMessage = "Failed to fetch IP details from ipgeolocation.io."; }
         }
-        else
+        catch (Exception)
         {
-            _errorMessage = "Failed to fetch IP details from ipgeolocation.io.";
+            if (IsDisposed) return;
+            _errorMessage = "Error fetching IP";
         }
     }
 
-    private class PublicIPResponse
-    {
-        public string Ip { get; set; } = string.Empty;
-        public string City { get; set; } = string.Empty;
-        public string CountryName { get; set; } = string.Empty;
-        public string CountryCode { get; set; } = string.Empty;
-    }
-
-    private class IpGeolocationResponse
-    {
-        [JsonPropertyName("ip")]
-        public string Ip { get; set; } = string.Empty;
-        [JsonPropertyName("location")]
-        public Location location { get; set; } = new();
-    }
-    private class Location
-    {
-        [JsonPropertyName("city")]
-        public string City { get; set; } = string.Empty;
-        [JsonPropertyName("country_name")]
-        public string CountryName { get; set; } = string.Empty;
-        [JsonPropertyName("country_code2")]
-        public string CountryCode { get; set; } = string.Empty;
-        [JsonPropertyName("country_flag")]
-        public string CountryFlag { get; set; } = string.Empty;
-        [JsonPropertyName("zipcode")]
-        public int ZipCode { get; set; } = 0;
-    }
+    private class PublicIPResponse { public string Ip { get; set; } = string.Empty; public string City { get; set; } = string.Empty; public string CountryName { get; set; } = string.Empty; public string CountryCode { get; set; } = string.Empty; }
+    private class IpGeolocationResponse { [JsonPropertyName("ip")] public string Ip { get; set; } = string.Empty; [JsonPropertyName("location")] public Location location { get; set; } = new(); }
+    private class Location { [JsonPropertyName("city")] public string City { get; set; } = string.Empty; [JsonPropertyName("country_name")] public string CountryName { get; set; } = string.Empty; [JsonPropertyName("country_code2")] public string CountryCode { get; set; } = string.Empty; [JsonPropertyName("country_flag")] public string CountryFlag { get; set; } = string.Empty; [JsonPropertyName("zipcode")] public int ZipCode { get; set; } = 0; }
 }

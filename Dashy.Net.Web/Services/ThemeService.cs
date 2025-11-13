@@ -6,8 +6,8 @@ public class ThemeService
 {
     public List<Theme> AvailableThemes { get; } =
     [
-        new() { Name = "Dark", CssClass = "theme-dark" },
-        new() { Name = "Light", CssClass = "theme-light" }
+        new() { Name = "Dark", CssClass = "theme-dark", CssHref = "themes/dark.css" },
+        new() { Name = "Light", CssClass = "theme-light", CssHref = "themes/light.css" }
     ];
 
     public Theme CurrentTheme { get; private set; }
@@ -16,7 +16,8 @@ public class ThemeService
 
     public ThemeService()
     {
-        CurrentTheme = AvailableThemes.First();
+        // Default to Dark theme when no saved choice exists
+        CurrentTheme = AvailableThemes.First(t => t.CssClass == "theme-dark");
     }
 
     public void SetTheme(string themeClass)

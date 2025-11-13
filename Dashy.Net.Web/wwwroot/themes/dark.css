@@ -1,0 +1,48 @@
+/* Theme tokens and overrides for the dark theme */
+:root {
+  /* Core palette */
+  --color-bg-dark: #0b0b10;
+  --color-fg-dark: #f9fafb;
+  --color-muted-dark: #9ca3af;
+  --color-surface-dark: rgba(255,255,255,0.08);
+  --color-surface-2-dark: rgba(255,255,255,0.14);
+  --color-border-dark: rgba(255,255,255,0.12);
+  --color-accent-dark: #6366f1;
+  --color-accent-strong-dark: #4f46e5;
+  --color-danger-dark: #ef4444;
+  --color-danger-strong-dark: #dc2626;
+
+  /* Shadows */
+  --shadow-1-dark: 0 2px 6px rgba(0,0,0,0.35);
+  --shadow-2-dark: 0 8px 24px rgba(0,0,0,0.45);
+  --shadow-3-dark: 0 16px 48px rgba(0,0,0,0.55);
+}
+
+/* Map to existing custom properties to minimize code churn */
+body.theme-dark {
+  --background-color: var(--color-bg-dark);
+  --text-color: var(--color-fg-dark);
+  --accent-text-color: #0b0b10;
+  --card-background-color: var(--color-surface-dark);
+  --card-hover-background-color: var(--color-surface-2-dark);
+  --border-color: var(--color-border-dark);
+  --subtle-text-color: var(--color-muted-dark);
+  --accent-color: var(--color-accent-dark);
+  --accent-color-darker: var(--color-accent-strong-dark);
+  --danger-color: var(--color-danger-dark);
+  --danger-hover-color: var(--color-danger-strong-dark);
+  --header-bg: rgba(0,0,0,0.6);
+  --header-shadow: var(--shadow-1-dark);
+  --card-shadow: var(--shadow-1-dark);
+  --card-hover-shadow: var(--shadow-2-dark);
+  --glass-background: rgba(255,255,255,0.05);
+  --glass-border: rgba(255,255,255,0.10);
+  --glass-shadow: var(--shadow-2-dark);
+  --glass-hover-background: rgba(255,255,255,0.10);
+  /* New tokens used by polished shell */
+  --surface-1: var(--color-surface-dark);
+  --surface-2: var(--color-surface-2-dark);
+  --hover-bg: rgba(255,255,255,0.08);
+  --focus-ring: #93c5fd; /* Blue-300 for dark background */
+  --accent-border: var(--color-accent-dark);
+}

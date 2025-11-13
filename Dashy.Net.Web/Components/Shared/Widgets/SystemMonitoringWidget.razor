@@ -2,53 +2,52 @@
 @inject IJSRuntime JSRuntime
 @implements IDisposable
 
-<div class="glass-tile @GetTileColorClass() @GetItemSizeClass()">
-    @if (ViewOptions.IsEditMode)
-    {
-        <div class="item-edit-controls">
-            <button class="edit-btn" title="Edit Item" @onclick="OnEditClick" @onclick:stopPropagation="true"><i class="fas fa-pencil-alt"></i></button>
-            <button class="delete-btn" title="Delete Item" @onclick="OnDeleteClick" @onclick:stopPropagation="true"><i class="fas fa-trash-alt"></i></button>
-        </div>
-    }
-
-    <div class="tile-content">
-        <div class="tile-icon">
-            <i class="fas fa-desktop"></i>
-        </div>
-        <div class="tile-title">System Monitor</div>
+<WidgetChrome Title="@Item.Title"
+              Icon="fas fa-desktop"
+              SizeClass="@GetItemSizeClass()"
+              ColorClass="@GetTileColorClass()"
+              IsEditMode="@ViewOptions.IsEditMode"
+              OnEdit="OnEditClick"
+              OnDelete="OnDeleteClick"
+              IsLoading="@_isLoading"
+              HasError="@(!string.IsNullOrEmpty(_errorMessage))"
+              ErrorMessage="@_errorMessage">
+    <div class="sysmon-body">
         @if (ViewOptions.CurrentItemSize == ItemSize.Large)
         {
-            <div class="tile-description">
-                CPU: @_cpuUsage% | RAM: @_ramUsage MB
-            </div>
+            <div class="tile-description">CPU: @_cpuUsage% | RAM: @_ramUsage MB | NET: @_networkUsage kB/s</div>
         }
         else if (ViewOptions.CurrentItemSize == ItemSize.Medium)
         {
-            <div class="tile-description">
-                CPU: @_cpuUsage%
-            </div>
+            <div class="tile-description">CPU: @_cpuUsage% | RAM: @_ramUsage MB</div>
+        }
+        else
+        {
+            <div class="tile-description">CPU: @_cpuUsage%</div>
         }
     </div>
-</div>
+</WidgetChrome>
 
 @code {
     private int _cpuUsage = 0;
     private int _ramUsage = 0;
     private int _networkUsage = 0;
     private Timer? _timer;
-    private Random _random = new Random();
+    private readonly Random _random = new();
+    private bool _isLoading = true;
+    private string? _errorMessage;
 
     private string GetTileColorClass()
     {
         return GetOption("tileColor") switch
         {
-            "primary" => "tile-primary",
-            "secondary" => "tile-secondary", 
-            "success" => "tile-success",
-            "warning" => "tile-warning",
-            "danger" => "tile-danger",
-            "info" => "tile-info",
-            _ => "tile-default"
+            "primary" => "purple",
+            "secondary" => "pink",
+            "success" => "green",
+            "warning" => "orange",
+            "danger" => "red",
+            "info" => "teal",
+            _ => string.Empty
         };
     }
 
@@ -62,16 +61,13 @@
         }
     }
 
-    private async Task OnEditClick()
-    {
-        await OnItemEdited.InvokeAsync();
-    }
+    private async Task OnEditClick() => await OnItemEdited.InvokeAsync();
 
     protected override void OnInitialized()
     {
         base.OnInitialized();
-        // Simulate system monitoring with random values
         _timer = new Timer(UpdateMetrics, null, TimeSpan.Zero, TimeSpan.FromSeconds(2));
+        _isLoading = false;
     }
 
     private void UpdateMetrics(object? state)
@@ -79,7 +75,6 @@
         _cpuUsage = _random.Next(10, 85);
         _ramUsage = _random.Next(2000, 8000);
         _networkUsage = _random.Next(50, 500);
-
         if (!IsDisposed)
         {
             InvokeAsync(StateHasChanged);
