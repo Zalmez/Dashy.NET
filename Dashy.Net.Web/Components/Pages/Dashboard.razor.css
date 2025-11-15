@@ -1,0 +1,24 @@
+/* Dashboard page layout (CSS isolation) */
+:host { display:block; }
+
+/* Robust grid so sections never disappear regardless of count */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-auto-flow: row dense; /* pack items predictably */
+  grid-auto-rows: minmax(0, auto); /* ensure rows always render */
+  gap: 2rem;
+  align-items: start;
+}
+
+/* Prevent overflow constraints from collapsing items */
+.section-item, .section-container { min-width: 0; }
+
+/* Respect size classes with predictable spans */
+.section-item.section-size-small { grid-column: span 1; }
+.section-item.section-size-medium { grid-column: span 1; }
+.section-item.section-size-large { grid-column: span 2; }
+
+@media (max-width: 768px) {
+  .dashboard-grid { grid-template-columns: 1fr; }
+}

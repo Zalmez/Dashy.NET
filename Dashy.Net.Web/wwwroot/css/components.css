@@ -6,100 +6,39 @@
   margin: 0 auto;
 }
 
+/* Use grid at all widths to avoid flex/grid swaps hiding items */
 .dashboard-grid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 2rem;
-  align-items: flex-start;
-  justify-content: stretch;
+  align-items: start;
 }
 
 .section-item {
-  flex: 1 1 auto;
-  min-width: 320px;
+  /* grid children must be allowed to shrink inside tracks */
+  min-width: 0;
   max-width: none;
 }
 
-.section-item.section-size-auto {
-  flex: 1 1 auto;
-  min-width: 320px;
-}
-
-.section-item.section-size-small {
-  flex: 1 1 400px;
-  min-width: 320px;
-}
-
-.section-item.section-size-medium {
-  flex: 1.5 1 500px;
-  min-width: 400px;
-}
-
-.section-item.section-size-large {
-  flex: 2 1 600px;
-  min-width: 500px;
-}
+.section-item.section-size-auto { }
+.section-item.section-size-small { grid-column: span 1; }
+.section-item.section-size-medium { grid-column: span 1; }
+.section-item.section-size-large { grid-column: span 2; }
 
 @media (max-width: 768px) {
-  .section-item,
-  .section-item.section-size-small,
-  .section-item.section-size-medium,
-  .section-item.section-size-large {
-    flex: 1 1 100%;
-    min-width: unset;
-    max-width: none;
-  }
-}
-
-@media (min-width: 769px) and (max-width: 1199px) {
-  .section-item {
-    flex: 1 1 calc(50% - 1rem);
-    min-width: 320px;
-  }
-
-  .section-item.section-size-large {
-    flex: 1 1 100%;
-  }
-}
-
-@media (min-width: 1200px) {
   .dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    gap: 2rem;
-    align-items: start;
-  }
-
-  .section-item {
-    flex: none;
-  }
-
-  .section-item.section-size-small {
-    grid-column: span 1;
-  }
-
-  .section-item.section-size-medium {
-    grid-column: span 1;
-  }
-
-  .section-item.section-size-large {
-    grid-column: span 2;
+    grid-template-columns: 1fr;
   }
 }
 
 @media (min-width: 1600px) {
   .dashboard-grid {
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  }
-
-  .section-item.section-size-large {
-    grid-column: span 2;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   }
 }
 
 .main-tiles-section {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   grid-template-columns: repeat(4, minmax(200px, 1fr)); /* Force exactly 4 columns */
   gap: 1.5rem;
   margin-bottom: 3rem;
