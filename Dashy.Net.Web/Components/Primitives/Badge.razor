@@ -1,0 +1,96 @@
+@*
+  Primitive Badge component for status indicators
+  Uses design tokens for consistent theming
+*@
+
+<span class="@GetCssClasses()" @attributes="AdditionalAttributes">
+    @if (IconStart != null)
+    {
+        <span class="badge-icon">@IconStart</span>
+    }
+    @ChildContent
+    @if (IconEnd != null)
+    {
+        <span class="badge-icon">@IconEnd</span>
+    }
+</span>
+
+@code {
+    /// <summary>
+    /// Badge visual variant
+    /// </summary>
+    [Parameter]
+    public BadgeVariant Variant { get; set; } = BadgeVariant.Primary;
+
+    /// <summary>
+    /// Badge size
+    /// </summary>
+    [Parameter]
+    public BadgeSize Size { get; set; } = BadgeSize.Medium;
+
+    /// <summary>
+    /// Icon to show at start of badge
+    /// </summary>
+    [Parameter]
+    public RenderFragment? IconStart { get; set; }
+
+    /// <summary>
+    /// Icon to show at end of badge
+    /// </summary>
+    [Parameter]
+    public RenderFragment? IconEnd { get; set; }
+
+    /// <summary>
+    /// Badge content
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// Additional HTML attributes
+    /// </summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string GetCssClasses()
+    {
+        var classes = new List<string> { "badge" };
+
+        classes.Add(Variant switch
+        {
+            BadgeVariant.Primary => "badge-primary",
+            BadgeVariant.Secondary => "badge-secondary",
+            BadgeVariant.Success => "badge-success",
+            BadgeVariant.Danger => "badge-danger",
+            BadgeVariant.Warning => "badge-warning",
+            BadgeVariant.Info => "badge-info",
+            _ => "badge-primary"
+        });
+
+        classes.Add(Size switch
+        {
+            BadgeSize.Small => "badge-sm",
+            BadgeSize.Large => "badge-lg",
+            _ => ""
+        });
+
+        return string.Join(" ", classes.Where(c => !string.IsNullOrEmpty(c)));
+    }
+
+    public enum BadgeVariant
+    {
+        Primary,
+        Secondary,
+        Success,
+        Danger,
+        Warning,
+        Info
+    }
+
+    public enum BadgeSize
+    {
+        Small,
+        Medium,
+        Large
+    }
+}

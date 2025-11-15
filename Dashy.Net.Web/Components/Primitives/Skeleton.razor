@@ -1,0 +1,74 @@
+@*
+  Primitive Skeleton loader component for loading states
+  Uses design tokens for consistent theming
+*@
+
+<div class="@GetCssClasses()" style="@GetStyles()" @attributes="AdditionalAttributes">
+    @if (!string.IsNullOrEmpty(AriaLabel))
+    {
+        <span class="sr-only">@AriaLabel</span>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// Skeleton shape variant
+    /// </summary>
+    [Parameter]
+    public SkeletonShape Shape { get; set; } = SkeletonShape.Rectangle;
+
+    /// <summary>
+    /// Width of skeleton (CSS value)
+    /// </summary>
+    [Parameter]
+    public string Width { get; set; } = "100%";
+
+    /// <summary>
+    /// Height of skeleton (CSS value)
+    /// </summary>
+    [Parameter]
+    public string Height { get; set; } = "1rem";
+
+    /// <summary>
+    /// Accessible label for screen readers
+    /// </summary>
+    [Parameter]
+    public string AriaLabel { get; set; } = "Loading...";
+
+    /// <summary>
+    /// Additional HTML attributes
+    /// </summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string GetCssClasses()
+    {
+        var classes = new List<string> { "skeleton" };
+
+        classes.Add(Shape switch
+        {
+            SkeletonShape.Circle => "rounded-full",
+            SkeletonShape.Rectangle => "rounded",
+            _ => "rounded"
+        });
+
+        return string.Join(" ", classes);
+    }
+
+    private string GetStyles()
+    {
+        var styles = new List<string>
+        {
+            $"width: {Width}",
+            $"height: {Height}"
+        };
+
+        return string.Join("; ", styles);
+    }
+
+    public enum SkeletonShape
+    {
+        Rectangle,
+        Circle
+    }
+}
