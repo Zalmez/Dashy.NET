@@ -32,3 +32,10 @@ Dashy.Net.Web/wwwroot/uploads
 .env
 .env.local
 .env.production
+
+# Node.js
+node_modules/
+package-lock.json
+
+# Generated CSS
+Dashy.Net.Web/wwwroot/css/app.generated.css

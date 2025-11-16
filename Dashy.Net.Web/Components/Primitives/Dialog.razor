@@ -1,0 +1,121 @@
+@using Microsoft.FluentUI.AspNetCore.Components
+
+@*
+  Primitive Dialog component wrapping Fluent UI
+  Uses design tokens for consistent theming
+*@
+
+<FluentDialog @bind-Hidden="@IsHiddenInternal"
+              Modal="@Modal"
+              TrapFocus="@TrapFocus"
+              class="@GetCssClasses()"
+              @attributes="AdditionalAttributes">
+    <div class="dialog-header flex items-center justify-between p-4 border-b" style="border-color: var(--border-color);">
+        <h2 class="text-xl font-semibold" style="color: var(--text-color);">@Title</h2>
+        @if (ShowCloseButton)
+        {
+            <button type="button" class="btn-ghost p-2" @onclick="HandleClose" aria-label="Close dialog">
+                <i class="fas fa-times"></i>
+            </button>
+        }
+    </div>
+    <div class="dialog-body p-4">
+        @ChildContent
+    </div>
+    @if (FooterContent != null)
+    {
+        <div class="dialog-footer p-4 border-t flex justify-end gap-2" style="border-color: var(--border-color);">
+            @FooterContent
+        </div>
+    }
+</FluentDialog>
+
+@code {
+    /// <summary>
+    /// Dialog title
+    /// </summary>
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Whether dialog is hidden
+    /// </summary>
+    [Parameter]
+    public bool Hidden { get; set; } = true;
+
+    /// <summary>
+    /// Event for when Hidden value changes
+    /// </summary>
+    [Parameter]
+    public EventCallback<bool> HiddenChanged { get; set; }
+
+    /// <summary>
+    /// Whether dialog is modal (blocks interaction with page)
+    /// </summary>
+    [Parameter]
+    public bool Modal { get; set; } = true;
+
+    /// <summary>
+    /// Whether to trap focus within dialog
+    /// </summary>
+    [Parameter]
+    public bool TrapFocus { get; set; } = true;
+
+    /// <summary>
+    /// Whether to show close button in header
+    /// </summary>
+    [Parameter]
+    public bool ShowCloseButton { get; set; } = true;
+
+    /// <summary>
+    /// Dialog content
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// Dialog footer content (typically buttons)
+    /// </summary>
+    [Parameter]
+    public RenderFragment? FooterContent { get; set; }
+
+    /// <summary>
+    /// Event triggered when dialog is closed
+    /// </summary>
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    /// <summary>
+    /// Additional HTML attributes
+    /// </summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private bool IsHiddenInternal
+    {
+        get => Hidden;
+        set
+        {
+            if (Hidden != value)
+            {
+                Hidden = value;
+                HiddenChanged.InvokeAsync(value);
+                if (value)
+                {
+                    OnClose.InvokeAsync();
+                }
+            }
+        }
+    }
+
+    private string GetCssClasses()
+    {
+        return "dialog";
+    }
+
+    private async Task HandleClose()
+    {
+        IsHiddenInternal = true;
+        await OnClose.InvokeAsync();
+    }
+}

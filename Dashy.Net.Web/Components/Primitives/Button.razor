@@ -1,0 +1,108 @@
+@using Microsoft.FluentUI.AspNetCore.Components
+
+@* 
+  Primitive Button component wrapping Fluent UI
+  Uses design tokens for consistent theming
+*@
+
+<FluentButton Appearance="@GetAppearance()"
+              Disabled="@Disabled"
+              class="@GetCssClasses()"
+              @onclick="HandleClick"
+              @attributes="AdditionalAttributes">
+    @ChildContent
+</FluentButton>
+
+@code {
+    /// <summary>
+    /// Button visual style variant
+    /// </summary>
+    [Parameter]
+    public ButtonVariant Variant { get; set; } = ButtonVariant.Primary;
+
+    /// <summary>
+    /// Button size
+    /// </summary>
+    [Parameter]
+    public ButtonSize Size { get; set; } = ButtonSize.Medium;
+
+    /// <summary>
+    /// Whether button is disabled
+    /// </summary>
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    /// <summary>
+    /// Button content
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// Click event handler
+    /// </summary>
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnClick { get; set; }
+
+    /// <summary>
+    /// Additional HTML attributes
+    /// </summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private Appearance GetAppearance() => Variant switch
+    {
+        ButtonVariant.Primary => Appearance.Accent,
+        ButtonVariant.Secondary => Appearance.Neutral,
+        ButtonVariant.Outline => Appearance.Outline,
+        ButtonVariant.Danger => Appearance.Accent,
+        ButtonVariant.Ghost => Appearance.Stealth,
+        _ => Appearance.Accent
+    };
+
+    private string GetCssClasses()
+    {
+        var classes = new List<string> { "btn" };
+        
+        classes.Add(Variant switch
+        {
+            ButtonVariant.Primary => "btn-primary",
+            ButtonVariant.Secondary => "btn-secondary",
+            ButtonVariant.Danger => "btn-danger",
+            _ => ""
+        });
+
+        classes.Add(Size switch
+        {
+            ButtonSize.Small => "btn-sm",
+            ButtonSize.Large => "btn-lg",
+            _ => ""
+        });
+
+        return string.Join(" ", classes.Where(c => !string.IsNullOrEmpty(c)));
+    }
+
+    private async Task HandleClick(MouseEventArgs e)
+    {
+        if (!Disabled)
+        {
+            await OnClick.InvokeAsync(e);
+        }
+    }
+
+    public enum ButtonVariant
+    {
+        Primary,
+        Secondary,
+        Outline,
+        Danger,
+        Ghost
+    }
+
+    public enum ButtonSize
+    {
+        Small,
+        Medium,
+        Large
+    }
+}

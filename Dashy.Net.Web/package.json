@@ -1,0 +1,22 @@
+{
+  "name": "dashy.net.web",
+  "version": "1.0.0",
+  "description": "Dashy.NET - Modern Dashboard Application",
+  "scripts": {
+    "css:build": "npx tailwindcss -i ./Styles/tailwind.css -o ./wwwroot/css/app.generated.css",
+    "css:watch": "npx tailwindcss -i ./Styles/tailwind.css -o ./wwwroot/css/app.generated.css --watch",
+    "build": "npm run css:build"
+  },
+  "keywords": [
+    "dashboard",
+    "blazor",
+    "dotnet"
+  ],
+  "author": "Dashy.NET Contributors",
+  "license": "AGPL-3.0",
+  "devDependencies": {
+    "autoprefixer": "^10.4.22",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.18"
+  }
+}
