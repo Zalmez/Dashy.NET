@@ -43,14 +43,7 @@
     protected override void OnInitialized()
     {
         base.OnInitialized();
-
         _timer = new Timer(UpdateTime, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
-    }
-
-    private async void OnTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
-    {
-        _currentTime = DateTime.Now;
-        await InvokeAsync(StateHasChanged);
     }
 
     private void UpdateTime(object? state)
@@ -67,20 +60,13 @@
         return colors[Math.Abs(hash) % colors.Length];
     }
 
-    private async Task EditWidget()
-    {
-        await OnItemEdited.InvokeAsync();
-    }
+    private async Task EditWidget() => await OnItemEdited.InvokeAsync();
+    private async Task DeleteWidget() => await OnItemDeleted.InvokeAsync(Item);
 
-    private async Task DeleteWidget()
-    {
-        await OnItemDeleted.InvokeAsync(Item);
-    }
     public override void Dispose()
     {
         base.Dispose();
         _timer?.Dispose();
     }
-
 }
 

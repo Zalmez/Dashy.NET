@@ -52,12 +52,12 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
             if (id.HasValue)
             {
                 logger.LogWarning("Dashboard with ID {DashboardId} not found.", id.Value);
-                return NotFound(new DashboardConfigVm(0, "Dashboard Not Found", $"Dashboard with ID {id.Value} was not found.", new List<SectionVm>(), new List<HeaderButtonVm>()));
+                return NotFound(new DashboardConfigVm(0, "Dashboard Not Found", $"Dashboard with ID {id.Value} was not found.", new List<SectionVm>(), new List<HeaderButtonVm>(), false));
             }
             else
             {
                 logger.LogWarning("No dashboard found in the database. Seeding might be required.");
-                return NotFound(new DashboardConfigVm(0, "No Dashboard Found", "Please seed the database.", new List<SectionVm>(), new List<HeaderButtonVm>()));
+                return NotFound(new DashboardConfigVm(0, "No Dashboard Found", "Please seed the database.", new List<SectionVm>(), new List<HeaderButtonVm>(), false));
             }
         }
 
@@ -78,7 +78,8 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
                     dbItem.SectionId,
                     string.IsNullOrWhiteSpace(dbItem.OptionsJson)
                         ? (JsonElement?)null
-                        : JsonDocument.Parse(dbItem.OptionsJson).RootElement.Clone()
+                        : JsonDocument.Parse(dbItem.OptionsJson).RootElement.Clone(),
+                    dbItem.ParentItemId
                 )).ToList()
             )).ToList(),
             dashboard.HeaderButtons.Select(dbButton => new HeaderButtonVm(
@@ -86,7 +87,8 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
                 dbButton.Text,
                 dbButton.Url,
                 dbButton.Icon
-            )).ToList()
+            )).ToList(),
+            dashboard.UseContainerWidgets
         );
 
         return Ok(configVm);
@@ -138,7 +140,8 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
                 newDashboard.Title,
                 newDashboard.Subtitle,
                 new List<SectionVm>(),
-                new List<HeaderButtonVm>()
+                new List<HeaderButtonVm>(),
+                false
             );
 
             return CreatedAtAction(nameof(GetConfig), new { id = newDashboard.Id }, configVm);
@@ -246,4 +249,76 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
             return Problem("An error occurred while seeding the database.", statusCode: 500);
         }
     }
+
+    /// <summary>
+    /// Sets the dashboard's UseContainerWidgets flag.
+    /// </summary>
+    [HttpPost("{id:int}/use-container-widgets")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SetUseContainerWidgets(int id, [FromBody] ToggleContainerWidgetsDto dto)
+    {
+        var dashboard = await dbContext.Dashboards.FindAsync(id);
+        if (dashboard is null)
+        {
+            return NotFound();
+        }
+
+        dashboard.UseContainerWidgets = dto.Enabled;
+        await dbContext.SaveChangesAsync();
+        logger.LogInformation("Dashboard {DashboardId} UseContainerWidgets set to {Enabled}", id, dto.Enabled);
+        return Ok(new { id = dashboard.Id, enabled = dashboard.UseContainerWidgets });
+    }
+
+    /// <summary>
+    /// Gets a flattened list of items for the dashboard, including root items and children of container widgets.
+    /// </summary>
+    /// <param name="id">The ID of the dashboard.</param>
+    [HttpGet("{id:int}/items/flat")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetFlattenedItems(int id)
+    {
+        var dashboard = await dbContext.Dashboards
+            .Include(d => d.Sections)
+            .ThenInclude(s => s.Items)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(d => d.Id == id);
+        if (dashboard is null) return NotFound();
+
+        var rootItems = dashboard.Sections
+            .SelectMany(s => s.Items)
+            .Where(i => i.ParentItemId == null)
+            .OrderBy(i => i.Position)
+            .Select(i => new ItemVm(
+                i.Id,
+                i.Title ?? "Untitled Item",
+                i.Icon,
+                i.Widget,
+                i.SectionId,
+                string.IsNullOrWhiteSpace(i.OptionsJson) ? (JsonElement?)null : JsonDocument.Parse(i.OptionsJson).RootElement.Clone(),
+                i.ParentItemId
+            )).ToList();
+
+        var childrenLookup = dashboard.Sections
+            .SelectMany(s => s.Items)
+            .Where(i => i.ParentItemId != null)
+            .GroupBy(i => i.ParentItemId!.Value)
+            .ToDictionary(g => g.Key, g => g.OrderBy(ci => ci.Position).Select(ci => new ItemVm(
+                ci.Id,
+                ci.Title ?? "Untitled Item",
+                ci.Icon,
+                ci.Widget,
+                ci.SectionId,
+                string.IsNullOrWhiteSpace(ci.OptionsJson) ? (JsonElement?)null : JsonDocument.Parse(ci.OptionsJson).RootElement.Clone(),
+                ci.ParentItemId
+            )).ToList());
+
+        return Ok(new { rootItems, children = childrenLookup });
+    }
+}
+
+public class ToggleContainerWidgetsDto
+{
+    public bool Enabled { get; set; }
 }

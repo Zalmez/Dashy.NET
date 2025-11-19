@@ -17,6 +17,10 @@ public class DashboardItem
     public DashboardSection Section { get; set; } = null!;
     public int Position { get; set; } = 0;
 
+    // New hierarchical container support (optional parent item)
+    public int? ParentItemId { get; set; }
+    public DashboardItem? ParentItem { get; set; }
+    public List<DashboardItem> Children { get; set; } = [];
 }
 
 public class DashboardSection
@@ -37,6 +41,7 @@ public class Dashboard
     [Required]
     public required string Title { get; set; } = "My Dashboard";
     public string? Subtitle { get; set; }
+    public bool UseContainerWidgets { get; set; } = true; // Default enabled for new installations
     public List<DashboardSection> Sections { get; set; } = [];
     public List<HeaderButton> HeaderButtons { get; set; } = [];
 }

@@ -19,17 +19,22 @@
     [Parameter] public List<TItem> Items { get; set; } = new();
     [Parameter] public RenderFragment<TItem> ItemTemplate { get; set; } = default!;
     [Parameter] public EventCallback<(TItem draggedItem, TItem targetItem)> OnItemMoved { get; set; }
+    [Inject] private Dashy.Net.Web.Services.DragContextService DragContext { get; set; } = default!;
 
     private TItem? _draggedItem;
 
     private void OnDragStart(DragEventArgs e, TItem item)
     {
         _draggedItem = item;
+        if (item is Dashy.Net.Shared.Models.ItemVm vm)
+        {
+            DragContext.Set(vm.Id, vm.ParentItemId, vm.SectionId);
+        }
     }
 
     private void OnDragOver(DragEventArgs e)
     {
-        // Handle drag over logic
+        // Optional: highlight target
     }
 
     private async Task OnDrop(DragEventArgs e, TItem targetItem)
@@ -39,5 +44,6 @@
             await OnItemMoved.InvokeAsync((_draggedItem, targetItem));
         }
         _draggedItem = default;
+        DragContext.Clear();
     }
 }

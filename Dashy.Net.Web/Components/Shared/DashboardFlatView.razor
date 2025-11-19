@@ -1,0 +1,111 @@
+@using Dashy.Net.Shared.Models
+@using Dashy.Net.Web.Components.Shared
+@inject Dashy.Net.Web.Services.DragContextService DragContext
+
+@if (Items is null || Items.Count == 0)
+{
+    <div class="empty-flat-grid" tabindex="0">No widgets yet.</div>
+}
+else
+{
+    <div class="flat-grid" @onkeydown="OnKeyDown">
+        <SortableList TItem="ItemVm" Items="Items" ItemTemplate="RenderItem"
+                      OnItemMoved="@(EventCallback.Factory.Create<(ItemVm draggedItem, ItemVm targetItem)>(this, OnMovedInternal))" />
+    </div>
+}
+@if (IsEditMode)
+{
+    <div class="flat-grid-actions">
+        <AddItemButton OnClick="AddRootWidget" />
+        <button class="btn btn-secondary" @onclick="AddSectionContainer" title="Add Section Container"><i class="fas fa-layer-group"></i></button>
+    </div>
+}
+
+@code {
+    [Parameter] public List<ItemVm> Items { get; set; } = new();
+    [Parameter] public bool IsEditMode { get; set; }
+    [Parameter] public EventCallback<List<int>> OnReordered { get; set; }
+    [Parameter] public EventCallback OnAddItem { get; set; }
+    [Parameter] public EventCallback OnAddSectionContainer { get; set; }
+
+    private int _focusedIndex = -1;
+
+    private RenderFragment<ItemVm> RenderItem => item => @<div class="flat-item" draggable="false" tabindex="0" @onfocus="() => OnItemFocus(item)">
+        @switch (item.Widget?.ToLower() ?? "static-link")
+        {
+            case "static-link":
+                <StaticLinkWidget Item="item" />
+                break;
+            case "clock":
+                <ClockWidget Item="item" />
+                break;
+            case "weather":
+                <WeatherWidget Item="item" />
+                break;
+            case "public ip":
+                <PublicIPWidget Item="item" />
+                break;
+            case "rss feed":
+                <RssWidget Item="item" />
+                break;
+            case "vulnerability feed":
+                <VulnerabilityFeedWidget Item="item" />
+                break;
+            case "section-container":
+                <SectionContainerWidget Item="item" />
+                break;
+            default:
+                <UnknownWidget Item="item" Widget="@item.Widget" />
+                break;
+        }
+    </div>;
+
+    private async Task OnMovedInternal((ItemVm draggedItem, ItemVm targetItem) move)
+    {
+        var oldIndex = Items.FindIndex(i => i.Id == move.draggedItem.Id);
+        var targetIndex = Items.FindIndex(i => i.Id == move.targetItem.Id);
+        if (oldIndex < 0 || targetIndex < 0 || oldIndex == targetIndex) return;
+        var itm = Items[oldIndex];
+        Items.RemoveAt(oldIndex);
+        Items.Insert(targetIndex, itm);
+        await OnReordered.InvokeAsync(Items.Select(i => i.Id).ToList());
+    }
+
+    private Task AddRootWidget() => OnAddItem.InvokeAsync();
+    private Task AddSectionContainer() => OnAddSectionContainer.InvokeAsync();
+
+    private void OnItemFocus(ItemVm item)
+    {
+        _focusedIndex = Items.FindIndex(i => i.Id == item.Id);
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (!IsEditMode) return;
+        if (_focusedIndex < 0) return;
+        if (e.Key == "ArrowLeft" || e.Key == "ArrowUp")
+        {
+            var newIndex = Math.Max(0, _focusedIndex - 1);
+            if (newIndex != _focusedIndex)
+            {
+                var itm = Items[_focusedIndex];
+                Items.RemoveAt(_focusedIndex);
+                Items.Insert(newIndex, itm);
+                _focusedIndex = newIndex;
+                await OnReordered.InvokeAsync(Items.Select(i => i.Id).ToList());
+            }
+        }
+        else if (e.Key == "ArrowRight" || e.Key == "ArrowDown")
+        {
+            var newIndex = Math.Min(Items.Count - 1, _focusedIndex + 1);
+            if (newIndex != _focusedIndex)
+            {
+                var itm = Items[_focusedIndex];
+                Items.RemoveAt(_focusedIndex);
+                Items.Insert(newIndex, itm);
+                _focusedIndex = newIndex;
+                await OnReordered.InvokeAsync(Items.Select(i => i.Id).ToList());
+            }
+        }
+    }
+}

@@ -1,0 +1,162 @@
+@inherits Dashy.Net.Web.Components.Shared.Widgets.WidgetBase
+@using Dashy.Net.Shared.Models
+@inject IJSRuntime JSRuntime
+@inject DashboardClient DashboardClient
+
+<div class="item-card-wrapper container-drop-target @( _isDragHover ? "drag-hover" : string.Empty )" data-widget-type="SectionContainerWidget"
+     @ondragover="OnDragOverRoot" @ondrop="OnDropOnContainer" @ondragenter="() => _isDragHover = true" @ondragleave="() => _isDragHover = false">
+    @if (ViewOptions.IsEditMode)
+    {
+        <div class="item-edit-controls">
+            <button class="edit-btn" title="Edit Container" @onclick="OnEditClick"><i class="fas fa-pencil-alt"></i></button>
+            <button class="delete-btn" title="Delete Container" @onclick="OnDeleteClick"><i class="fas fa-trash-alt"></i></button>
+        </div>
+    }
+
+    <div class="item-card">
+        <div class="item-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 1rem;"
+             @ondragover="OnDragOverRoot" @ondrop="OnDropOnContainer">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+                @if (!string.IsNullOrWhiteSpace(Item.Icon))
+                {
+                    <i class="@Item.Icon item-icon"></i>
+                }
+                <h3 class="tile-title">@Item.Title</h3>
+            </div>
+            @if (ViewOptions.IsEditMode)
+            {
+                <button class="btn btn-secondary" @onclick="OnAddChild"> <i class="fas fa-plus"></i> Add Item</button>
+            }
+        </div>
+
+        <div class="items-wrapper @("layout-" + ViewOptions.CurrentLayout.ToString().ToLower())">
+            @foreach (var child in GetChildren())
+            {
+                <div class="item" @key="child.Id" draggable="true"
+                     @ondragstart="(e) => OnDragStartChild(e, child)"
+                     @ondragover="OnDragOverChild" @ondrop="(e) => OnDropOnChild(e, child)">
+                    @switch (child.Widget?.ToLower() ?? "static-link")
+                    {
+                        case "static-link":
+                            <StaticLinkWidget Item="child" OnItemDeleted="HandleChildDeleted" OnItemEdited="() => HandleChildEdited(child)" />
+                            break;
+                        case "clock":
+                            <ClockWidget Item="child" OnItemDeleted="HandleChildDeleted" OnItemEdited="() => HandleChildEdited(child)" />
+                            break;
+                        case "weather":
+                            <WeatherWidget Item="child" OnItemDeleted="HandleChildDeleted" OnItemEdited="() => HandleChildEdited(child)" />
+                            break;
+                        case "public ip":
+                            <PublicIPWidget Item="child" OnItemDeleted="HandleChildDeleted" OnItemEdited="() => HandleChildEdited(child)" />
+                            break;
+                        case "rss feed":
+                            <RssWidget Item="child" OnItemDeleted="HandleChildDeleted" OnItemEdited="() => HandleChildEdited(child)" />
+                            break;
+                        case "vulnerability feed":
+                            <VulnerabilityFeedWidget Item="child" OnItemDeleted="HandleChildDeleted" OnItemEdited="() => HandleChildEdited(child)" />
+                            break;
+                        case "section-container":
+                            <SectionContainerWidget Item="child" OnItemDeleted="HandleChildDeleted" OnItemEdited="() => HandleChildEdited(child)"
+                                                    OnChildDeleted="OnChildDeleted" OnChildEdited="OnChildEdited" OnAddChild="OnAddChild" />
+                            break;
+                        default:
+                            <UnknownWidget Item="child" Widget="@child.Widget" OnItemDeleted="HandleChildDeleted" OnItemEdited="() => HandleChildEdited(child)" />
+                            break;
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback<ItemVm> OnChildDeleted { get; set; }
+    [Parameter] public EventCallback<ItemVm> OnChildEdited { get; set; }
+    [Parameter] public EventCallback OnAddChild { get; set; }
+
+    [CascadingParameter] public Dashy.Net.Web.Services.DashboardStateService? DashboardState { get; set; }
+
+    private ItemVm? _draggedItem;
+    private bool _isDragHover;
+
+    private IEnumerable<ItemVm> GetChildren()
+    {
+        var items = DashboardState?.Config?.Sections
+            .SelectMany(s => s.Items)
+            .Where(i => i.ParentItemId == Item.Id)
+            ?? Enumerable.Empty<ItemVm>();
+        return items.OrderBy(i => i.Id);
+    }
+
+    private async Task OnDeleteClick()
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Delete container '{Item.Title}' and all its items?");
+        if (IsDisposed) return;
+        if (confirmed)
+        {
+            await OnItemDeleted.InvokeAsync(Item);
+        }
+    }
+
+    private async Task OnEditClick()
+    {
+        await OnItemEdited.InvokeAsync();
+    }
+
+    private Task HandleChildDeleted(ItemVm child) => OnChildDeleted.InvokeAsync(child);
+    private Task HandleChildEdited(ItemVm child) => OnChildEdited.InvokeAsync(child);
+
+    private void OnDragStartChild(DragEventArgs e, ItemVm child)
+    {
+        _draggedItem = child;
+    }
+
+    private void OnDragOverRoot(DragEventArgs e)
+    {
+        if (!ViewOptions.IsEditMode) return;
+        // Accept drag-over
+    }
+
+    private void OnDragOverChild(DragEventArgs e)
+    {
+        if (!ViewOptions.IsEditMode) return;
+        // Accept drag-over
+    }
+
+    private async Task OnDropOnContainer(DragEventArgs e)
+    {
+        if (!ViewOptions.IsEditMode || _draggedItem is null) return;
+        // Move dragged item under this container
+        var moveDto = new MoveItemDto
+        {
+            ItemId = _draggedItem.Id,
+            NewParentItemId = Item.Id,
+            NewSectionId = _draggedItem.SectionId
+        };
+        var ok = await DashboardClient.Items.MoveAsync(moveDto);
+        if (!ok || IsDisposed) return;
+        var newConfig = await DashboardClient.GetConfigAsync();
+        if (IsDisposed) return;
+        await InvokeAsync(() => DashboardState?.SetConfig(newConfig));
+        _draggedItem = null;
+    }
+
+    private async Task OnDropOnChild(DragEventArgs e, ItemVm targetChild)
+    {
+        if (!ViewOptions.IsEditMode || _draggedItem is null || targetChild.Id == _draggedItem.Id) return;
+        // Reorder within same container (parent stays Item.Id)
+        var siblings = GetChildren().ToList();
+        var draggedIndex = siblings.FindIndex(i => i.Id == _draggedItem.Id);
+        var targetIndex = siblings.FindIndex(i => i.Id == targetChild.Id);
+        if (draggedIndex < 0 || targetIndex < 0) return;
+        siblings.RemoveAt(draggedIndex);
+        siblings.Insert(targetIndex, _draggedItem);
+        var reorderIds = siblings.Select(s => s.Id).ToList();
+        var ok = await DashboardClient.Items.ReorderAsync(new ReorderItemsDto(reorderIds));
+        if (!ok || IsDisposed) return;
+        var newConfig = await DashboardClient.GetConfigAsync();
+        if (IsDisposed) return;
+        await InvokeAsync(() => DashboardState?.SetConfig(newConfig));
+        _draggedItem = null;
+    }
+}

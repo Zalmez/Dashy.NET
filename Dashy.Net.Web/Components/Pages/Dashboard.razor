@@ -10,6 +10,7 @@
 @inject DashboardStateService DashboardState
 @inject ViewOptionsService ViewOptions
 @inject EventSubscriptionManager SubscriptionManager
+@inject DragContextService DragContext
 @implements IDisposable
 
 <PageTitle>@DashboardState.Config?.Title</PageTitle>
@@ -35,7 +36,7 @@
 else
 {
     <div class="dashboard-container">
-        @if (ViewOptions.IsEditMode)
+        @if (ViewOptions.IsEditMode && !DashboardState.Config.UseContainerWidgets)
         {
             <div class="add-section-container">
                 <button class="btn btn-primary" @onclick="OpenAddSectionModal">
@@ -44,69 +45,79 @@ else
             </div>
         }
 
-        <div class="dashboard-grid">
-            @foreach (var currentSection in FilteredSections)
-            {
-                <div class="section-item @GetSectionSizeClass(currentSection)" @key="currentSection.Id">
-                    <div class="section-container @GetLayoutClass()" id="section-@currentSection.Id">
-                        <div class="section-header" @onclick="() => ToggleSectionCollapse(currentSection.Id)">
-                            <div class="section-header-left">
-                                <i class="fas fa-chevron-down section-chevron @(_collapsedSections.Contains(currentSection.Id) ? "collapsed" : "")"></i>
-                                @if (!string.IsNullOrWhiteSpace(currentSection.Icon))
-                                {
-                                    <i class="@currentSection.Icon section-icon"></i>
-                                }
-                                <h2>@currentSection.Name</h2>
-                            </div>
-                            @if (ViewOptions.IsEditMode)
-                            {
-                                <div class="section-edit-controls" @onclick:stopPropagation="true">
-                                    <button class="edit-btn" title="Edit Section" @onclick="() => OpenEditSectionModal(currentSection)"><i class="fas fa-pencil-alt"></i></button>
-                                    <button class="delete-btn" title="Delete Section" @onclick="() => HandleSectionDeleted(currentSection)">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
-                                </div>
-                            }
-                        </div>
-                        <div class="items-wrapper @GetItemsContainerClass(currentSection.Id)">
-                            @foreach (var currentItem in currentSection.Items)
-                            {
-                                <div class="item" @key="currentItem.Id">
-                                    @switch (currentItem.Widget?.ToLower() ?? "static-link")
+        @if (DashboardState.Config.UseContainerWidgets)
+        {
+            <div class="root-drop-zone @(DragContext.CurrentItemId.HasValue ? "drag-active" : string.Empty)" @ondragover="OnRootDragOver" @ondrop="OnRootDrop">
+                <DashboardFlatView Items="GetFlattenedRootItems()" IsEditMode="ViewOptions.IsEditMode"
+                               OnReordered="HandleFlatReordered" OnAddItem="OpenAddRootItem" OnAddSectionContainer="OpenAddSectionContainer" />
+            </div>
+        }
+        else
+        {
+            <div class="dashboard-grid">
+                @foreach (var currentSection in FilteredSections)
+                {
+                    <div class="section-item @GetSectionSizeClass(currentSection)" @key="currentSection.Id">
+                        <div class="section-container @GetLayoutClass()" id="section-@currentSection.Id">
+                            <div class="section-header" @onclick="() => ToggleSectionCollapse(currentSection.Id)">
+                                <div class="section-header-left">
+                                    <i class="fas fa-chevron-down section-chevron @(_collapsedSections.Contains(currentSection.Id) ? "collapsed" : "")"></i>
+                                    @if (!string.IsNullOrWhiteSpace(currentSection.Icon))
                                     {
-                                        case "static-link":
-                                            <StaticLinkWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
-                                            break;
-                                        case "clock":
-                                            <ClockWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)"/>
-                                            break;
-                                        case "weather":
-                                            <WeatherWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
-                                            break;
-                                        case "public ip":
-                                            <PublicIPWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
-                                            break;
-                                        case "rss feed":
-                                            <RssWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
-                                            break;
-                                        case "vulnerability feed":
-                                            <VulnerabilityFeedWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
-                                            break;
-                                        default:
-                                            <UnknownWidget Item="currentItem" Widget="@currentItem.Widget" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
-                                            break;
+                                        <i class="@currentSection.Icon section-icon"></i>
                                     }
+                                    <h2>@currentSection.Name</h2>
                                 </div>
-                            }
-                            @if (ViewOptions.IsEditMode && !_collapsedSections.Contains(currentSection.Id))
-                            {
-                                <AddItemButton OnClick="() => OpenCreateModal(currentSection.Id)" />
-                            }
+                                @if (ViewOptions.IsEditMode)
+                                {
+                                    <div class="section-edit-controls" @onclick:stopPropagation="true">
+                                        <button class="edit-btn" title="Edit Section" @onclick="() => OpenEditSectionModal(currentSection)"><i class="fas fa-pencil-alt"></i></button>
+                                        <button class="delete-btn" title="Delete Section" @onclick="() => HandleSectionDeleted(currentSection)">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                            <div class="items-wrapper @GetItemsContainerClass(currentSection.Id)">
+                                @foreach (var currentItem in currentSection.Items)
+                                {
+                                    <div class="item" @key="currentItem.Id">
+                                        @switch (currentItem.Widget?.ToLower() ?? "static-link")
+                                        {
+                                            case "static-link":
+                                                <StaticLinkWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
+                                                break;
+                                            case "clock":
+                                                <ClockWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)"/>
+                                                break;
+                                            case "weather":
+                                                <WeatherWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
+                                                break;
+                                            case "public ip":
+                                                <PublicIPWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
+                                                break;
+                                            case "rss feed":
+                                                <RssWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
+                                                break;
+                                            case "vulnerability feed":
+                                                <VulnerabilityFeedWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
+                                                break;
+                                            default:
+                                                <UnknownWidget Item="currentItem" Widget="@currentItem.Widget" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
+                                                break;
+                                        }
+                                    </div>
+                                }
+                                @if (ViewOptions.IsEditMode && !_collapsedSections.Contains(currentSection.Id))
+                                {
+                                    <AddItemButton OnClick="() => OpenCreateModal(currentSection.Id)" />
+                                }
+                            </div>
                         </div>
                     </div>
-                </div>
-            }
-        </div>
+                }
+            </div>
+        }
     </div>
 
     <Modal Title="@_itemModalTitle" IsOpen="@_isItemModalOpen" OnClose="CloseItemModal">
@@ -157,10 +168,23 @@ else
 
     private IEnumerable<SectionVm> FilteredSections =>
         DashboardState.Config?.Sections.Where(section =>
-            string.IsNullOrWhiteSpace(ViewOptions.SearchTerm) ||
-            section.Name.Contains(ViewOptions.SearchTerm, StringComparison.OrdinalIgnoreCase) ||
-            section.Items.Any(item => item.Title.Contains(ViewOptions.SearchTerm, StringComparison.OrdinalIgnoreCase))
+            string.IsNullOrWhiteSpace(ViewOptions.SearchTerm) || SectionMatchesSearch(section, ViewOptions.SearchTerm)
         ) ?? Enumerable.Empty<SectionVm>();
+
+    private bool SectionMatchesSearch(SectionVm section, string term)
+    {
+        // direct match on section name or any direct item title
+        if (section.Name.Contains(term, StringComparison.OrdinalIgnoreCase)) return true;
+        if (section.Items.Any(item => item.Title.Contains(term, StringComparison.OrdinalIgnoreCase))) return true;
+        // If using container widgets, expand if any child inside a container matches
+        var containerItems = section.Items.Where(i => string.Equals(i.Widget, "section-container", StringComparison.OrdinalIgnoreCase));
+        foreach (var container in containerItems)
+        {
+            var childItems = section.Items.Where(i => i.ParentItemId == container.Id);
+            if (childItems.Any(c => c.Title.Contains(term, StringComparison.OrdinalIgnoreCase))) return true;
+        }
+        return false;
+    }
 
     protected override void OnInitialized()
     {
@@ -230,9 +254,30 @@ else
         _isItemModalOpen = true;
     }
 
+    private async Task<int> EnsureDefaultSectionAsync()
+    {
+        var config = DashboardState.Config;
+        if (config is null) return 0;
+        var existing = config.Sections.FirstOrDefault();
+        if (existing is not null) return existing.Id;
+        var createDto = new CreateSectionDto { Name = "__root__", Icon = null, DashboardId = config.Id };
+        var success = await DashboardClient.Sections.CreateAsync(createDto);
+        if (!success || _isDisposed) return 0;
+        var newConfig = await DashboardClient.GetConfigAsync(Id);
+        if (_isDisposed) return 0;
+        await InvokeAsync(() => DashboardState.SetConfig(newConfig));
+        return newConfig?.Sections.FirstOrDefault()?.Id ?? 0;
+    }
+
     private void OpenAddSectionModal()
     {
         if (DashboardState.Config is null) return;
+        if (DashboardState.Config.UseContainerWidgets)
+        {
+            // In container mode we never show the legacy section modal; ensure a backing section then open container widget creation.
+            InvokeAsync(async () => await OpenAddSectionContainer());
+            return;
+        }
         _sectionToEdit = null;
         _sectionModel = new CreateSectionDto { DashboardId = DashboardState.Config.Id };
         _isSectionModalOpen = true;
@@ -279,6 +324,14 @@ else
     private async Task HandleSaveSection(CreateSectionDto sectionToSave)
     {
         if (_isDisposed) return;
+        // Under container widgets mode we don't persist legacy sections; creation routed to item modal instead.
+        // Allow creation of the FIRST section when none exist so container items have a required SectionId host.
+        if (DashboardState.Config?.UseContainerWidgets == true && (DashboardState.Config.Sections?.Any() ?? false))
+        {
+            // Container mode with existing section(s): ignore legacy section save.
+            CloseSectionModal();
+            return;
+        }
         bool success;
         if (_sectionToEdit is not null)
         {
@@ -443,6 +496,100 @@ else
             _isInitializing = false;
             StateHasChanged();
         }
+    }
+
+    private List<ItemVm> GetFlattenedRootItems()
+    {
+        var result = new List<ItemVm>();
+        if (DashboardState.Config is null) return result;
+        foreach (var section in DashboardState.Config.Sections)
+        {
+            foreach (var item in section.Items.OrderBy(i => i.SectionId).ThenBy(i => i.Id))
+            {
+                if (item.ParentItemId is null) // root level or container itself
+                {
+                    result.Add(item);
+                }
+            }
+        }
+        // Filter search term
+        if (!string.IsNullOrWhiteSpace(ViewOptions.SearchTerm))
+        {
+            var term = ViewOptions.SearchTerm;
+            result = result.Where(i => i.Title.Contains(term, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+        return result;
+    }
+
+    private async Task HandleFlatReordered(List<int> orderedIds)
+    {
+        if (orderedIds.Count == 0) return;
+        var dto = new ReorderItemsDto(orderedIds);
+        var ok = await DashboardClient.Items.ReorderAsync(dto);
+        if (!ok || _isDisposed) return;
+        var newConfig = await DashboardClient.GetConfigAsync(Id);
+        if (_isDisposed) return;
+        await InvokeAsync(() => DashboardState.SetConfig(newConfig));
+    }
+
+    private async Task OpenAddRootItem()
+    {
+        // Use first section or force creating one if none
+        var sectionId = DashboardState.Config?.Sections.FirstOrDefault()?.Id ?? 0;
+        if (sectionId == 0)
+        {
+            sectionId = await EnsureDefaultSectionAsync();
+        }
+        if (sectionId == 0) return;
+        OpenCreateModal(sectionId);
+    }
+
+    private async Task OpenAddSectionContainer()
+    {
+        var sectionId = DashboardState.Config?.Sections.FirstOrDefault()?.Id ?? 0;
+        if (sectionId == 0)
+        {
+            sectionId = await EnsureDefaultSectionAsync();
+        }
+        if (sectionId == 0) return;
+        _itemModalTitle = "Add Section Container";
+        _currentItemToEdit = new ItemEditModel { SectionId = sectionId, Widget = "section-container" };
+        _isItemModalOpen = true;
+    }
+
+    private void OnRootDragOver(DragEventArgs e)
+    {
+        if (!ViewOptions.IsEditMode) return;
+        // Accept drag over root for unparenting
+    }
+
+    private async Task OnRootDrop(DragEventArgs e)
+    {
+        if (!ViewOptions.IsEditMode) return;
+        var itemId = DragContext.CurrentItemId;
+        if (itemId is null) return;
+        var config = DashboardState.Config;
+        if (config is null) return;
+        // Find item current state
+        var item = config.Sections.SelectMany(s => s.Items).FirstOrDefault(i => i.Id == itemId.Value);
+        if (item is null) { DragContext.Clear(); return; }
+        if (item.ParentItemId is null)
+        {
+            DragContext.Clear();
+            return; // already root
+        }
+        var moveDto = new MoveItemDto
+        {
+            ItemId = item.Id,
+            NewSectionId = item.SectionId,
+            ClearParent = true
+        };
+        var ok = await DashboardClient.Items.MoveAsync(moveDto);
+        if (!ok || _isDisposed) { DragContext.Clear(); return; }
+        var newConfig = await DashboardClient.GetConfigAsync(Id);
+        if (_isDisposed) { DragContext.Clear(); return; }
+        await InvokeAsync(() => DashboardState.SetConfig(newConfig));
+        DragContext.Clear();
     }
 
     public void Dispose()

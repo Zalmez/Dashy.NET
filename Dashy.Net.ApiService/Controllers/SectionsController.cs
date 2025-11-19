@@ -12,6 +12,7 @@ namespace Dashy.Net.ApiService.Controllers;
 [Route("api/sections")]
 [Produces("application/json")]
 [Authorize]
+[Obsolete("Sections endpoints will be removed after container widget migration.")]
 public class SectionsController(AppDbContext dbContext, ILogger<SectionsController> logger) : ControllerBase
 {
     [HttpPost]
@@ -123,5 +124,42 @@ public class SectionsController(AppDbContext dbContext, ILogger<SectionsControll
 
         logger.LogInformation("Successfully deleted section '{SectionName}' with ID: {SectionId}", section.Name, id);
         return NoContent();
+    }
+
+    // New: Convert section root items into a single container widget
+    [HttpPost("{id}/convert-to-container")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ConvertToContainer(int id)
+    {
+        var section = await dbContext.Sections.Include(s => s.Items).FirstOrDefaultAsync(s => s.Id == id);
+        if (section is null)
+        {
+            logger.LogWarning("Attempted to convert non-existent section with ID: {SectionId}", id);
+            return NotFound();
+        }
+
+        // Create a new container item in this section
+        var container = new DashboardItem
+        {
+            Title = section.Name,
+            Icon = section.Icon,
+            Widget = "section-container",
+            SectionId = section.Id,
+            Position = section.Items.Count > 0 ? section.Items.Max(i => i.Position) + 1 : 0
+        };
+        dbContext.Items.Add(container);
+        await dbContext.SaveChangesAsync();
+
+        // Move all current ROOT items (no ParentItemId) under the container
+        var rootItems = section.Items.Where(i => i.ParentItemId == null && i.Id != container.Id).ToList();
+        foreach (var item in rootItems)
+        {
+            item.ParentItemId = container.Id;
+        }
+        await dbContext.SaveChangesAsync();
+
+        logger.LogInformation("Converted section {SectionId} to container widget {ContainerId}", id, container.Id);
+        return Ok(new { containerId = container.Id });
     }
 }

@@ -62,6 +62,7 @@ builder.Services.AddHttpClient<AppSettingsClient>(opts =>
 {
     opts.BaseAddress = new("https+http://apiservice");
 }).AddHttpMessageHandler<TokenHandler>();
+builder.Services.AddScoped<DragContextService>();
 #endregion
 
 

@@ -14,14 +14,16 @@ public class CreateItemDto
     public string? Icon { get; set; }
     public string? Widget { get; set; }
     public int SectionId { get; set; }
+    public int? ParentItemId { get; set; } // New: optional parent container item
     public Dictionary<string, object> Options { get; set; } = new();
     public CreateItemDto() { }
-    public CreateItemDto(string title, string? icon, string? widget, int sectionId, Dictionary<string, object> options)
+    public CreateItemDto(string title, string? icon, string? widget, int sectionId, Dictionary<string, object> options, int? parentItemId = null)
     {
         Title = title;
         Icon = icon;
         Widget = widget;
         SectionId = sectionId;
+        ParentItemId = parentItemId;
         Options = options;
     }
 }
@@ -33,15 +35,17 @@ public class UpdateItemDto
     public string? Icon { get; set; }
     public string? Widget { get; set; }
     public int SectionId { get; set; }
+    public int? ParentItemId { get; set; } // New: optional parent container item
     public Dictionary<string, object> Options { get; set; } = new();
 
     public UpdateItemDto() { }
-    public UpdateItemDto(string title, string? icon, string? widget, int sectionId, Dictionary<string, object> options)
+    public UpdateItemDto(string title, string? icon, string? widget, int sectionId, Dictionary<string, object> options, int? parentItemId = null)
     {
         Title = title;
         Icon = icon;
         Widget = widget;
         SectionId = sectionId;
+        ParentItemId = parentItemId;
         Options = options;
     }
 }
@@ -155,8 +159,9 @@ public class AuthenticationProviderSettingDto
 }
 
 // --- ViewModels (Models for the Blazor UI) ---
-public record DashboardConfigVm(int Id, string Title, string? Subtitle, List<SectionVm> Sections, List<HeaderButtonVm> HeaderButtons);
+public record DashboardConfigVm(int Id, string Title, string? Subtitle, List<SectionVm> Sections, List<HeaderButtonVm> HeaderButtons, bool UseContainerWidgets = false);
 public record DashboardListItemVm(int Id, string Title, string? Subtitle);
+[Obsolete("Sections will be replaced by container widgets; use ItemVm + section-container widget.")]
 public record SectionVm(int Id, string Name, string? Icon, int DashboardId, List<ItemVm> Items);
 public record HeaderButtonVm(int Id, string Text, string? Url, string? Icon);
 public record ItemVm(
@@ -165,7 +170,8 @@ public record ItemVm(
     string? Icon,
     string? Widget,
     int SectionId,
-    JsonElement? Options
+    JsonElement? Options,
+    int? ParentItemId = null // New: optional parent container item id
 );
 
 public record AuthenticationProviderVm(
@@ -204,3 +210,4 @@ public class AuthenticationProviderSettingTemplate
     public string InputType { get; set; } = "text";
     public List<string>? Options { get; set; }
 }
+public record ReorderItemsScopedDto(int SectionId, int? ParentItemId, List<int> OrderedItemIds);

@@ -9,10 +9,10 @@ var authClientSecret = config["auth_clientsecret"] ?? "";
 
 var postgres = builder.AddPostgres("postgresdb")
     .WithLifetime(ContainerLifetime.Persistent)
-    .WithDataVolume("dashydb")
-    .WithPgAdmin();
+    .WithDataVolume("dashydb");
 
 var db = postgres.AddDatabase("dashy");
+
 
 var apiService = builder.AddProject<Projects.Dashy_Net_ApiService>("apiservice")
     .WithReference(postgres)
@@ -26,5 +26,7 @@ builder.AddProject<Projects.Dashy_Net_Web>("webfrontend")
     .WithEnvironment("auth_authority", authAuthority).WithEnvironment("auth_clientid", authClientId).WithEnvironment("auth_clientsecret", authClientSecret)
     .WithReference(apiService)
     .WaitFor(apiService);
+
+postgres.WithPgAdmin();
 
 builder.Build().Run();

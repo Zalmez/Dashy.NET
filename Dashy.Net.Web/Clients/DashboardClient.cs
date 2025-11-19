@@ -57,7 +57,8 @@ public class DashboardClient
                                 Title: "Error: Cannot connect to API! (Bad Gateway error)",
                                 Subtitle: null,
                                 Sections: new(),
-                                HeaderButtons: new()
+                                HeaderButtons: new(),
+                                UseContainerWidgets: false
                             );
                         case HttpStatusCode.ServiceUnavailable:
                             return new DashboardConfigVm
@@ -66,7 +67,8 @@ public class DashboardClient
                                 Title: "Error: Cannot connect to API! (Service Unavailable)",
                                 Subtitle: null,
                                 Sections: new(),
-                                HeaderButtons: new()
+                                HeaderButtons: new(),
+                                UseContainerWidgets: false
                             );
                         case HttpStatusCode.GatewayTimeout:
                             return new DashboardConfigVm
@@ -75,7 +77,8 @@ public class DashboardClient
                                 Title: "Error: Cannot connect to API! (Gateway Timeout)",
                                 Subtitle: null,
                                 Sections: new(),
-                                HeaderButtons: new()
+                                HeaderButtons: new(),
+                                UseContainerWidgets: false
                             );
                         default:
                             break;
@@ -90,8 +93,23 @@ public class DashboardClient
             Title: "Error: Cannot connect to API! (Unknown error)",
             Subtitle: null,
             Sections: new(),
-            HeaderButtons: new()
+            HeaderButtons: new(),
+            UseContainerWidgets: false
         );
+    }
+
+    public async Task<bool> SetUseContainerWidgetsAsync(int dashboardId, bool enabled)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync($"api/dashboard/{dashboardId}/use-container-widgets", new { enabled });
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to set UseContainerWidgets for dashboard {DashboardId}", dashboardId);
+            return false;
+        }
     }
 
     public async Task<DashboardConfigVm?> CreateAsync(CreateDashboardDto createDto)
@@ -157,6 +175,63 @@ public class DashboardClient
         {
             _logger.LogError(ex, "Failed to seed dashboard.");
             return false;
+        }
+    }
+
+    public async Task<(List<ItemVm> rootItems, Dictionary<int, List<ItemVm>> children)?> GetFlattenedItemsAsync(int dashboardId)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync($"api/dashboard/{dashboardId}/items/flat");
+            if (!response.IsSuccessStatusCode) return null;
+            var json = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(json);
+            var rootItems = new List<ItemVm>();
+            if (doc.RootElement.TryGetProperty("rootItems", out var rootArr))
+            {
+                foreach (var r in rootArr.EnumerateArray())
+                {
+                    rootItems.Add(new ItemVm(
+                        r.GetProperty("id").GetInt32(),
+                        r.GetProperty("title").GetString() ?? "Untitled",
+                        r.TryGetProperty("icon", out var ic) ? ic.GetString() : null,
+                        r.TryGetProperty("widget", out var wd) ? wd.GetString() : null,
+                        r.GetProperty("sectionId").GetInt32(),
+                        r.TryGetProperty("options", out var opt) ? opt : (JsonElement?)null,
+                        r.TryGetProperty("parentItemId", out var pid) && pid.ValueKind != JsonValueKind.Null ? pid.GetInt32() : (int?)null
+                    ));
+                }
+            }
+            var children = new Dictionary<int, List<ItemVm>>();
+            if (doc.RootElement.TryGetProperty("children", out var childObj))
+            {
+                foreach (var kv in childObj.EnumerateObject())
+                {
+                    if (int.TryParse(kv.Name, out var parentId))
+                    {
+                        var list = new List<ItemVm>();
+                        foreach (var c in kv.Value.EnumerateArray())
+                        {
+                            list.Add(new ItemVm(
+                                c.GetProperty("id").GetInt32(),
+                                c.GetProperty("title").GetString() ?? "Untitled",
+                                c.TryGetProperty("icon", out var icc) ? icc.GetString() : null,
+                                c.TryGetProperty("widget", out var wdc) ? wdc.GetString() : null,
+                                c.GetProperty("sectionId").GetInt32(),
+                                c.TryGetProperty("options", out var optc) ? optc : (JsonElement?)null,
+                                c.TryGetProperty("parentItemId", out var pidc) && pidc.ValueKind != JsonValueKind.Null ? pidc.GetInt32() : (int?)null
+                            ));
+                        }
+                        children[parentId] = list;
+                    }
+                }
+            }
+            return (rootItems, children);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get flattened items for dashboard {DashboardId}", dashboardId);
+            return null;
         }
     }
 }

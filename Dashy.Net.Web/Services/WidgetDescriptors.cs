@@ -48,3 +48,11 @@ public class VulnerabilityFeedDescriptor : IWidgetDescriptor
     public string Name => "Vulnerability Feed";
     public string Icon => "fas fa-rss";
 }
+
+// New container widget descriptor
+public class SectionContainerWidgetDescriptor : IWidgetDescriptor
+{
+    public string TypeIdentifier => "section-container";
+    public string Name => "section-container";
+    public string Icon => "fas fa-folder-open";
+}

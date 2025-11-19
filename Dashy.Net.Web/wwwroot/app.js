@@ -1,5 +1,9 @@
 ﻿function setBodyClass(cssClass) {
-  document.body.className = cssClass;
+  const classes = ['theme-light','theme-dark','theme-high-contrast'];
+  classes.forEach(c => document.body.classList.remove(c));
+  if (cssClass && classes.includes(cssClass)) {
+    document.body.classList.add(cssClass);
+  }
 }
 
 function saveToLocalStorage(key, value) {
@@ -42,12 +46,10 @@ function removeCustomBackground() {
   }
 }
 
-// Test function to verify CSS is working
 function testBackground() {
   console.log('testBackground called');
   const dashboardElement = document.querySelector('.dashboard-layout');
   if (dashboardElement) {
-    // Use a simple gradient as a test
     dashboardElement.style.setProperty('--custom-background-image', 'linear-gradient(45deg, #ff6b6b, #4ecdc4)');
     dashboardElement.classList.add('has-custom-background');
     console.log('Test background applied');
