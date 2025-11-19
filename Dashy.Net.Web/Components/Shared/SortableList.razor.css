@@ -1,54 +1,40 @@
 .sortable-list {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.5rem;
 }
 
 .sortable-item {
-    padding: 0.75rem; /* use a bit more breathing room */
-    border: 1px solid var(--glass-border);
-    border-radius: 12px; /* smoother corners */
-    background: var(--glass-background);
-    backdrop-filter: blur(14px) saturate(140%);
+    padding: 0.5rem;
+    border: 1px solid var(--glass-border); /* subtle themed border */
+    border-radius: 12px;
+    background: transparent; /* blend with page */
+    backdrop-filter: none;
     cursor: grab;
     position: relative;
-    box-shadow: var(--glass-shadow);
+    box-shadow: none; /* no extra outer shadow */
     transition: background-color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
-    overflow: hidden;
+    overflow: visible;
 }
 
-/* subtle gradient sheen */
-.sortable-item::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.05) 45%, rgba(255,255,255,0.02) 100%);
-    border-radius: inherit;
-    opacity: 0.85;
-    transition: opacity var(--transition-fast);
-}
+/* remove sheen */
+.sortable-item::before { display: none; }
 
+/* Very light hover, just to indicate interactivity in edit mode */
 .sortable-item:hover {
-    border-color: var(--accent-color);
-    box-shadow: 0 12px 40px rgba(0,0,0,0.45);
-    transform: translateY(-2px);
+    background: var(--glass-background);
+    border-color: var(--glass-border);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.22); /* toned down */
 }
-
-.sortable-item:hover::before { opacity: 1; }
 
 .sortable-item:active { cursor: grabbing; }
 
 .sortable-item.drag-over {
-    border-color: var(--accent-color);
+    outline: 2px dashed var(--accent-color);
+    outline-offset: 6px;
     background: var(--glass-hover-background);
 }
 
-/* High contrast keeps stronger border, no blur */
-body.theme-high-contrast .sortable-item {
-    backdrop-filter: none;
-    background: var(--card-background-color);
-    border: 2px solid var(--border-color);
-    box-shadow: none;
-}
-body.theme-high-contrast .sortable-item::before { display: none; }
+/* High contrast keeps stronger outline and border for accessibility */
+body.theme-high-contrast .sortable-item { border: 2px solid var(--border-color); }
+body.theme-high-contrast .sortable-item.drag-over { outline: 2px solid var(--border-color); }

@@ -226,7 +226,7 @@ h1,h2,h3,h4,h5,h6 { color: var(--text-color); margin: 0; }
   4. COMPONENT STYLES
 ==============================================================*/
 /* --- Sections & Items --- */
-.section-container { background-color: var(--card-background-color); border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 1.5rem; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
+.section-container { background-color: var(--card-background-color); border: 1px solid var(--glass-border); border-radius: 0.5rem; padding: 1.5rem; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
 .section-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); cursor: pointer; }
 .section-header-left { display: flex; align-items: center; gap: 0.75rem; }
 .section-icon { font-size: 1.1rem; color: var(--subtle-text-color); }
