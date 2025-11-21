@@ -253,7 +253,7 @@ else
 
     private void OpenCreateModal(int sectionId, int? parentItemId = null)
     {
-        _itemModalTitle = parentItemId is null ? "Add New Item" : "Add Child Item";
+        _itemModalTitle = parentItemId is null ? "Add New Widget" : "Add Child Widget";
         _currentItemToEdit = new ItemEditModel { SectionId = sectionId, Widget = "static-link", ParentItemId = parentItemId };
         _isItemModalOpen = true;
     }
