@@ -25,7 +25,7 @@
             </div>
             @if (ViewOptions.IsEditMode)
             {
-                <button class="btn btn-secondary" @onclick="OnAddChild"> <i class="fas fa-plus"></i> Add Item</button>
+                <button class="btn btn-secondary" @onclick="() => OnAddChildToContainer.InvokeAsync(Item.Id)"> <i class="fas fa-plus"></i> Add Widget</button>
             }
         </div>
 
@@ -50,7 +50,7 @@
 @code {
     [Parameter] public EventCallback<ItemVm> OnChildDeleted { get; set; }
     [Parameter] public EventCallback<ItemVm> OnChildEdited { get; set; }
-    [Parameter] public EventCallback OnAddChild { get; set; }
+    [Parameter] public EventCallback<int> OnAddChildToContainer { get; set; }
 
     private bool _isDragHover;
     private List<ItemVm> _children = new();
@@ -162,7 +162,7 @@
                 builder.AddAttribute(1, "Item", child);
                 builder.AddAttribute(2, "OnChildDeleted", EventCallback.Factory.Create<ItemVm>(this, OnChildDeleted));
                 builder.AddAttribute(3, "OnChildEdited", EventCallback.Factory.Create<ItemVm>(this, OnChildEdited));
-                builder.AddAttribute(4, "OnAddChild", EventCallback.Factory.Create(this, OnAddChild));
+                builder.AddAttribute(4, "OnAddChildToContainer", EventCallback.Factory.Create<int>(this, OnAddChildToContainer));
                 builder.CloseComponent();
                 break;
             default:

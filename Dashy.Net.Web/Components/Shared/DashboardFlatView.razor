@@ -30,6 +30,7 @@ else
     [Parameter] public bool IsEditMode { get; set; }
     [Parameter] public EventCallback<List<int>> OnReordered { get; set; }
     [Parameter] public EventCallback OnAddItem { get; set; }
+    [Parameter] public EventCallback<int> OnAddItemToContainer { get; set; }
 
     private int _focusedIndex = -1;
 
@@ -70,6 +71,7 @@ else
             case "section-container":
                 builder.OpenComponent<SectionContainerWidget>(0);
                 builder.AddAttribute(1, "Item", item);
+                builder.AddAttribute(2, "OnAddChildToContainer", EventCallback.Factory.Create<int>(this, id => OnAddItemToContainer.InvokeAsync(id)));                
                 builder.CloseComponent();
                 break;
             default:

@@ -49,7 +49,9 @@ else
         {   
             <FluentDragContainer TItem="ItemVm" class="dashboard-drag-container" OnDropEnd="HandleDashboardDropEnd">
                 <DashboardFlatView Items="GetFlattenedRootItems()" IsEditMode="ViewOptions.IsEditMode"
-                               OnReordered="HandleFlatReordered" OnAddItem="OpenAddRootItem" />
+                                   OnReordered="HandleFlatReordered"
+                                   OnAddItem="OpenAddRootItem"
+                                   OnAddItemToContainer="@(EventCallback.Factory.Create<int>(this, OpenAddChildItem))" />
             </FluentDragContainer>
         }
         else
@@ -101,6 +103,10 @@ else
                                                 break;
                                             case "vulnerability feed":
                                                 <VulnerabilityFeedWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
+                                                break;
+                                            case "section-container":
+                                                <SectionContainerWidget Item="currentItem"
+                                                                        OnAddChildToContainer="@(EventCallback.Factory.Create<int>(this, OpenAddChildItem))" />
                                                 break;
                                             default:
                                                 <UnknownWidget Item="currentItem" Widget="@currentItem.Widget" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
@@ -165,6 +171,8 @@ else
 
     private bool _isInitializing = false;
     private string? _initError;
+
+    private int? _pendingContainerId;
 
     private IEnumerable<SectionVm> FilteredSections =>
         DashboardState.Config?.Sections.Where(section =>
@@ -238,11 +246,18 @@ else
         InvokeAsync(StateHasChanged);
     }
 
-    private void OpenCreateModal(int sectionId)
+    private void OpenCreateModal(int sectionId, int? parentItemId = null)
     {
-        _itemModalTitle = "Add New Item";
-        _currentItemToEdit = new ItemEditModel { SectionId = sectionId, Widget = "static-link" };
+        _itemModalTitle = parentItemId is null ? "Add New Item" : "Add Child Item";
+        _currentItemToEdit = new ItemEditModel { SectionId = sectionId, Widget = "static-link", ParentItemId = parentItemId };
         _isItemModalOpen = true;
+    }
+
+    private void OpenAddChildItem(int containerItemId)
+    {
+        var sectionId = DashboardState.Config?.Sections.FirstOrDefault(s => s.Items.Any(i => i.Id == containerItemId))?.Id ?? 0;
+        if (sectionId == 0) return;
+        OpenCreateModal(sectionId, containerItemId);
     }
 
     private void OpenEditModal(ItemVm item)
@@ -316,6 +331,7 @@ else
     {
         _isItemModalOpen = false;
         _currentItemToEdit = null;
+        _pendingContainerId = null;
     }
 
     private async Task HandleSaveSection(CreateSectionDto sectionToSave)
