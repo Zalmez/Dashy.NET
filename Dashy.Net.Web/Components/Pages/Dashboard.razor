@@ -577,16 +577,15 @@ else
     {
         if (_isDisposed || !ViewOptions.IsEditMode) return;
         var source = e.Source?.Item;
-        var target = e.Target?.Item; // may be null when dropping on root blank drop zone
+        var target = e.Target?.Item;
         if (source is null) return;
         var config = DashboardState.Config;
         if (config is null) return;
 
-        // Root blank drop => un-nest
         if (target is null)
         {
             if (source.ParentItemId is null)
-                return; // already root
+                return;
             var okUnnest = await DashboardClient.Items.MoveAsync(new MoveItemDto
             {
                 ItemId = source.Id,
@@ -605,7 +604,6 @@ else
         var targetParent = target.ParentItemId;
         var targetIsContainer = IsContainer(target);
 
-        // Case 1: dropping onto a container => nest into that container
         if (targetIsContainer)
         {
             var okNest = await DashboardClient.Items.MoveAsync(new MoveItemDto
@@ -620,8 +618,6 @@ else
             await InvokeAsync(() => DashboardState.SetConfig(cfg));
             return;
         }
-
-        // Case 2: same parent reorder (root or inside a container)
         if (source.SectionId == target.SectionId && sourceParent == targetParent)
         {
             var siblings = config.Sections.SelectMany(s => s.Items)
@@ -643,8 +639,6 @@ else
             }
             return;
         }
-
-        // Case 3: cross-parent move (un-nest to target's parent or between containers)
         {
             var moveDto = new MoveItemDto
             {
@@ -656,7 +650,6 @@ else
             var okMove = await DashboardClient.Items.MoveAsync(moveDto);
             if (!okMove || _isDisposed) return;
 
-            // After moving, reorder in the target scope to place source near target
             var cfg = await DashboardClient.GetConfigAsync(Id);
             if (_isDisposed) return;
             var siblings = cfg?.Sections.SelectMany(s => s.Items)
