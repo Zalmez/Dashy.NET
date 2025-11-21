@@ -1141,7 +1141,3 @@
   display: flex;
   gap: 0.5rem;
 }
-
-.sortable-item {
-  cursor: grab;
-}

@@ -4,26 +4,31 @@
 @inject Dashy.Net.Web.Clients.DashboardClient DashboardClient
 @inject Dashy.Net.Web.Services.DashboardStateService DashboardState
 
-@if (Items is null || Items.Count == 0)
-{
-    <div class="empty-flat-grid" tabindex="0">No widgets yet.</div>
-}
-else
-{
-    <div class="flat-grid" @onkeydown="OnKeyDown">
-        <SortableList TItem="ItemVm" Items="Items" ItemTemplate="RenderItem"
-                      UseOwnContainer="false"
-                      OnItemMoved="@(EventCallback.Factory.Create<(ItemVm draggedItem, ItemVm targetItem)>(this, OnMovedInternal))"
-                      OnItemNested="@(EventCallback.Factory.Create<(ItemVm draggedItem, ItemVm newParent)>(this, OnNestedInternal))"
-                      OnItemFocused="@(EventCallback.Factory.Create<ItemVm>(this, OnItemFocus))" />
-    </div>
-}
-@if (IsEditMode)
-{
-    <div class="flat-grid-actions">
-        <AddItemButton OnClick="AddRootWidget" />
-    </div>
-}
+<FluentDropZone TItem="ItemVm" Droppable="@IsEditMode" Draggable="false" StopPropagation="true" class="flat-root-drop-zone">
+    @if (Items is null || Items.Count == 0)
+    {
+        <div class="empty-flat-grid" tabindex="0">No widgets yet.</div>
+    }
+    else
+    {
+        <div class="flat-grid" @onkeydown="OnKeyDown">
+            @foreach (var item in Items)
+            {
+                var isContainer = item.Widget?.Contains("container", StringComparison.OrdinalIgnoreCase) == true;
+                var css = $"sortable-item {(isContainer ? "sortable-container" : "sortable-leaf")}";
+                <FluentDropZone TItem="ItemVm" Item="item" Data="item" class="@css" Draggable="@IsEditMode" Droppable="@IsEditMode" StopPropagation="true" tabindex="0" @onfocus="() => OnItemFocus(item)">
+                    @RenderItem(item)
+                </FluentDropZone>
+            }
+        </div>
+    }
+    @if (IsEditMode)
+    {
+        <div class="flat-grid-actions">
+            <AddItemButton OnClick="AddRootWidget" />
+        </div>
+    }
+</FluentDropZone>
     
 @code {
     [Parameter] public List<ItemVm> Items { get; set; } = new();
@@ -82,36 +87,6 @@ else
                 break;
         }
     };
-
-    private async Task OnMovedInternal((ItemVm draggedItem, ItemVm targetItem) move)
-    {
-        var oldIndex = Items.FindIndex(i => i.Id == move.draggedItem.Id);
-        var targetIndex = Items.FindIndex(i => i.Id == move.targetItem.Id);
-        if (oldIndex < 0 || targetIndex < 0 || oldIndex == targetIndex) return;
-        var itm = Items[oldIndex];
-        Items.RemoveAt(oldIndex);
-        Items.Insert(targetIndex, itm);
-        await OnReordered.InvokeAsync(Items.Select(i => i.Id).ToList());
-    }
-
-    private async Task OnNestedInternal((ItemVm draggedItem, ItemVm newParent) nest)
-    {
-        var idx = Items.FindIndex(i => i.Id == nest.draggedItem.Id);
-        if (idx >= 0)
-        {
-            Items.RemoveAt(idx);
-        }
-        var ok = await DashboardClient.Items.MoveAsync(new Dashy.Net.Web.Clients.MoveItemDto
-        {
-            ItemId = nest.draggedItem.Id,
-            NewSectionId = nest.newParent.SectionId,
-            NewParentItemId = nest.newParent.Id
-        });
-        if (!ok) return;
-        var newConfig = await DashboardClient.GetConfigAsync();
-        if (newConfig is null) return;
-        await InvokeAsync(() => DashboardState.SetConfig(newConfig));
-    }
 
     private Task AddRootWidget() => OnAddItem.InvokeAsync();
 
