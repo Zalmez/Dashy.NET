@@ -3,8 +3,10 @@
 @inject Dashy.Net.Web.Services.DragContextService DragContext
 @inject Dashy.Net.Web.Clients.DashboardClient DashboardClient
 @inject Dashy.Net.Web.Services.DashboardStateService DashboardState
+@inject Dashy.Net.Web.Services.ViewOptionsService ViewOptions
+@implements IDisposable
 
-<FluentDropZone TItem="ItemVm" Droppable="@IsEditMode" Draggable="false" StopPropagation="true" class="flat-root-drop-zone">
+<FluentDropZone TItem="ItemVm" Droppable="@IsEditMode" Draggable="false" StopPropagation="true" class="flat-root-drop-zone layout-auto">
     @if (Items is null || Items.Count == 0)
     {
         <div class="empty-flat-grid" tabindex="0">No widgets yet.</div>
@@ -14,8 +16,8 @@
         <div class="flat-grid" @onkeydown="OnKeyDown">
             @foreach (var item in Items)
             {
-                var isContainer = item.Widget?.Contains("container", StringComparison.OrdinalIgnoreCase) == true;
-                var css = $"sortable-item {(isContainer ? "sortable-container" : "sortable-leaf")}";
+                var isContainer = IsContainer(item);
+                var css = $"sortable-item {(isContainer ? "sortable-container" : "sortable-leaf")} {GetItemSizeClass()}";
                 <FluentDropZone TItem="ItemVm" Item="item" Data="item" class="@css" Draggable="@IsEditMode" Droppable="@IsEditMode" StopPropagation="true" tabindex="0" @onfocus="() => OnItemFocus(item)">
                     @RenderItem(item)
                 </FluentDropZone>
@@ -38,6 +40,22 @@
     [Parameter] public EventCallback<int> OnAddItemToContainer { get; set; }
 
     private int _focusedIndex = -1;
+
+    protected override void OnInitialized()
+    {
+    }
+
+    public void Dispose() { }
+
+    private static bool IsContainer(ItemVm item) => item.Widget?.Contains("container", StringComparison.OrdinalIgnoreCase) == true;
+
+    private string GetItemSizeClass() => ViewOptions.CurrentItemSize switch
+    {
+        ItemSize.Small => "item-size-small",
+        ItemSize.Medium => "item-size-medium",
+        ItemSize.Large => "item-size-large",
+        _ => "item-size-medium"
+    };
 
     private RenderFragment<ItemVm> RenderItem => item => builder =>
     {
@@ -90,10 +108,7 @@
 
     private Task AddRootWidget() => OnAddItem.InvokeAsync();
 
-    private void OnItemFocus(ItemVm item)
-    {
-        _focusedIndex = Items.FindIndex(i => i.Id == item.Id);
-    }
+    private void OnItemFocus(ItemVm item) => _focusedIndex = Items.FindIndex(i => i.Id == item.Id);
 
     private async Task OnKeyDown(KeyboardEventArgs e)
     {
