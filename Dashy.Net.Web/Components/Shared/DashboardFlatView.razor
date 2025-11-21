@@ -38,11 +38,14 @@
     [Parameter] public EventCallback<List<int>> OnReordered { get; set; }
     [Parameter] public EventCallback OnAddItem { get; set; }
     [Parameter] public EventCallback<int> OnAddItemToContainer { get; set; }
+    [Parameter] public EventCallback<ItemVm> OnItemEdited { get; set; }
+    [Parameter] public EventCallback<ItemVm> OnItemDeleted { get; set; }
 
     private int _focusedIndex = -1;
 
     protected override void OnInitialized()
     {
+        // Layout orientation disabled for now
     }
 
     public void Dispose() { }
@@ -59,48 +62,65 @@
 
     private RenderFragment<ItemVm> RenderItem => item => builder =>
     {
+        // Provide edit/delete callbacks for all widgets
         switch ((item.Widget?.ToLower()) ?? "static-link")
         {
             case "static-link":
                 builder.OpenComponent<StaticLinkWidget>(0);
                 builder.AddAttribute(1, "Item", item);
+                builder.AddAttribute(2, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, i => OnItemDeleted.InvokeAsync(i)));
+                builder.AddAttribute(3, "OnItemEdited", EventCallback.Factory.Create(this, () => OnItemEdited.InvokeAsync(item)));
                 builder.CloseComponent();
                 break;
             case "clock":
                 builder.OpenComponent<ClockWidget>(0);
                 builder.AddAttribute(1, "Item", item);
+                builder.AddAttribute(2, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, i => OnItemDeleted.InvokeAsync(i)));
+                builder.AddAttribute(3, "OnItemEdited", EventCallback.Factory.Create(this, () => OnItemEdited.InvokeAsync(item)));
                 builder.CloseComponent();
                 break;
             case "weather":
                 builder.OpenComponent<WeatherWidget>(0);
                 builder.AddAttribute(1, "Item", item);
+                builder.AddAttribute(2, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, i => OnItemDeleted.InvokeAsync(i)));
+                builder.AddAttribute(3, "OnItemEdited", EventCallback.Factory.Create(this, () => OnItemEdited.InvokeAsync(item)));
                 builder.CloseComponent();
                 break;
             case "public ip":
                 builder.OpenComponent<PublicIPWidget>(0);
                 builder.AddAttribute(1, "Item", item);
+                builder.AddAttribute(2, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, i => OnItemDeleted.InvokeAsync(i)));
+                builder.AddAttribute(3, "OnItemEdited", EventCallback.Factory.Create(this, () => OnItemEdited.InvokeAsync(item)));
                 builder.CloseComponent();
                 break;
             case "rss feed":
                 builder.OpenComponent<RssWidget>(0);
                 builder.AddAttribute(1, "Item", item);
+                builder.AddAttribute(2, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, i => OnItemDeleted.InvokeAsync(i)));
+                builder.AddAttribute(3, "OnItemEdited", EventCallback.Factory.Create(this, () => OnItemEdited.InvokeAsync(item)));
                 builder.CloseComponent();
                 break;
             case "vulnerability feed":
                 builder.OpenComponent<VulnerabilityFeedWidget>(0);
                 builder.AddAttribute(1, "Item", item);
+                builder.AddAttribute(2, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, i => OnItemDeleted.InvokeAsync(i)));
+                builder.AddAttribute(3, "OnItemEdited", EventCallback.Factory.Create(this, () => OnItemEdited.InvokeAsync(item)));
                 builder.CloseComponent();
                 break;
             case "section-container":
                 builder.OpenComponent<SectionContainerWidget>(0);
                 builder.AddAttribute(1, "Item", item);
-                builder.AddAttribute(2, "OnAddChildToContainer", EventCallback.Factory.Create<int>(this, id => OnAddItemToContainer.InvokeAsync(id)));                
+                builder.AddAttribute(2, "OnAddChildToContainer", EventCallback.Factory.Create<int>(this, id => OnAddItemToContainer.InvokeAsync(id)));
+                builder.AddAttribute(3, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, i => OnItemDeleted.InvokeAsync(i)));
+                builder.AddAttribute(4, "OnItemEdited", EventCallback.Factory.Create(this, () => OnItemEdited.InvokeAsync(item)));
                 builder.CloseComponent();
                 break;
             default:
                 builder.OpenComponent<UnknownWidget>(0);
                 builder.AddAttribute(1, "Item", item);
                 builder.AddAttribute(2, "Widget", item.Widget);
+                builder.AddAttribute(3, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, i => OnItemDeleted.InvokeAsync(i)));
+                builder.AddAttribute(4, "OnItemEdited", EventCallback.Factory.Create(this, () => OnItemEdited.InvokeAsync(item)));
                 builder.CloseComponent();
                 break;
         }

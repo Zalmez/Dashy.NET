@@ -51,7 +51,9 @@ else
                 <DashboardFlatView Items="GetFlattenedRootItems()" IsEditMode="ViewOptions.IsEditMode"
                                    OnReordered="HandleFlatReordered"
                                    OnAddItem="OpenAddRootItem"
-                                   OnAddItemToContainer="@(EventCallback.Factory.Create<int>(this, OpenAddChildItem))" />
+                                   OnAddItemToContainer="@(EventCallback.Factory.Create<int>(this, OpenAddChildItem))"
+                                   OnItemEdited="@(EventCallback.Factory.Create<ItemVm>(this, OpenEditModal))"
+                                   OnItemDeleted="@(EventCallback.Factory.Create<ItemVm>(this, HandleItemDeleted))" />
             </FluentDragContainer>
         }
         else
@@ -77,6 +79,7 @@ else
                                         <button class="delete-btn" title="Delete Section" @onclick="() => HandleSectionDeleted(currentSection)">
                                             <i class="fas fa-trash-alt"></i>
                                         </button>
+                                        
                                     </div>
                                 }
                             </div>
@@ -87,29 +90,31 @@ else
                                         @switch (currentItem.Widget?.ToLower() ?? "static-link")
                                         {
                                             case "static-link":
-                                                <StaticLinkWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
+                                                <StaticLinkWidget Item="currentItem" OnItemDeleted="@(EventCallback.Factory.Create<ItemVm>(this, HandleItemDeleted))" OnItemEdited="@(EventCallback.Factory.Create(this, () => OpenEditModal(currentItem)))" />
                                                 break;
                                             case "clock":
-                                                <ClockWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)"/>
+                                                <ClockWidget Item="currentItem" OnItemDeleted="@(EventCallback.Factory.Create<ItemVm>(this, HandleItemDeleted))" OnItemEdited="@(EventCallback.Factory.Create(this, () => OpenEditModal(currentItem)))" />
                                                 break;
                                             case "weather":
-                                                <WeatherWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
+                                                <WeatherWidget Item="currentItem" OnItemDeleted="@(EventCallback.Factory.Create<ItemVm>(this, HandleItemDeleted))" OnItemEdited="@(EventCallback.Factory.Create(this, () => OpenEditModal(currentItem)))" />
                                                 break;
                                             case "public ip":
-                                                <PublicIPWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
+                                                <PublicIPWidget Item="currentItem" OnItemDeleted="@(EventCallback.Factory.Create<ItemVm>(this, HandleItemDeleted))" OnItemEdited="@(EventCallback.Factory.Create(this, () => OpenEditModal(currentItem)))" />
                                                 break;
                                             case "rss feed":
-                                                <RssWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
+                                                <RssWidget Item="currentItem" OnItemDeleted="@(EventCallback.Factory.Create<ItemVm>(this, HandleItemDeleted))" OnItemEdited="@(EventCallback.Factory.Create(this, () => OpenEditModal(currentItem)))" />
                                                 break;
                                             case "vulnerability feed":
-                                                <VulnerabilityFeedWidget Item="currentItem" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
+                                                <VulnerabilityFeedWidget Item="currentItem" OnItemDeleted="@(EventCallback.Factory.Create<ItemVm>(this, HandleItemDeleted))" OnItemEdited="@(EventCallback.Factory.Create(this, () => OpenEditModal(currentItem)))" />
                                                 break;
                                             case "section-container":
                                                 <SectionContainerWidget Item="currentItem"
-                                                                        OnAddChildToContainer="@(EventCallback.Factory.Create<int>(this, OpenAddChildItem))" />
+                                                                        OnAddChildToContainer="@(EventCallback.Factory.Create<int>(this, OpenAddChildItem))"
+                                                                        OnItemDeleted="@(EventCallback.Factory.Create<ItemVm>(this, HandleItemDeleted))"
+                                                                        OnItemEdited="@(EventCallback.Factory.Create(this, () => OpenEditModal(currentItem)))" />
                                                 break;
                                             default:
-                                                <UnknownWidget Item="currentItem" Widget="@currentItem.Widget" OnItemDeleted="HandleItemDeleted" OnItemEdited="() => OpenEditModal(currentItem)" />
+                                                <UnknownWidget Item="currentItem" Widget="@currentItem.Widget" OnItemDeleted="@(EventCallback.Factory.Create<ItemVm>(this, HandleItemDeleted))" OnItemEdited="@(EventCallback.Factory.Create(this, () => OpenEditModal(currentItem)))" />
                                                 break;
                                         }
                                     </div>
