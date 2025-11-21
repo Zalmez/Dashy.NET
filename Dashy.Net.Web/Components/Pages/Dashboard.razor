@@ -4,19 +4,19 @@
 @using Dashy.Net.Web.Components.Shared
 @using Dashy.Net.Shared.Models
 @using Dashy.Net.Web.Services
+@using Microsoft.FluentUI.AspNetCore.Components
 @inject ILogger<Dashboard> Logger
 @inject IJSRuntime JSRuntime
 @inject DashboardClient DashboardClient
 @inject DashboardStateService DashboardState
 @inject ViewOptionsService ViewOptions
 @inject EventSubscriptionManager SubscriptionManager
-@inject DragContextService DragContext
 @implements IDisposable
 
 <PageTitle>@DashboardState.Config?.Title</PageTitle>
 
 @if (DashboardState.Config is null)
-{
+{ 
     @if (_isInitializing)
     {
         <p><span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> <span>Initializing dashboard...</span></p>
@@ -36,7 +36,7 @@
 else
 {
     <div class="dashboard-container">
-        @if (ViewOptions.IsEditMode && !DashboardState.Config.UseContainerWidgets)
+        @if (ViewOptions.IsEditMode && !DashboardState.Config.UseContainerWidgets) @* TODO: Remove this part for 1.0 release(noted as a breaking change)*@
         {
             <div class="add-section-container">
                 <button class="btn btn-primary" @onclick="OpenAddSectionModal">
@@ -46,11 +46,11 @@ else
         }
 
         @if (DashboardState.Config.UseContainerWidgets)
-        {
-            <div class="root-drop-zone @(DragContext.CurrentItemId.HasValue ? "drag-active" : string.Empty)" @ondragover="OnRootDragOver" @ondrop="OnRootDrop">
+        {   
+            <FluentDragContainer TItem="ItemVm" class="dashboard-drag-container" OnDropEnd="HandleDashboardDropEnd">
                 <DashboardFlatView Items="GetFlattenedRootItems()" IsEditMode="ViewOptions.IsEditMode"
-                               OnReordered="HandleFlatReordered" OnAddItem="OpenAddRootItem" OnAddSectionContainer="OpenAddSectionContainer" />
-            </div>
+                               OnReordered="HandleFlatReordered" OnAddItem="OpenAddRootItem" />
+            </FluentDragContainer>
         }
         else
         {
@@ -173,10 +173,8 @@ else
 
     private bool SectionMatchesSearch(SectionVm section, string term)
     {
-        // direct match on section name or any direct item title
         if (section.Name.Contains(term, StringComparison.OrdinalIgnoreCase)) return true;
         if (section.Items.Any(item => item.Title.Contains(term, StringComparison.OrdinalIgnoreCase))) return true;
-        // If using container widgets, expand if any child inside a container matches
         var containerItems = section.Items.Where(i => string.Equals(i.Widget, "section-container", StringComparison.OrdinalIgnoreCase));
         foreach (var container in containerItems)
         {
@@ -274,8 +272,7 @@ else
         if (DashboardState.Config is null) return;
         if (DashboardState.Config.UseContainerWidgets)
         {
-            // In container mode we never show the legacy section modal; ensure a backing section then open container widget creation.
-            InvokeAsync(async () => await OpenAddSectionContainer());
+            InvokeAsync(async () => await OpenAddRootItem());
             return;
         }
         _sectionToEdit = null;
@@ -324,11 +321,8 @@ else
     private async Task HandleSaveSection(CreateSectionDto sectionToSave)
     {
         if (_isDisposed) return;
-        // Under container widgets mode we don't persist legacy sections; creation routed to item modal instead.
-        // Allow creation of the FIRST section when none exist so container items have a required SectionId host.
         if (DashboardState.Config?.UseContainerWidgets == true && (DashboardState.Config.Sections?.Any() ?? false))
         {
-            // Container mode with existing section(s): ignore legacy section save.
             CloseSectionModal();
             return;
         }
@@ -506,13 +500,12 @@ else
         {
             foreach (var item in section.Items.OrderBy(i => i.SectionId).ThenBy(i => i.Id))
             {
-                if (item.ParentItemId is null) // root level or container itself
+                if (item.ParentItemId is null)
                 {
                     result.Add(item);
                 }
             }
         }
-        // Filter search term
         if (!string.IsNullOrWhiteSpace(ViewOptions.SearchTerm))
         {
             var term = ViewOptions.SearchTerm;
@@ -524,9 +517,27 @@ else
     private async Task HandleFlatReordered(List<int> orderedIds)
     {
         if (orderedIds.Count == 0) return;
-        var dto = new ReorderItemsDto(orderedIds);
-        var ok = await DashboardClient.Items.ReorderAsync(dto);
-        if (!ok || _isDisposed) return;
+        var allItems = DashboardState.Config?.Sections.SelectMany(s => s.Items).ToDictionary(i => i.Id);
+        if (allItems is null) return;
+        var orderedItems = orderedIds
+            .Select(id => allItems.TryGetValue(id, out var itm) ? itm : null)
+            .Where(itm => itm is not null && itm.ParentItemId is null)
+            .ToList()!;
+
+        var groups = orderedItems
+            .GroupBy(i => (i.SectionId, Parent: (int?)null))
+            .ToList();
+
+        var okAll = true;
+        foreach (var grp in groups)
+        {
+            var scopedIds = grp.Select(i => i.Id).ToList();
+            var dto = new ReorderItemsScopedDto(grp.Key.SectionId, grp.Key.Parent, scopedIds);
+            var ok = await DashboardClient.Items.ReorderScopedAsync(dto);
+            if (!ok) okAll = false;
+        }
+
+        if (!okAll || _isDisposed) return;
         var newConfig = await DashboardClient.GetConfigAsync(Id);
         if (_isDisposed) return;
         await InvokeAsync(() => DashboardState.SetConfig(newConfig));
@@ -534,7 +545,6 @@ else
 
     private async Task OpenAddRootItem()
     {
-        // Use first section or force creating one if none
         var sectionId = DashboardState.Config?.Sections.FirstOrDefault()?.Id ?? 0;
         if (sectionId == 0)
         {
@@ -544,52 +554,90 @@ else
         OpenCreateModal(sectionId);
     }
 
-    private async Task OpenAddSectionContainer()
-    {
-        var sectionId = DashboardState.Config?.Sections.FirstOrDefault()?.Id ?? 0;
-        if (sectionId == 0)
-        {
-            sectionId = await EnsureDefaultSectionAsync();
-        }
-        if (sectionId == 0) return;
-        _itemModalTitle = "Add Section Container";
-        _currentItemToEdit = new ItemEditModel { SectionId = sectionId, Widget = "section-container" };
-        _isItemModalOpen = true;
-    }
+    private static bool IsContainer(ItemVm item)
+        => item.Widget?.Contains("container", StringComparison.OrdinalIgnoreCase) == true;
 
-    private void OnRootDragOver(DragEventArgs e)
+    private async void HandleDashboardDropEnd(FluentDragEventArgs<ItemVm> e)
     {
-        if (!ViewOptions.IsEditMode) return;
-        // Accept drag over root for unparenting
-    }
-
-    private async Task OnRootDrop(DragEventArgs e)
-    {
-        if (!ViewOptions.IsEditMode) return;
-        var itemId = DragContext.CurrentItemId;
-        if (itemId is null) return;
+        if (_isDisposed || !ViewOptions.IsEditMode) return;
+        var source = e.Source?.Item;
+        var target = e.Target?.Item;
+        if (source is null || target is null || source.Id == target.Id) return;
         var config = DashboardState.Config;
         if (config is null) return;
-        // Find item current state
-        var item = config.Sections.SelectMany(s => s.Items).FirstOrDefault(i => i.Id == itemId.Value);
-        if (item is null) { DragContext.Clear(); return; }
-        if (item.ParentItemId is null)
+
+        var sourceParent = source.ParentItemId;
+        var targetParent = target.ParentItemId;
+        var targetIsContainer = IsContainer(target);
+
+        if (targetIsContainer)
         {
-            DragContext.Clear();
-            return; // already root
+            var okNest = await DashboardClient.Items.MoveAsync(new MoveItemDto
+            {
+                ItemId = source.Id,
+                NewSectionId = target.SectionId != source.SectionId ? target.SectionId : null,
+                NewParentItemId = target.Id
+            });
+            if (!okNest || _isDisposed) return;
+            var cfg = await DashboardClient.GetConfigAsync(Id);
+            if (_isDisposed) return;
+            await InvokeAsync(() => DashboardState.SetConfig(cfg));
+            return;
         }
-        var moveDto = new MoveItemDto
+
+        if (source.SectionId == target.SectionId && sourceParent == targetParent)
         {
-            ItemId = item.Id,
-            NewSectionId = item.SectionId,
-            ClearParent = true
-        };
-        var ok = await DashboardClient.Items.MoveAsync(moveDto);
-        if (!ok || _isDisposed) { DragContext.Clear(); return; }
-        var newConfig = await DashboardClient.GetConfigAsync(Id);
-        if (_isDisposed) { DragContext.Clear(); return; }
-        await InvokeAsync(() => DashboardState.SetConfig(newConfig));
-        DragContext.Clear();
+            var siblings = config.Sections.SelectMany(s => s.Items)
+                .Where(i => i.SectionId == target.SectionId && i.ParentItemId == targetParent)
+                .ToList();
+            var srcIndex = siblings.FindIndex(i => i.Id == source.Id);
+            var tgtIndex = siblings.FindIndex(i => i.Id == target.Id);
+            if (srcIndex >= 0 && tgtIndex >= 0 && srcIndex != tgtIndex)
+            {
+                var itm = siblings[srcIndex];
+                siblings.RemoveAt(srcIndex);
+                siblings.Insert(tgtIndex, itm);
+                var ids = siblings.Select(i => i.Id).ToList();
+                var okReorder = await DashboardClient.Items.ReorderScopedAsync(new ReorderItemsScopedDto(target.SectionId, targetParent, ids));
+                if (!okReorder || _isDisposed) return;
+                var cfg = await DashboardClient.GetConfigAsync(Id);
+                if (_isDisposed) return;
+                await InvokeAsync(() => DashboardState.SetConfig(cfg));
+            }
+            return;
+        }
+
+        {
+            var moveDto = new MoveItemDto
+            {
+                ItemId = source.Id,
+                NewSectionId = source.SectionId == target.SectionId ? null : target.SectionId,
+                NewParentItemId = targetParent,
+                ClearParent = targetParent is null
+            };
+            var okMove = await DashboardClient.Items.MoveAsync(moveDto);
+            if (!okMove || _isDisposed) return;
+
+            var cfg = await DashboardClient.GetConfigAsync(Id);
+            if (_isDisposed) return;
+            var siblings = cfg?.Sections.SelectMany(s => s.Items)
+                .Where(i => i.SectionId == target.SectionId && i.ParentItemId == targetParent)
+                .ToList() ?? new List<ItemVm>();
+            var srcIndex = siblings.FindIndex(i => i.Id == source.Id);
+            var tgtIndex = siblings.FindIndex(i => i.Id == target.Id);
+            if (srcIndex >= 0 && tgtIndex >= 0 && srcIndex != tgtIndex)
+            {
+                var itm = siblings[srcIndex];
+                siblings.RemoveAt(srcIndex);
+                siblings.Insert(tgtIndex, itm);
+                var ids = siblings.Select(i => i.Id).ToList();
+                var okOrder = await DashboardClient.Items.ReorderScopedAsync(new ReorderItemsScopedDto(target.SectionId, targetParent, ids));
+                if (!okOrder || _isDisposed) return;
+                cfg = await DashboardClient.GetConfigAsync(Id);
+                if (_isDisposed) return;
+            }
+            await InvokeAsync(() => DashboardState.SetConfig(cfg));
+        }
     }
 
     public void Dispose()

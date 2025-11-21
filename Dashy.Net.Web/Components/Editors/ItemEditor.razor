@@ -192,14 +192,6 @@
     protected override void OnParametersSet()
     {
         var descriptor = WidgetRegistry.GetDescriptor(EditModel.Widget);
-        // _editorComponentType = descriptor?.OptionsEditorComponent;
-        // if (_editorComponentType is not null)
-        // {
-        //     _editorParameters = new Dictionary<string, object>
-        //     {
-        //         { "EditModel", EditModel }
-        //     };
-        // }
         StateHasChanged();
     }
 

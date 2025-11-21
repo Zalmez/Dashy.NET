@@ -1,6 +1,8 @@
 @using Dashy.Net.Shared.Models
 @using Dashy.Net.Web.Components.Shared
 @inject Dashy.Net.Web.Services.DragContextService DragContext
+@inject Dashy.Net.Web.Clients.DashboardClient DashboardClient
+@inject Dashy.Net.Web.Services.DashboardStateService DashboardState
 
 @if (Items is null || Items.Count == 0)
 {
@@ -10,55 +12,74 @@ else
 {
     <div class="flat-grid" @onkeydown="OnKeyDown">
         <SortableList TItem="ItemVm" Items="Items" ItemTemplate="RenderItem"
-                      OnItemMoved="@(EventCallback.Factory.Create<(ItemVm draggedItem, ItemVm targetItem)>(this, OnMovedInternal))" />
+                      UseOwnContainer="false"
+                      OnItemMoved="@(EventCallback.Factory.Create<(ItemVm draggedItem, ItemVm targetItem)>(this, OnMovedInternal))"
+                      OnItemNested="@(EventCallback.Factory.Create<(ItemVm draggedItem, ItemVm newParent)>(this, OnNestedInternal))"
+                      OnItemFocused="@(EventCallback.Factory.Create<ItemVm>(this, OnItemFocus))" />
     </div>
 }
 @if (IsEditMode)
 {
     <div class="flat-grid-actions">
         <AddItemButton OnClick="AddRootWidget" />
-        <button class="btn btn-secondary" @onclick="AddSectionContainer" title="Add Section Container"><i class="fas fa-layer-group"></i></button>
     </div>
 }
-
+    
 @code {
     [Parameter] public List<ItemVm> Items { get; set; } = new();
     [Parameter] public bool IsEditMode { get; set; }
     [Parameter] public EventCallback<List<int>> OnReordered { get; set; }
     [Parameter] public EventCallback OnAddItem { get; set; }
-    [Parameter] public EventCallback OnAddSectionContainer { get; set; }
 
     private int _focusedIndex = -1;
 
-    private RenderFragment<ItemVm> RenderItem => item => @<div class="flat-item" draggable="false" tabindex="0" @onfocus="() => OnItemFocus(item)">
-        @switch (item.Widget?.ToLower() ?? "static-link")
+    private RenderFragment<ItemVm> RenderItem => item => builder =>
+    {
+        switch ((item.Widget?.ToLower()) ?? "static-link")
         {
             case "static-link":
-                <StaticLinkWidget Item="item" />
+                builder.OpenComponent<StaticLinkWidget>(0);
+                builder.AddAttribute(1, "Item", item);
+                builder.CloseComponent();
                 break;
             case "clock":
-                <ClockWidget Item="item" />
+                builder.OpenComponent<ClockWidget>(0);
+                builder.AddAttribute(1, "Item", item);
+                builder.CloseComponent();
                 break;
             case "weather":
-                <WeatherWidget Item="item" />
+                builder.OpenComponent<WeatherWidget>(0);
+                builder.AddAttribute(1, "Item", item);
+                builder.CloseComponent();
                 break;
             case "public ip":
-                <PublicIPWidget Item="item" />
+                builder.OpenComponent<PublicIPWidget>(0);
+                builder.AddAttribute(1, "Item", item);
+                builder.CloseComponent();
                 break;
             case "rss feed":
-                <RssWidget Item="item" />
+                builder.OpenComponent<RssWidget>(0);
+                builder.AddAttribute(1, "Item", item);
+                builder.CloseComponent();
                 break;
             case "vulnerability feed":
-                <VulnerabilityFeedWidget Item="item" />
+                builder.OpenComponent<VulnerabilityFeedWidget>(0);
+                builder.AddAttribute(1, "Item", item);
+                builder.CloseComponent();
                 break;
             case "section-container":
-                <SectionContainerWidget Item="item" />
+                builder.OpenComponent<SectionContainerWidget>(0);
+                builder.AddAttribute(1, "Item", item);
+                builder.CloseComponent();
                 break;
             default:
-                <UnknownWidget Item="item" Widget="@item.Widget" />
+                builder.OpenComponent<UnknownWidget>(0);
+                builder.AddAttribute(1, "Item", item);
+                builder.AddAttribute(2, "Widget", item.Widget);
+                builder.CloseComponent();
                 break;
         }
-    </div>;
+    };
 
     private async Task OnMovedInternal((ItemVm draggedItem, ItemVm targetItem) move)
     {
@@ -71,8 +92,26 @@ else
         await OnReordered.InvokeAsync(Items.Select(i => i.Id).ToList());
     }
 
+    private async Task OnNestedInternal((ItemVm draggedItem, ItemVm newParent) nest)
+    {
+        var idx = Items.FindIndex(i => i.Id == nest.draggedItem.Id);
+        if (idx >= 0)
+        {
+            Items.RemoveAt(idx);
+        }
+        var ok = await DashboardClient.Items.MoveAsync(new Dashy.Net.Web.Clients.MoveItemDto
+        {
+            ItemId = nest.draggedItem.Id,
+            NewSectionId = nest.newParent.SectionId,
+            NewParentItemId = nest.newParent.Id
+        });
+        if (!ok) return;
+        var newConfig = await DashboardClient.GetConfigAsync();
+        if (newConfig is null) return;
+        await InvokeAsync(() => DashboardState.SetConfig(newConfig));
+    }
+
     private Task AddRootWidget() => OnAddItem.InvokeAsync();
-    private Task AddSectionContainer() => OnAddSectionContainer.InvokeAsync();
 
     private void OnItemFocus(ItemVm item)
     {

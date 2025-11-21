@@ -171,7 +171,7 @@ public record ItemVm(
     string? Widget,
     int SectionId,
     JsonElement? Options,
-    int? ParentItemId = null // New: optional parent container item id
+    int? ParentItemId = null
 );
 
 public record AuthenticationProviderVm(

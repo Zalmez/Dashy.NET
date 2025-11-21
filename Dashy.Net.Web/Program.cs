@@ -20,7 +20,6 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddOutputCache();
 
-// Add Fluent UI Blazor services
 builder.Services.AddFluentUIComponents();
 
 #region Dashy.Net required services

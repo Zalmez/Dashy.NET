@@ -1,49 +1,113 @@
 @typeparam TItem
+@using Microsoft.FluentUI.AspNetCore.Components
 
-<div class="sortable-list">
-    @if (Items != null)
-    {
-        foreach (var item in Items)
+@if (UseOwnContainer)
+{
+    <FluentDragContainer TItem="TItem" class="sortable-list" OnDropEnd="HandleDropEnd">
+        @if (Items != null && Items.Count > 0)
         {
-            <div class="sortable-item" draggable="true"
-                 @ondragstart="(e) => OnDragStart(e, item)"
-                 @ondragover="OnDragOver"
-                 @ondrop="(e) => OnDrop(e, item)">
-                @ItemTemplate(item)
-            </div>
+            foreach (var item in Items)
+            {
+                var isContainer = IsContainer(item);
+                var css = $"sortable-item {(isContainer ? "sortable-container" : "sortable-leaf")}";
+                <FluentDropZone Item="item" Data="item" class="@css" Draggable="@ViewOptions.IsEditMode" Droppable="@ViewOptions.IsEditMode" StopPropagation="true"
+                                tabindex="0" @onfocus="() => HandleFocus(item)">
+                    @ItemTemplate(item)
+                </FluentDropZone>
+            }
         }
-    }
-</div>
+        else
+        {
+            <FluentDropZone TItem="TItem" class="sortable-item empty" Draggable="false" Droppable="@ViewOptions.IsEditMode">
+                <span>No items</span>
+            </FluentDropZone>
+        }
+    </FluentDragContainer>
+}
+else
+{
+    <div class="sortable-list">
+        @if (Items != null && Items.Count > 0)
+        {
+            foreach (var item in Items)
+            {
+                var isContainer = IsContainer(item);
+                var css = $"sortable-item {(isContainer ? "sortable-container" : "sortable-leaf")}";
+                <FluentDropZone Item="item" Data="item" class="@css" Draggable="@ViewOptions.IsEditMode" Droppable="@ViewOptions.IsEditMode" StopPropagation="true"
+                                tabindex="0" @onfocus="() => HandleFocus(item)">
+                    @ItemTemplate(item)
+                </FluentDropZone>
+            }
+        }
+        else
+        {
+            <FluentDropZone TItem="TItem" class="sortable-item empty" Draggable="false" Droppable="@ViewOptions.IsEditMode">
+                <span>No items</span>
+            </FluentDropZone>
+        }
+    </div>
+}
 
 @code {
     [Parameter] public List<TItem> Items { get; set; } = new();
     [Parameter] public RenderFragment<TItem> ItemTemplate { get; set; } = default!;
     [Parameter] public EventCallback<(TItem draggedItem, TItem targetItem)> OnItemMoved { get; set; }
-    [Inject] private Dashy.Net.Web.Services.DragContextService DragContext { get; set; } = default!;
+    [Parameter] public EventCallback<(TItem draggedItem, TItem newParent)> OnItemNested { get; set; }
+    [Parameter] public EventCallback<TItem> OnItemFocused { get; set; }
+    [Parameter] public bool UseOwnContainer { get; set; } = true;
 
-    private TItem? _draggedItem;
+    [Inject] private ILogger<SortableList<TItem>> Logger { get; set; } = default!;
+    [Inject] private Dashy.Net.Web.Services.ViewOptionsService ViewOptions { get; set; } = default!;
 
-    private void OnDragStart(DragEventArgs e, TItem item)
+    private void HandleDropEnd(FluentDragEventArgs<TItem> e)
     {
-        _draggedItem = item;
-        if (item is Dashy.Net.Shared.Models.ItemVm vm)
+        if (!ViewOptions.IsEditMode) return;
+        if (Items.Count == 0) return;
+        var sourceItem = e.Source.Item;
+        var targetItem = e.Target.Item;
+        if (EqualityComparer<TItem>.Default.Equals(sourceItem, targetItem)) return;
+
+        var targetIsContainer = IsContainer(targetItem);
+        if (targetIsContainer)
         {
-            DragContext.Set(vm.Id, vm.ParentItemId, vm.SectionId);
+            if (OnItemNested.HasDelegate)
+            {
+                var oldIndexNest = Items.IndexOf(sourceItem);
+                if (oldIndexNest >= 0)
+                {
+                    Items.RemoveAt(oldIndexNest);
+                    Logger.LogInformation("DnD nesting: moved {Dragged} into container {Target}", Describe(sourceItem), Describe(targetItem));
+                    _ = OnItemNested.InvokeAsync((sourceItem, targetItem));
+                    StateHasChanged();
+                }
+            }
+            return;
         }
-    }
 
-    private void OnDragOver(DragEventArgs e)
-    {
-        // Optional: highlight target
-    }
+        var oldIndex = Items.IndexOf(sourceItem);
+        var targetIndex = Items.IndexOf(targetItem);
+        if (oldIndex < 0 || targetIndex < 0 || oldIndex == targetIndex) return;
 
-    private async Task OnDrop(DragEventArgs e, TItem targetItem)
-    {
-        if (_draggedItem != null && !EqualityComparer<TItem>.Default.Equals(_draggedItem, targetItem))
+        Items.RemoveAt(oldIndex);
+        Items.Insert(targetIndex, sourceItem);
+
+        Logger.LogInformation("DnD reorder: {OldIndex}->{NewIndex}; dragged={Dragged}; target={Target}", oldIndex, targetIndex, Describe(sourceItem), Describe(targetItem));
+
+        if (OnItemMoved.HasDelegate)
         {
-            await OnItemMoved.InvokeAsync((_draggedItem, targetItem));
+            _ = OnItemMoved.InvokeAsync((sourceItem, targetItem));
         }
-        _draggedItem = default;
-        DragContext.Clear();
+        StateHasChanged();
     }
+
+    private static bool IsContainer(TItem item)
+        => item is Dashy.Net.Shared.Models.ItemVm vm && vm.Widget?.Contains("container", StringComparison.OrdinalIgnoreCase) == true;
+
+    private static string Describe(TItem item)
+        => item is Dashy.Net.Shared.Models.ItemVm vm
+            ? $"ItemVm(Id={vm.Id},Title='{vm.Title}',Widget='{vm.Widget}')"
+            : (item?.ToString() ?? "<null>");
+
+    private Task HandleFocus(TItem item)
+        => OnItemFocused.HasDelegate ? OnItemFocused.InvokeAsync(item) : Task.CompletedTask;
 }
