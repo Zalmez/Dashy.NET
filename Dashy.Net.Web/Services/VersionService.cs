@@ -138,13 +138,6 @@ public class VersionService : IVersionService
             {
                 services.Add(apiVersionInfo);
             }
-
-            // Try to get version info from Migration service
-            var migrationVersionInfo = await GetMigrationServiceVersionAsync();
-            if (migrationVersionInfo != null)
-            {
-                services.Add(migrationVersionInfo);
-            }
         }
         catch (Exception ex)
         {
@@ -189,28 +182,6 @@ public class VersionService : IVersionService
             _logger.LogDebug(ex, "Could not retrieve version from API service");
         }
         return null;
-    }
-
-    private Task<ServiceVersionInfo?> GetMigrationServiceVersionAsync()
-    {
-        // Migration service doesn't have an HTTP endpoint, so we'll return a placeholder
-        // In a real implementation, you might check a shared file or database entry
-        try
-        {
-            var result = new ServiceVersionInfo
-            {
-                ServiceName = "MigrationService",
-                Version = _version, // Placeholder - same as current version
-                FullVersion = _fullVersion,
-                IsPreRelease = _isPreRelease
-            };
-            return Task.FromResult<ServiceVersionInfo?>(result);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "Could not retrieve version from Migration service");
-            return Task.FromResult<ServiceVersionInfo?>(null);
-        }
     }
 
     private string? GetCommitHashFromAssembly(Assembly assembly)

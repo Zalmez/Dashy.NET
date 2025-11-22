@@ -47,7 +47,7 @@ Open your browser and navigate to `http://localhost:8080`
 
 ## Docker Compose Configuration
 
-Here's the complete `docker-compose.yml` for reference:
+Here's the complete `docker-compose.yml` for reference (migration worker removed – migrations run automatically on API startup):
 
 ```yaml
 services:
@@ -60,19 +60,12 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
 
-  migrationservice:
-    image: ghcr.io/zalmez/dashy.net/migrationservice:latest
-    restart: unless-stopped
-    env_file: .env
-    depends_on:
-      - db
-
   apiservice:
     image: ghcr.io/zalmez/dashy.net/apiservice:latest
     restart: unless-stopped
     env_file: .env
     depends_on: 
-      - migrationservice
+      - db
     ports:
       - "8080:80"
       - "8443:443"
