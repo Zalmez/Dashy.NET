@@ -1,7 +1,7 @@
 ﻿# Dashy.Net
 
 <p align="center">
-  <img width="200" src="https://raw.githubusercontent.com/Lissy93/dashy/master/docs/assets/logo.png" alt="Dashy Logo">
+  <img width="200" src="https://raw.githubusercontent.com/Zalmez/Dashy.NET/0d616ef65108d6b1c63ee64a68758729b0b23100/Dashy.Net.Web/wwwroot/images/dashynet_logo_new_with_text.svg" alt="Dashy Logo">
 </p>
 <p align="center">
   A self-hosted, personal dashboard built for you. This project is a .NET-based clone inspired by the original <a href="https://github.com/Lissy93/dashy">Dashy by Lissy93</a>.
@@ -48,6 +48,7 @@ Unlike the original Dashy's YAML-based configuration, Dashy.Net is configured en
 📚 **[View Full Documentation](https://zalmez.github.io/Dashy.NET/)**
 
 The complete documentation includes:
+
 - Installation guides
 - Docker deployment instructions
 - Configuration tutorials
@@ -63,4 +64,3 @@ This license ensures that the project and any derivatives will always remain fre
 ## Acknowledgements
 
 This project would not exist without the incredible work done by **Alicia Sykes (Lissy93)** and it's contributors on the original [Dashy](https://github.com/Lissy93/dashy). Dashy.Net is proud to be inspired by dashy's original vision and contributions to the open-source community. The original Dashy project is licensed under the MIT license.
-
