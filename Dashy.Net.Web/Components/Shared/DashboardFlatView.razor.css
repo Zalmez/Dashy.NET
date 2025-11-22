@@ -1,0 +1,8 @@
+.flat-grid { display: flex; flex-wrap: wrap; gap: 1rem; }
+.flat-item { flex: 0 1 260px; position: relative; }
+.root-drop-zone { min-height: 40px; transition: outline .15s ease, background-color .15s ease; }
+.root-drop-zone.drag-active { outline: 3px dashed var(--accent-color); outline-offset: 6px; background-color: rgba(99,102,241,0.08); }
+.container-drop-target { position: relative; }
+.container-drop-target.drag-hover { box-shadow: 0 0 0 3px var(--accent-color); border-radius: 8px; }
+.flat-grid-actions { margin-top: 1rem; display: flex; gap: .5rem; }
+.sortable-item.dragging { opacity: .4; }

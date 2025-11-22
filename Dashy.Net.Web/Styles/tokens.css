@@ -14,12 +14,12 @@
   --color-light-border: #e5e9f0;
   
   /* Dark theme colors */
-  --color-dark-bg: #0a0a0a;
-  --color-dark-text: #ffffff;
+  --color-dark-bg: #0a0a0a; /* restored original dark base for gradients */
+  --color-dark-text: #ffffff; /* corrected (was #000000) */
   --color-dark-text-subtle: #a1a1aa;
-  --color-dark-card-bg: rgba(255, 255, 255, 0.08);
-  --color-dark-card-hover: rgba(255, 255, 255, 0.15);
-  --color-dark-border: rgba(255, 255, 255, 0.1);
+  --color-dark-card-bg: #1d1f20;
+  --color-dark-card-hover: #242628;
+  --color-dark-border: rgba(255, 255, 255, 0.12);
 
   /* Accent colors */
   --color-primary-light: #4f46e5;
@@ -38,20 +38,20 @@
   --color-info-hover: #2563eb;
 
   /* ===== Spacing ===== */
-  --space-xs: 0.25rem;   /* 4px */
-  --space-sm: 0.5rem;    /* 8px */
-  --space-md: 1rem;      /* 16px */
-  --space-lg: 1.5rem;    /* 24px */
-  --space-xl: 2rem;      /* 32px */
-  --space-2xl: 3rem;     /* 48px */
-  --space-3xl: 4rem;     /* 64px */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4rem;
 
   /* ===== Border Radius ===== */
-  --radius-sm: 0.25rem;  /* 4px */
-  --radius-md: 0.375rem; /* 6px */
-  --radius-lg: 0.5rem;   /* 8px */
-  --radius-xl: 0.75rem;  /* 12px */
-  --radius-2xl: 1rem;    /* 16px */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
   --radius-full: 9999px;
 
   /* ===== Elevation / Shadows ===== */
@@ -62,23 +62,23 @@
   --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 
   /* Dark mode shadows */
-  --shadow-dark-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-dark-md: 0 8px 32px rgba(0, 0, 0, 0.2);
-  --shadow-dark-lg: 0 12px 40px rgba(0, 0, 0, 0.3);
-  --shadow-dark-xl: 0 20px 50px rgba(0, 0, 0, 0.4);
+  --shadow-dark-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+  --shadow-dark-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-dark-lg: 0 10px 24px rgba(0, 0, 0, 0.5);
+  --shadow-dark-xl: 0 20px 36px rgba(0, 0, 0, 0.6);
 
   /* ===== Typography ===== */
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: 'Menlo', 'Monaco', 'Courier New', monospace;
   
-  --text-xs: 0.75rem;    /* 12px */
-  --text-sm: 0.875rem;   /* 14px */
-  --text-base: 1rem;     /* 16px */
-  --text-lg: 1.125rem;   /* 18px */
-  --text-xl: 1.25rem;    /* 20px */
-  --text-2xl: 1.5rem;    /* 24px */
-  --text-3xl: 1.875rem;  /* 30px */
-  --text-4xl: 2.25rem;   /* 36px */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
 
   --font-normal: 400;
   --font-medium: 500;
@@ -159,18 +159,18 @@ body.theme-dark {
   --info-color: var(--color-info);
   --info-hover-color: var(--color-info-hover);
   
-  --header-bg: rgba(0, 0, 0, 0.6);
-  --header-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --header-bg: rgba(0, 0, 0, 0.7);
+  --header-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
   --card-shadow: var(--shadow-dark-md);
   --card-hover-shadow: var(--shadow-dark-lg);
   
-  --glass-background: rgba(255, 255, 255, 0.05);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
-  --glass-hover-background: rgba(255, 255, 255, 0.1);
+  --glass-background: rgba(255, 255, 255, 0.06);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
+  --glass-hover-background: rgba(255, 255, 255, 0.12);
 }
 
-/* High Contrast Theme (extends dark theme) */
+/* High Contrast Theme */
 body.theme-high-contrast {
   --background-color: #000000;
   --text-color: #ffffff;
@@ -202,19 +202,7 @@ body.theme-high-contrast {
 }
 
 /* Density variants */
-.density-compact {
-  --item-padding: var(--density-compact-padding);
-}
+.density-compact { --item-padding: var(--density-compact-padding); }
+.density-comfortable { --item-padding: var(--density-comfortable-padding); }
 
-.density-comfortable {
-  --item-padding: var(--density-comfortable-padding);
-}
-
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
+@media (prefers-reduced-motion: reduce) { * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }

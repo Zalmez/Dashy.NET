@@ -85,4 +85,24 @@ public class SectionsClient(HttpClient httpClient, ILogger<SectionsClient> logge
         }
     }
 
+    public async Task<bool> ConvertToContainerAsync(int sectionId)
+    {
+        try
+        {
+            var response = await httpClient.PostAsync($"api/sections/{sectionId}/convert-to-container", null);
+            if (!response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                logger.LogError("Failed to convert section {SectionId} to container. Status: {StatusCode}. Body: {Body}", sectionId, response.StatusCode, content);
+                return false;
+            }
+            logger.LogInformation("Converted section {SectionId} to container.", sectionId);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Exception while converting section {SectionId} to container", sectionId);
+            return false;
+        }
+    }
 }

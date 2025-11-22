@@ -12,7 +12,8 @@ public class ItemsClient(HttpClient httpClient, ILogger<ItemsClient> logger)
             var response = await httpClient.PostAsJsonAsync("api/items", dto);
             if (!response.IsSuccessStatusCode)
             {
-                logger.LogError("Failed to create item '{ItemTitle}'. Status: {StatusCode}", dto.Title, response.StatusCode);
+                var body = await response.Content.ReadAsStringAsync();
+                logger.LogError("Failed to create item '{ItemTitle}'. Status: {StatusCode}. Body: {Body}", dto.Title, response.StatusCode, body);
                 return false;
             }
             logger.LogInformation("Successfully created new item '{ItemTitle}'", dto.Title);
@@ -66,6 +67,28 @@ public class ItemsClient(HttpClient httpClient, ILogger<ItemsClient> logger)
             return false;
         }
     }
+
+    public async Task<bool> MoveAsync(MoveItemDto dto)
+    {
+        try
+        {
+            var response = await httpClient.PostAsJsonAsync("api/items/move", dto);
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                logger.LogError("Failed to move item {ItemId}. Status: {StatusCode}. Body: {Body}", dto.ItemId, response.StatusCode, body);
+                return false;
+            }
+            logger.LogInformation("Successfully moved item {ItemId} to section {SectionId} parent {ParentItemId} position {Position}", dto.ItemId, dto.NewSectionId, dto.NewParentItemId, dto.NewPosition);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Exception while moving item {ItemId}", dto.ItemId);
+            return false;
+        }
+    }
+
     public async Task<bool> DeleteAsync(int itemId)
     {
         try
@@ -85,4 +108,33 @@ public class ItemsClient(HttpClient httpClient, ILogger<ItemsClient> logger)
             return false;
         }
     }
+
+    public async Task<bool> ReorderScopedAsync(ReorderItemsScopedDto dto)
+    {
+        try
+        {
+            var response = await httpClient.PostAsJsonAsync("api/items/reorder/scoped", dto);
+            if (!response.IsSuccessStatusCode)
+            {
+                logger.LogError("Failed scoped reorder for Section {SectionId} Parent {ParentItemId}. Status: {StatusCode}", dto.SectionId, dto.ParentItemId, response.StatusCode);
+                return false;
+            }
+            logger.LogInformation("Scoped reorder success Section {SectionId} Parent {ParentItemId}", dto.SectionId, dto.ParentItemId);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Exception during scoped reorder Section {SectionId} Parent {ParentItemId}", dto.SectionId, dto.ParentItemId);
+            return false;
+        }
+    }
+}
+
+public class MoveItemDto
+{
+    public int ItemId { get; set; }
+    public int? NewSectionId { get; set; }
+    public int? NewParentItemId { get; set; }
+    public bool ClearParent { get; set; }
+    public int? NewPosition { get; set; }
 }

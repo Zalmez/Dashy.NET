@@ -7,6 +7,7 @@ public class ItemEditModel
 {
     public int Id { get; set; }
     public int SectionId { get; set; }
+    public int? ParentItemId { get; set; } // New: optional container parent
 
     [Required(AllowEmptyStrings = false)]
     public string Title { get; set; } = string.Empty;
@@ -44,6 +45,7 @@ public class ItemEditModel
     {
         Id = item.Id;
         SectionId = item.SectionId;
+        ParentItemId = item.ParentItemId; // New mapping
         Title = item.Title;
         Icon = item.Icon;
         Widget = item.Widget ?? "static-link";
@@ -123,11 +125,11 @@ public class ItemEditModel
 
     public CreateItemDto ToCreateDto()
     {
-        return new CreateItemDto(Title, Icon, Widget, SectionId, PackOptions());
+        return new CreateItemDto(Title, Icon, Widget, SectionId, PackOptions(), ParentItemId);
     }
 
     public UpdateItemDto ToUpdateDto()
     {
-        return new UpdateItemDto(Title, Icon, Widget, SectionId, PackOptions());
+        return new UpdateItemDto(Title, Icon, Widget, SectionId, PackOptions(), ParentItemId);
     }
 }

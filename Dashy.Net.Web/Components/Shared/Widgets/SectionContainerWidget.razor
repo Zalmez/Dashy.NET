@@ -1,0 +1,213 @@
+@inherits Dashy.Net.Web.Components.Shared.Widgets.WidgetBase
+@using Dashy.Net.Shared.Models
+@inject IJSRuntime JSRuntime
+@inject DashboardClient DashboardClient
+@inject ILogger<SectionContainerWidget> Logger
+@inject Dashy.Net.Web.Services.DashboardStateService DashboardState
+
+<div class="item-card-wrapper container-drop-target @( _isDragHover ? "drag-hover" : string.Empty )" data-widget-type="SectionContainerWidget">
+    @if (ViewOptions.IsEditMode)
+    {
+        <div class="item-edit-controls">
+            <button class="edit-btn" title="Edit Container" @onclick="OnEditClick"><i class="fas fa-pencil-alt"></i></button>
+            <button class="delete-btn" title="Delete Container" @onclick="OnDeleteClick"><i class="fas fa-trash-alt"></i></button>
+        </div>
+    }
+
+    <div class="item-card">
+        <div class="item-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 1rem;">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+                @if (!string.IsNullOrWhiteSpace(Item.Icon))
+                {
+                    <i class="@Item.Icon item-icon"></i>
+                }
+                <h3 class="tile-title">@Item.Title</h3>
+            </div>
+            @if (ViewOptions.IsEditMode)
+            {
+                <button class="btn btn-secondary" @onclick="() => OnAddChildToContainer.InvokeAsync(Item.Id)"> <i class="fas fa-plus"></i> Add Widget</button>
+            }
+        </div>
+
+        <div class="items-wrapper @("layout-" + ViewOptions.CurrentLayout.ToString().ToLower())">
+            @if (_children.Count == 0)
+            {
+                <div class="empty-flat-grid" tabindex="0">No items in this container.</div>
+            }
+            else
+            {
+                <div class="flat-grid">
+                    <SortableList TItem="ItemVm" Items="_children" ItemTemplate="RenderChild"
+                                  UseOwnContainer="false"
+                                  OnItemMoved="@(EventCallback.Factory.Create<(ItemVm draggedItem, ItemVm targetItem)>(this, OnChildMoved))"
+                                  OnItemNested="@(EventCallback.Factory.Create<(ItemVm draggedItem, ItemVm newParent)>(this, OnChildNested))" />
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback<ItemVm> OnChildDeleted { get; set; }
+    [Parameter] public EventCallback<ItemVm> OnChildEdited { get; set; }
+    [Parameter] public EventCallback<int> OnAddChildToContainer { get; set; }
+
+    private bool _isDragHover;
+    private List<ItemVm> _children = new();
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        if (DashboardState is not null)
+        {
+            SubscriptionManager.AddSubscription(() => DashboardState.OnConfigLoaded -= HandleConfigChanged);
+            DashboardState.OnConfigLoaded += HandleConfigChanged;
+        }
+        else
+        {
+            Logger.LogWarning("DashboardState not injected for SectionContainerWidget (ItemId={ItemId}). Child items will not render until available.", Item.Id);
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        _children = GetChildren().ToList();
+    }
+
+    private void HandleConfigChanged()
+    {
+        _children = GetChildren().ToList();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private IEnumerable<ItemVm> GetChildren()
+    {
+        if (DashboardState?.Config?.Sections is null)
+        {
+            return Enumerable.Empty<ItemVm>();
+        }
+        return DashboardState.Config.Sections
+            .SelectMany(s => s.Items)
+            .Where(i => i.ParentItemId == Item.Id)
+            .OrderBy(i => i.Id)
+            .ToList();
+    }
+
+    private async Task OnDeleteClick()
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Delete container '{Item.Title}' and all its items?");
+        if (IsDisposed) return;
+        if (confirmed)
+        {
+            await OnItemDeleted.InvokeAsync(Item);
+        }
+    }
+
+    private async Task OnEditClick()
+    {
+        await OnItemEdited.InvokeAsync();
+    }
+
+    private Task HandleChildDeleted(ItemVm child) => OnChildDeleted.InvokeAsync(child);
+    private Task HandleChildEdited(ItemVm child) => OnChildEdited.InvokeAsync(child);
+
+    private RenderFragment<ItemVm> RenderChild => child => builder =>
+    {
+        switch (child.Widget?.ToLower() ?? "static-link")
+        {
+            case "static-link":
+                builder.OpenComponent<StaticLinkWidget>(0);
+                builder.AddAttribute(1, "Item", child);
+                builder.AddAttribute(2, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, HandleChildDeleted));
+                builder.AddAttribute(3, "OnItemEdited", EventCallback.Factory.Create(this, () => HandleChildEdited(child)));
+                builder.CloseComponent();
+                break;
+            case "clock":
+                builder.OpenComponent<ClockWidget>(0);
+                builder.AddAttribute(1, "Item", child);
+                builder.AddAttribute(2, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, HandleChildDeleted));
+                builder.AddAttribute(3, "OnItemEdited", EventCallback.Factory.Create(this, () => HandleChildEdited(child)));
+                builder.CloseComponent();
+                break;
+            case "weather":
+                builder.OpenComponent<WeatherWidget>(0);
+                builder.AddAttribute(1, "Item", child);
+                builder.AddAttribute(2, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, HandleChildDeleted));
+                builder.AddAttribute(3, "OnItemEdited", EventCallback.Factory.Create(this, () => HandleChildEdited(child)));
+                builder.CloseComponent();
+                break;
+            case "public ip":
+                builder.OpenComponent<PublicIPWidget>(0);
+                builder.AddAttribute(1, "Item", child);
+                builder.AddAttribute(2, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, HandleChildDeleted));
+                builder.AddAttribute(3, "OnItemEdited", EventCallback.Factory.Create(this, () => HandleChildEdited(child)));
+                builder.CloseComponent();
+                break;
+            case "rss feed":
+                builder.OpenComponent<RssWidget>(0);
+                builder.AddAttribute(1, "Item", child);
+                builder.AddAttribute(2, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, HandleChildDeleted));
+                builder.AddAttribute(3, "OnItemEdited", EventCallback.Factory.Create(this, () => HandleChildEdited(child)));
+                builder.CloseComponent();
+                break;
+            case "vulnerability feed":
+                builder.OpenComponent<VulnerabilityFeedWidget>(0);
+                builder.AddAttribute(1, "Item", child);
+                builder.AddAttribute(2, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, HandleChildDeleted));
+                builder.AddAttribute(3, "OnItemEdited", EventCallback.Factory.Create(this, () => HandleChildEdited(child)));
+                builder.CloseComponent();
+                break;
+            case "section-container":
+                builder.OpenComponent<SectionContainerWidget>(0);
+                builder.AddAttribute(1, "Item", child);
+                builder.AddAttribute(2, "OnChildDeleted", EventCallback.Factory.Create<ItemVm>(this, OnChildDeleted));
+                builder.AddAttribute(3, "OnChildEdited", EventCallback.Factory.Create<ItemVm>(this, OnChildEdited));
+                builder.AddAttribute(4, "OnAddChildToContainer", EventCallback.Factory.Create<int>(this, OnAddChildToContainer));
+                builder.CloseComponent();
+                break;
+            default:
+                builder.OpenComponent<UnknownWidget>(0);
+                builder.AddAttribute(1, "Item", child);
+                builder.AddAttribute(2, "Widget", child.Widget);
+                builder.AddAttribute(3, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, HandleChildDeleted));
+                builder.AddAttribute(4, "OnItemEdited", EventCallback.Factory.Create(this, () => HandleChildEdited(child)));
+                builder.CloseComponent();
+                break;
+        }
+    };
+
+    private async Task OnChildMoved((ItemVm draggedItem, ItemVm targetItem) move)
+    {
+        var siblings = GetChildren().ToList();
+        var oldIndex = siblings.FindIndex(i => i.Id == move.draggedItem.Id);
+        var targetIndex = siblings.FindIndex(i => i.Id == move.targetItem.Id);
+        if (oldIndex < 0 || targetIndex < 0 || oldIndex == targetIndex) return;
+        var itm = siblings[oldIndex];
+        siblings.RemoveAt(oldIndex);
+        siblings.Insert(targetIndex, itm);
+        var reorderIds = siblings.Select(s => s.Id).ToList();
+        var ok = await DashboardClient.Items.ReorderScopedAsync(new ReorderItemsScopedDto(Item.SectionId, Item.Id, reorderIds));
+        if (!ok || IsDisposed) return;
+        var newConfig = await DashboardClient.GetConfigAsync();
+        if (IsDisposed) return;
+        await InvokeAsync(() => DashboardState.SetConfig(newConfig));
+        _children = GetChildren().ToList();
+        StateHasChanged();
+    }
+
+    private async Task OnChildNested((ItemVm draggedItem, ItemVm newParent) nest)
+    {
+        var ok = await DashboardClient.Items.MoveAsync(new MoveItemDto
+        {
+            ItemId = nest.draggedItem.Id,
+            NewSectionId = nest.newParent.SectionId,
+            NewParentItemId = nest.newParent.Id
+        });
+        if (!ok || IsDisposed) return;
+        var newConfig = await DashboardClient.GetConfigAsync();
+        if (IsDisposed) return;
+        await InvokeAsync(() => DashboardState.SetConfig(newConfig));
+        _children = GetChildren().ToList();
+        StateHasChanged();
+    }
+}

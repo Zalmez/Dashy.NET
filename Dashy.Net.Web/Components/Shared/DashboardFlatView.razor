@@ -1,0 +1,162 @@
+@using Dashy.Net.Shared.Models
+@using Dashy.Net.Web.Components.Shared
+@inject Dashy.Net.Web.Services.DragContextService DragContext
+@inject Dashy.Net.Web.Clients.DashboardClient DashboardClient
+@inject Dashy.Net.Web.Services.DashboardStateService DashboardState
+@inject Dashy.Net.Web.Services.ViewOptionsService ViewOptions
+@implements IDisposable
+
+<FluentDropZone TItem="ItemVm" Droppable="@IsEditMode" Draggable="false" StopPropagation="true" class="flat-root-drop-zone layout-auto">
+    @if (Items is null || Items.Count == 0)
+    {
+        <div class="empty-flat-grid" tabindex="0">No widgets yet.</div>
+    }
+    else
+    {
+        <div class="flat-grid" @onkeydown="OnKeyDown">
+            @foreach (var item in Items)
+            {
+                var isContainer = IsContainer(item);
+                var css = $"sortable-item {(isContainer ? "sortable-container" : "sortable-leaf")} {GetItemSizeClass()}";
+                <FluentDropZone TItem="ItemVm" Item="item" Data="item" class="@css" Draggable="@IsEditMode" Droppable="@IsEditMode" StopPropagation="true" tabindex="0" @onfocus="() => OnItemFocus(item)">
+                    @RenderItem(item)
+                </FluentDropZone>
+            }
+        </div>
+    }
+    @if (IsEditMode)
+    {
+        <div class="flat-grid-actions">
+            <AddItemButton OnClick="AddRootWidget" />
+        </div>
+    }
+</FluentDropZone>
+    
+@code {
+    [Parameter] public List<ItemVm> Items { get; set; } = new();
+    [Parameter] public bool IsEditMode { get; set; }
+    [Parameter] public EventCallback<List<int>> OnReordered { get; set; }
+    [Parameter] public EventCallback OnAddItem { get; set; }
+    [Parameter] public EventCallback<int> OnAddItemToContainer { get; set; }
+    [Parameter] public EventCallback<ItemVm> OnItemEdited { get; set; }
+    [Parameter] public EventCallback<ItemVm> OnItemDeleted { get; set; }
+
+    private int _focusedIndex = -1;
+
+    protected override void OnInitialized()
+    {
+        // Layout orientation disabled for now
+    }
+
+    public void Dispose() { }
+
+    private static bool IsContainer(ItemVm item) => item.Widget?.Contains("container", StringComparison.OrdinalIgnoreCase) == true;
+
+    private string GetItemSizeClass() => ViewOptions.CurrentItemSize switch
+    {
+        ItemSize.Small => "item-size-small",
+        ItemSize.Medium => "item-size-medium",
+        ItemSize.Large => "item-size-large",
+        _ => "item-size-medium"
+    };
+
+    private RenderFragment<ItemVm> RenderItem => item => builder =>
+    {
+        // Provide edit/delete callbacks for all widgets
+        switch ((item.Widget?.ToLower()) ?? "static-link")
+        {
+            case "static-link":
+                builder.OpenComponent<StaticLinkWidget>(0);
+                builder.AddAttribute(1, "Item", item);
+                builder.AddAttribute(2, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, i => OnItemDeleted.InvokeAsync(i)));
+                builder.AddAttribute(3, "OnItemEdited", EventCallback.Factory.Create(this, () => OnItemEdited.InvokeAsync(item)));
+                builder.CloseComponent();
+                break;
+            case "clock":
+                builder.OpenComponent<ClockWidget>(0);
+                builder.AddAttribute(1, "Item", item);
+                builder.AddAttribute(2, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, i => OnItemDeleted.InvokeAsync(i)));
+                builder.AddAttribute(3, "OnItemEdited", EventCallback.Factory.Create(this, () => OnItemEdited.InvokeAsync(item)));
+                builder.CloseComponent();
+                break;
+            case "weather":
+                builder.OpenComponent<WeatherWidget>(0);
+                builder.AddAttribute(1, "Item", item);
+                builder.AddAttribute(2, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, i => OnItemDeleted.InvokeAsync(i)));
+                builder.AddAttribute(3, "OnItemEdited", EventCallback.Factory.Create(this, () => OnItemEdited.InvokeAsync(item)));
+                builder.CloseComponent();
+                break;
+            case "public ip":
+                builder.OpenComponent<PublicIPWidget>(0);
+                builder.AddAttribute(1, "Item", item);
+                builder.AddAttribute(2, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, i => OnItemDeleted.InvokeAsync(i)));
+                builder.AddAttribute(3, "OnItemEdited", EventCallback.Factory.Create(this, () => OnItemEdited.InvokeAsync(item)));
+                builder.CloseComponent();
+                break;
+            case "rss feed":
+                builder.OpenComponent<RssWidget>(0);
+                builder.AddAttribute(1, "Item", item);
+                builder.AddAttribute(2, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, i => OnItemDeleted.InvokeAsync(i)));
+                builder.AddAttribute(3, "OnItemEdited", EventCallback.Factory.Create(this, () => OnItemEdited.InvokeAsync(item)));
+                builder.CloseComponent();
+                break;
+            case "vulnerability feed":
+                builder.OpenComponent<VulnerabilityFeedWidget>(0);
+                builder.AddAttribute(1, "Item", item);
+                builder.AddAttribute(2, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, i => OnItemDeleted.InvokeAsync(i)));
+                builder.AddAttribute(3, "OnItemEdited", EventCallback.Factory.Create(this, () => OnItemEdited.InvokeAsync(item)));
+                builder.CloseComponent();
+                break;
+            case "section-container":
+                builder.OpenComponent<SectionContainerWidget>(0);
+                builder.AddAttribute(1, "Item", item);
+                builder.AddAttribute(2, "OnAddChildToContainer", EventCallback.Factory.Create<int>(this, id => OnAddItemToContainer.InvokeAsync(id)));
+                builder.AddAttribute(3, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, i => OnItemDeleted.InvokeAsync(i)));
+                builder.AddAttribute(4, "OnItemEdited", EventCallback.Factory.Create(this, () => OnItemEdited.InvokeAsync(item)));
+                builder.CloseComponent();
+                break;
+            default:
+                builder.OpenComponent<UnknownWidget>(0);
+                builder.AddAttribute(1, "Item", item);
+                builder.AddAttribute(2, "Widget", item.Widget);
+                builder.AddAttribute(3, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, i => OnItemDeleted.InvokeAsync(i)));
+                builder.AddAttribute(4, "OnItemEdited", EventCallback.Factory.Create(this, () => OnItemEdited.InvokeAsync(item)));
+                builder.CloseComponent();
+                break;
+        }
+    };
+
+    private Task AddRootWidget() => OnAddItem.InvokeAsync();
+
+    private void OnItemFocus(ItemVm item) => _focusedIndex = Items.FindIndex(i => i.Id == item.Id);
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (!IsEditMode) return;
+        if (_focusedIndex < 0) return;
+        if (e.Key == "ArrowLeft" || e.Key == "ArrowUp")
+        {
+            var newIndex = Math.Max(0, _focusedIndex - 1);
+            if (newIndex != _focusedIndex)
+            {
+                var itm = Items[_focusedIndex];
+                Items.RemoveAt(_focusedIndex);
+                Items.Insert(newIndex, itm);
+                _focusedIndex = newIndex;
+                await OnReordered.InvokeAsync(Items.Select(i => i.Id).ToList());
+            }
+        }
+        else if (e.Key == "ArrowRight" || e.Key == "ArrowDown")
+        {
+            var newIndex = Math.Min(Items.Count - 1, _focusedIndex + 1);
+            if (newIndex != _focusedIndex)
+            {
+                var itm = Items[_focusedIndex];
+                Items.RemoveAt(_focusedIndex);
+                Items.Insert(newIndex, itm);
+                _focusedIndex = newIndex;
+                await OnReordered.InvokeAsync(Items.Select(i => i.Id).ToList());
+            }
+        }
+    }
+}

@@ -20,7 +20,6 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddOutputCache();
 
-// Add Fluent UI Blazor services
 builder.Services.AddFluentUIComponents();
 
 #region Dashy.Net required services
@@ -62,6 +61,7 @@ builder.Services.AddHttpClient<AppSettingsClient>(opts =>
 {
     opts.BaseAddress = new("https+http://apiservice");
 }).AddHttpMessageHandler<TokenHandler>();
+builder.Services.AddScoped<DragContextService>();
 #endregion
 
 

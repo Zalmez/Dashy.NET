@@ -6,17 +6,35 @@
 
 .sortable-item {
     padding: 0.5rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    background-color: #f9f9f9;
+    border: 1px solid var(--glass-border); /* subtle themed border */
+    border-radius: 12px;
+    background: transparent; /* blend with page */
+    backdrop-filter: none;
     cursor: grab;
+    position: relative;
+    box-shadow: none; /* no extra outer shadow */
+    transition: background-color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+    overflow: visible;
 }
 
-    .sortable-item:active {
-        cursor: grabbing;
-    }
+/* remove sheen */
+.sortable-item::before { display: none; }
 
-    .sortable-item.drag-over {
-        border-color: #007bff;
-        background-color: #e9f5ff;
-    }
+/* Very light hover, just to indicate interactivity in edit mode */
+.sortable-item:hover {
+    background: var(--glass-background);
+    border-color: var(--glass-border);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.22); /* toned down */
+}
+
+.sortable-item:active { cursor: grabbing; }
+
+.sortable-item.drag-over {
+    outline: 2px dashed var(--accent-color);
+    outline-offset: 6px;
+    background: var(--glass-hover-background);
+}
+
+/* High contrast keeps stronger outline and border for accessibility */
+body.theme-high-contrast .sortable-item { border: 2px solid var(--border-color); }
+body.theme-high-contrast .sortable-item.drag-over { outline: 2px solid var(--border-color); }

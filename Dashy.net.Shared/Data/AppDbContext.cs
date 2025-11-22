@@ -43,5 +43,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<AuthenticationProviderSettings>()
             .HasIndex(e => new { e.AuthenticationProviderId, e.Key })
             .IsUnique();
+
+        // Self-referencing hierarchy for DashboardItem (optional parent container widget)
+        modelBuilder.Entity<DashboardItem>()
+            .HasOne(i => i.ParentItem)
+            .WithMany(p => p.Children)
+            .HasForeignKey(i => i.ParentItemId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

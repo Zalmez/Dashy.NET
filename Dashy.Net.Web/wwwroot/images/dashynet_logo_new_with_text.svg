@@ -1,0 +1,82 @@
+<svg width="2000" height="2400" viewBox="0 0 2000 2400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Core gradient -->
+    <linearGradient id="dashyCoreGradientC" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a855f7"/>
+      <stop offset="50%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#22d3ee"/>
+    </linearGradient>
+
+    <!-- Soft glow -->
+    <radialGradient id="dashyGlowC" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.9"/>
+      <stop offset="50%" stop-color="#6366f1" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#020617" stop-opacity="0"/>
+    </radialGradient>
+
+    <filter id="dashyShadowC" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="50" stdDeviation="60"
+                    flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <!-- SCALE EVERYTHING UP FROM THE ORIGINAL DESIGN -->
+  <g transform="scale(3.2)">
+
+    <!-- TOP: Icon -->
+    <g transform="translate(100,40)">
+      <circle cx="300" cy="300" r="260" fill="url(#dashyGlowC)" />
+
+      <g opacity="0.55">
+        <rect x="80" y="200" width="220" height="36" rx="18"
+              transform="rotate(-25 80 200)" fill="#a855f7" />
+        <rect x="300" y="360" width="220" height="36" rx="18"
+              transform="rotate(-25 300 360)" fill="#22d3ee" />
+      </g>
+
+      <g filter="url(#dashyShadowC)">
+        <path
+          d="M300,60 L480,160 L480,340 L300,440 L120,340 L120,160 Z
+             M300,150 L195,210 L195,290 L300,350 L405,290 L405,210 Z"
+          fill="url(#dashyCoreGradientC)"
+          fill-rule="evenodd"
+          stroke="rgba(15,23,42,0.6)"
+          stroke-width="3.5"
+          stroke-linejoin="round"
+        />
+      </g>
+
+      <circle cx="200" cy="220" r="10" fill="#a855f7" opacity="0.85" />
+      <circle cx="400" cy="280" r="10" fill="#22d3ee" opacity="0.9" />
+      <circle cx="260" cy="360" r="8"  fill="#6366f1" opacity="0.8" />
+      <circle cx="340" cy="190" r="8"  fill="#38bdf8" opacity="0.8" />
+    </g>
+
+    <!-- TEXT (pulled into glow area) -->
+    <g transform="translate(0,600)">
+      <text x="400" y="0"
+            text-anchor="middle"
+            font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+            font-size="120"
+            font-weight="700"
+            letter-spacing="4"
+            fill="#0f172a">
+        DASHY
+      </text>
+
+      <rect x="260" y="30" width="280" height="90" rx="45"
+            fill="url(#dashyCoreGradientC)" opacity="0.30" />
+
+      <text x="400" y="95"
+            text-anchor="middle"
+            font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+            font-size="70"
+            font-weight="600"
+            letter-spacing="4"
+            fill="#0f172a">
+        .NET
+      </text>
+    </g>
+
+  </g>
+</svg>
