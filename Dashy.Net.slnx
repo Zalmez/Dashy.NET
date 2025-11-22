@@ -1,0 +1,16 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/Solution Items/">
+    <File Path="copilot-instructions.md" />
+  </Folder>
+  <Project Path="Dashy.Net.ApiService/Dashy.Net.ApiService.csproj" />
+  <Project Path="Dashy.Net.AppHost/Dashy.Net.AppHost.csproj" />
+  <Project Path="Dashy.Net.ServiceDefaults/Dashy.Net.ServiceDefaults.csproj" />
+  <Project Path="Dashy.net.Shared/Dashy.Net.Shared.csproj" />
+  <Project Path="Dashy.Net.Tests/Dashy.Net.Tests.csproj" />
+  <Project Path="Dashy.Net.Web/Dashy.Net.Web.csproj" />
+</Solution>

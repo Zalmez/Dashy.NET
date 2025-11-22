@@ -54,10 +54,10 @@ h1,h2,h3,h4,h5,h6 { color: var(--text-color); margin: 0; }
 /*==============================================================
   2. CORE LAYOUT
 ==============================================================*/
-.main-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: var(--glass-background); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 16px; box-shadow: var(--glass-shadow); position: sticky; top: 1rem; margin: 1rem 2rem 0; z-index: 100; }
+.main-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1rem; background: var(--glass-background); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 16px; box-shadow: var(--glass-shadow); position: sticky; top: 1rem; margin: 1rem 2rem 0; z-index: 100; }
 .header-title-section { display: flex; flex-direction: column; }
-.header-title-section h1 { font-size: 1.75rem; font-weight: 700; margin: 0; }
-.header-logo { width: 100px; height: 100px; border-radius: 25%; object-fit: cover; padding-top: 1rem; }
+.header-title-section h1 { font-size: 1.3rem; font-weight: 700; margin: 0; }
+.header-logo { width: 6.6rem; object-fit: cover; margin-bottom: -1.5rem;margin-top: -1.5rem;}
 .header-user-section { display: flex; align-items: center; }
 .header-controls { display: flex; gap: 2rem; align-items: center; }
 .control-group { display: flex; flex-direction: column; gap: 0.5rem; align-items: center; }
@@ -297,3 +297,9 @@ h1,h2,h3,h4,h5,h6 { color: var(--text-color); margin: 0; }
 
 /* High Contrast adjustments */
 body.theme-high-contrast .fab-main-button { border:2px solid var(--border-color); }
+
+/* Logo text theming (for inline SVG usage) */
+.logo-text { fill: var(--text-color) !important; transition: fill .2s ease-in-out; }
+.logo-text-accent { fill: var(--accent-color) !important; }
+.theme-light .logo-text { fill: var(--text-color) !important; }
+.theme-dark .logo-text { fill: var(--text-color) !important; }
