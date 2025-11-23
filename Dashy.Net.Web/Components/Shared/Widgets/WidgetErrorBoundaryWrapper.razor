@@ -1,0 +1,13 @@
+@inherits LayoutComponentBase
+
+<ErrorBoundary>
+    <ChildContent>
+        @Body
+    </ChildContent>
+    <ErrorContent>
+        <div class="alert alert-warning p-2 m-1">
+            <strong>Widget failed to render.</strong>
+            <span class="d-block">Please refresh or remove the widget if the problem persists.</span>
+        </div>
+    </ErrorContent>
+</ErrorBoundary>

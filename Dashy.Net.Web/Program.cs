@@ -22,6 +22,9 @@ builder.Services.AddOutputCache();
 
 builder.Services.AddFluentUIComponents();
 
+// TimeProvider registration for testable time abstractions
+builder.Services.AddSingleton(TimeProvider.System);
+
 #region Dashy.Net required services
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddTransient<TokenHandler>();

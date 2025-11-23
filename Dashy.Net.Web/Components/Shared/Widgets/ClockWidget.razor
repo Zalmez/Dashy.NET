@@ -1,35 +1,47 @@
 @using Dashy.Net.Shared.Models
 @inherits WidgetBase
 
-<div class="glass-tile @GetTileColorClass() @GetItemSizeClass()" @onclick:preventDefault="ViewOptions.IsEditMode">
-    @if (ViewOptions.IsEditMode)
-    {
-        <div class="item-edit-controls">
-            <button class="edit-btn" title="Edit Item" @onclick="EditWidget" @onclick:stopPropagation="true"><i
-                    class="fas fa-pencil-alt"></i></button>
-            <button class="delete-btn" title="Delete Item" @onclick="DeleteWidget" @onclick:stopPropagation="true"><i
-                    class="fas fa-trash-alt"></i></button>
-        </div>
-    }
-
-    <div class="tile-content clock-widget-container">
-        @if (string.IsNullOrWhiteSpace(_errorMessage))
-        {
-            <div class="time-display">@_currentTime.ToString(TimeFormat)</div>
-            @if (ViewOptions.CurrentItemSize == ItemSize.Large || ViewOptions.CurrentItemSize == ItemSize.Medium)
+<ErrorBoundary>
+    <ChildContent>
+        <div class="glass-tile @GetTileColorClass() @GetItemSizeClass()" @onclick:preventDefault="ViewOptions.IsEditMode">
+            @if (ViewOptions.IsEditMode)
             {
-                <div class="date-display">@_currentTime.ToString(DateFormat)</div>
+                <div class="item-edit-controls">
+                    <button class="edit-btn" title="Edit Item" @onclick="EditWidget" @onclick:stopPropagation="true"><i
+                            class="fas fa-pencil-alt"></i></button>
+                    <button class="delete-btn" title="Delete Item" @onclick="DeleteWidget" @onclick:stopPropagation="true"><i
+                            class="fas fa-trash-alt"></i></button>
+                </div>
             }
-        }
-        else
-        {
-            <div class="tile-icon">
-                <i class="fas fa-exclamation-triangle"></i>
+
+            <div class="tile-content clock-widget-container">
+                @if (string.IsNullOrWhiteSpace(_errorMessage))
+                {
+                    <div class="time-display">@_currentTime.ToString(TimeFormat)</div>
+                    @if (ViewOptions.CurrentItemSize == ItemSize.Large || ViewOptions.CurrentItemSize == ItemSize.Medium)
+                    {
+                        <div class="date-display">@_currentTime.ToString(DateFormat)</div>
+                    }
+                }
+                else
+                {
+                    <div class="tile-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="tile-title error-message">@_errorMessage</div>
+                }
             </div>
-            <div class="tile-title error-message">@_errorMessage</div>
-        }
-    </div>
-</div>
+        </div>
+    </ChildContent>
+    <ErrorContent>
+        <div class="glass-tile error-state @GetItemSizeClass()">
+            <div class="tile-content">
+                <div class="tile-icon"><i class="fas fa-exclamation-circle"></i></div>
+                <div class="tile-title">Clock widget failed to render.</div>
+            </div>
+        </div>
+    </ErrorContent>
+</ErrorBoundary>
 
 @code
 {
