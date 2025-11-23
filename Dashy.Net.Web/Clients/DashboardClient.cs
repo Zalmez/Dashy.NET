@@ -25,20 +25,26 @@ public class DashboardClient
         HeaderButtons = new HeaderButtonsClient(httpClient, loggerFactory.CreateLogger<HeaderButtonsClient>());
         Settings = new SettingsClient(httpClient, loggerFactory);
     }
-    public async Task<DashboardConfigVm?> GetConfigAsync(int? dashboardId = null)
+
+    public async Task<DashboardConfigVm?> GetConfigAsync(int? dashboardId = null, CancellationToken cancellationToken = default)
     {
         int retryCount = 0;
         const int maxRetries = 3;
         bool success = false;
-        while (retryCount < maxRetries && !success)
+        while (retryCount < maxRetries && !success && !cancellationToken.IsCancellationRequested)
         {
             try
             {
                 retryCount++;
                 var url = dashboardId.HasValue ? $"api/dashboard/config?id={dashboardId.Value}" : "api/dashboard/config";
-                var response = await _httpClient.GetFromJsonAsync<DashboardConfigVm>(url);
+                var response = await _httpClient.GetFromJsonAsync<DashboardConfigVm>(url, cancellationToken);
                 success = response is not null && response.Id >= 0;
                 return response;
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogWarning("Dashboard config request was cancelled (attempt {Attempt}/{Max})", retryCount, maxRetries);
+                return null;
             }
             catch (HttpRequestException ex)
             {
@@ -48,62 +54,34 @@ public class DashboardClient
                     switch (ex.StatusCode.Value)
                     {
                         case HttpStatusCode.NotFound:
-                            await SeedDashboardAsync();
+                            await SeedDashboardAsync(cancellationToken);
                             break;
                         case HttpStatusCode.BadGateway:
-                            return new DashboardConfigVm
-                            (
-                                Id: 0,
-                                Title: "Error: Cannot connect to API! (Bad Gateway error)",
-                                Subtitle: null,
-                                Sections: new(),
-                                HeaderButtons: new(),
-                                UseContainerWidgets: false
-                            );
+                            return new DashboardConfigVm(0, "Error: Cannot connect to API! (Bad Gateway error)", null, new(), new(), false);
                         case HttpStatusCode.ServiceUnavailable:
-                            return new DashboardConfigVm
-                            (
-                                Id: 0,
-                                Title: "Error: Cannot connect to API! (Service Unavailable)",
-                                Subtitle: null,
-                                Sections: new(),
-                                HeaderButtons: new(),
-                                UseContainerWidgets: false
-                            );
+                            return new DashboardConfigVm(0, "Error: Cannot connect to API! (Service Unavailable)", null, new(), new(), false);
                         case HttpStatusCode.GatewayTimeout:
-                            return new DashboardConfigVm
-                            (
-                                Id: 0,
-                                Title: "Error: Cannot connect to API! (Gateway Timeout)",
-                                Subtitle: null,
-                                Sections: new(),
-                                HeaderButtons: new(),
-                                UseContainerWidgets: false
-                            );
+                            return new DashboardConfigVm(0, "Error: Cannot connect to API! (Gateway Timeout)", null, new(), new(), false);
                         default:
                             break;
                     }
                 }
-
             }
         }
-        return new DashboardConfigVm
-        (
-            Id: 0,
-            Title: "Error: Cannot connect to API! (Unknown error)",
-            Subtitle: null,
-            Sections: new(),
-            HeaderButtons: new(),
-            UseContainerWidgets: false
-        );
+        return new DashboardConfigVm(0, "Error: Cannot connect to API! (Unknown error)", null, new(), new(), false);
     }
 
-    public async Task<bool> SetUseContainerWidgetsAsync(int dashboardId, bool enabled)
+    public async Task<bool> SetUseContainerWidgetsAsync(int dashboardId, bool enabled, CancellationToken cancellationToken = default)
     {
         try
         {
-            var response = await _httpClient.PostAsJsonAsync($"api/dashboard/{dashboardId}/use-container-widgets", new { enabled });
+            var response = await _httpClient.PostAsJsonAsync($"api/dashboard/{dashboardId}/use-container-widgets", new { enabled }, cancellationToken);
             return response.IsSuccessStatusCode;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("SetUseContainerWidgets cancelled for dashboard {DashboardId}", dashboardId);
+            return false;
         }
         catch (Exception ex)
         {
@@ -112,14 +90,14 @@ public class DashboardClient
         }
     }
 
-    public async Task<DashboardConfigVm?> CreateAsync(CreateDashboardDto createDto)
+    public async Task<DashboardConfigVm?> CreateAsync(CreateDashboardDto createDto, CancellationToken cancellationToken = default)
     {
         try
         {
-            var response = await _httpClient.PostAsJsonAsync("api/dashboard", createDto);
+            var response = await _httpClient.PostAsJsonAsync("api/dashboard", createDto, cancellationToken);
             if (response.IsSuccessStatusCode)
             {
-                var result = await response.Content.ReadFromJsonAsync<DashboardConfigVm>();
+                var result = await response.Content.ReadFromJsonAsync<DashboardConfigVm>(cancellationToken: cancellationToken);
                 _logger.LogInformation("Successfully created new dashboard '{DashboardTitle}'", createDto.Title);
                 return result;
             }
@@ -129,6 +107,11 @@ public class DashboardClient
                 return null;
             }
         }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Create dashboard cancelled for '{DashboardTitle}'", createDto.Title);
+            return null;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Exception while creating dashboard");
@@ -136,12 +119,17 @@ public class DashboardClient
         }
     }
 
-    public async Task<bool> UpdateAsync(int id, UpdateDashboardDto updateDto)
+    public async Task<bool> UpdateAsync(int id, UpdateDashboardDto updateDto, CancellationToken cancellationToken = default)
     {
         try
         {
-            var response = await _httpClient.PutAsJsonAsync($"api/dashboard/{id}", updateDto);
+            var response = await _httpClient.PutAsJsonAsync($"api/dashboard/{id}", updateDto, cancellationToken);
             return response.IsSuccessStatusCode;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Update dashboard cancelled for {DashboardId}", id);
+            return false;
         }
         catch (Exception ex)
         {
@@ -150,12 +138,17 @@ public class DashboardClient
         }
     }
 
-    public async Task<IEnumerable<DashboardListItemVm>> GetAllAsync()
+    public async Task<IEnumerable<DashboardListItemVm>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            var response = await _httpClient.GetFromJsonAsync<IEnumerable<DashboardListItemVm>>("api/dashboard/list");
+            var response = await _httpClient.GetFromJsonAsync<IEnumerable<DashboardListItemVm>>("api/dashboard/list", cancellationToken);
             return response ?? Enumerable.Empty<DashboardListItemVm>();
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("GetAll dashboards cancelled");
+            return Enumerable.Empty<DashboardListItemVm>();
         }
         catch (Exception ex)
         {
@@ -164,12 +157,17 @@ public class DashboardClient
         }
     }
 
-    public async Task<bool> SeedDashboardAsync()
+    public async Task<bool> SeedDashboardAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            var response = await _httpClient.PostAsync("api/dashboard/seed", null);
+            var response = await _httpClient.PostAsync("api/dashboard/seed", null, cancellationToken);
             return response.IsSuccessStatusCode;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("SeedDashboard cancelled");
+            return false;
         }
         catch (Exception ex)
         {
@@ -178,13 +176,13 @@ public class DashboardClient
         }
     }
 
-    public async Task<(List<ItemVm> rootItems, Dictionary<int, List<ItemVm>> children)?> GetFlattenedItemsAsync(int dashboardId)
+    public async Task<(List<ItemVm> rootItems, Dictionary<int, List<ItemVm>> children)?> GetFlattenedItemsAsync(int dashboardId, CancellationToken cancellationToken = default)
     {
         try
         {
-            var response = await _httpClient.GetAsync($"api/dashboard/{dashboardId}/items/flat");
+            var response = await _httpClient.GetAsync($"api/dashboard/{dashboardId}/items/flat", cancellationToken);
             if (!response.IsSuccessStatusCode) return null;
-            var json = await response.Content.ReadAsStringAsync();
+            var json = await response.Content.ReadAsStringAsync(cancellationToken);
             using var doc = JsonDocument.Parse(json);
             var rootItems = new List<ItemVm>();
             if (doc.RootElement.TryGetProperty("rootItems", out var rootArr))
@@ -228,6 +226,11 @@ public class DashboardClient
             }
             return (rootItems, children);
         }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("GetFlattenedItems cancelled for {DashboardId}", dashboardId);
+            return null;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get flattened items for dashboard {DashboardId}", dashboardId);
@@ -235,8 +238,6 @@ public class DashboardClient
         }
     }
 }
-
-
 
 public class ProvidersClient
 {
@@ -249,12 +250,17 @@ public class ProvidersClient
         _logger = logger;
     }
 
-    public async Task<IEnumerable<AuthenticationProviderVm>> GetAllAsync()
+    public async Task<IEnumerable<AuthenticationProviderVm>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            var providers = await _httpClient.GetFromJsonAsync<IEnumerable<AuthenticationProviderVm>>("api/auth-providers");
+            var providers = await _httpClient.GetFromJsonAsync<IEnumerable<AuthenticationProviderVm>>("api/auth-providers", cancellationToken);
             return providers ?? Enumerable.Empty<AuthenticationProviderVm>();
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("GetAll authentication providers cancelled");
+            return Enumerable.Empty<AuthenticationProviderVm>();
         }
         catch (Exception ex)
         {
@@ -263,11 +269,16 @@ public class ProvidersClient
         }
     }
 
-    public async Task<AuthenticationProviderVm?> GetAsync(int id)
+    public async Task<AuthenticationProviderVm?> GetAsync(int id, CancellationToken cancellationToken = default)
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<AuthenticationProviderVm>($"api/auth-providers/{id}");
+            return await _httpClient.GetFromJsonAsync<AuthenticationProviderVm>($"api/auth-providers/{id}", cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Get authentication provider cancelled for {Id}", id);
+            return null;
         }
         catch (Exception ex)
         {
@@ -276,12 +287,17 @@ public class ProvidersClient
         }
     }
 
-    public async Task<bool> CreateAsync(CreateAuthenticationProviderDto createDto)
+    public async Task<bool> CreateAsync(CreateAuthenticationProviderDto createDto, CancellationToken cancellationToken = default)
     {
         try
         {
-            var response = await _httpClient.PostAsJsonAsync("api/auth-providers", createDto);
+            var response = await _httpClient.PostAsJsonAsync("api/auth-providers", createDto, cancellationToken);
             return response.IsSuccessStatusCode;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Create authentication provider cancelled");
+            return false;
         }
         catch (Exception ex)
         {
@@ -290,12 +306,17 @@ public class ProvidersClient
         }
     }
 
-    public async Task<bool> UpdateAsync(int id, UpdateAuthenticationProviderDto updateDto)
+    public async Task<bool> UpdateAsync(int id, UpdateAuthenticationProviderDto updateDto, CancellationToken cancellationToken = default)
     {
         try
         {
-            var response = await _httpClient.PutAsJsonAsync($"api/auth-providers/{id}", updateDto);
+            var response = await _httpClient.PutAsJsonAsync($"api/auth-providers/{id}", updateDto, cancellationToken);
             return response.IsSuccessStatusCode;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Update authentication provider cancelled for {Id}", id);
+            return false;
         }
         catch (Exception ex)
         {
@@ -304,12 +325,17 @@ public class ProvidersClient
         }
     }
 
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
         try
         {
-            var response = await _httpClient.DeleteAsync($"api/auth-providers/{id}");
+            var response = await _httpClient.DeleteAsync($"api/auth-providers/{id}", cancellationToken);
             return response.IsSuccessStatusCode;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Delete authentication provider cancelled for {Id}", id);
+            return false;
         }
         catch (Exception ex)
         {
