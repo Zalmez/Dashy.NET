@@ -12,6 +12,7 @@ public class DashboardItem
     public string? Icon { get; set; }
     public string Widget { get; set; } = "static-link";
     public string? OptionsJson { get; set; }
+    public DateTime LastModifiedUtc { get; set; } = DateTime.UtcNow;
 
     public int SectionId { get; set; }
     public DashboardSection Section { get; set; } = null!;
@@ -33,6 +34,7 @@ public class DashboardSection
     public int Position { get; set; } = 0;
     public int DashboardId { get; set; }
     public Dashboard Dashboard { get; set; } = null!;
+    public DateTime LastModifiedUtc { get; set; } = DateTime.UtcNow;
 }
 
 public class Dashboard
@@ -44,6 +46,7 @@ public class Dashboard
     public bool UseContainerWidgets { get; set; } = true; // Default enabled for new installations
     public List<DashboardSection> Sections { get; set; } = [];
     public List<HeaderButton> HeaderButtons { get; set; } = [];
+    public DateTime LastModifiedUtc { get; set; } = DateTime.UtcNow;
 }
 
 public class HeaderButton

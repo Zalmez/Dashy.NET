@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
+using System.Text;
 
 namespace Dashy.Net.ApiService.Controllers;
 
@@ -16,6 +17,9 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
 {
     private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
+    private static string ComputeConfigETag(Dashboard dashboard)
+        => $"W/\"{dashboard.LastModifiedUtc.Ticks}\"";
+
     /// <summary>
     /// Gets the entire configuration for the dashboard view, including sections and items.
     /// This is the primary endpoint for the frontend to load its initial state.
@@ -23,42 +27,38 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
     /// <param name="id">Optional dashboard ID. If not specified, returns the first dashboard.</param>
     [HttpGet("config")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status304NotModified)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetConfig([FromQuery] int? id = null)
     {
-        Dashboard? dashboard;
-
-        if (id.HasValue)
-        {
-            dashboard = await dbContext.Dashboards
-                .Include(d => d.Sections.OrderBy(s => s.Position))
-                    .ThenInclude(s => s.Items.OrderBy(i => i.Position))
+        Dashboard? dashboard = id.HasValue
+            ? await dbContext.Dashboards
+                .Include(d => d.Sections.OrderBy(s => s.Position)).ThenInclude(s => s.Items.OrderBy(i => i.Position))
                 .Include(d => d.HeaderButtons.OrderBy(b => b.Position))
                 .AsNoTracking()
-                .FirstOrDefaultAsync(d => d.Id == id.Value);
-        }
-        else
-        {
-            dashboard = await dbContext.Dashboards
-                .Include(d => d.Sections.OrderBy(s => s.Position))
-                    .ThenInclude(s => s.Items.OrderBy(i => i.Position))
+                .FirstOrDefaultAsync(d => d.Id == id.Value)
+            : await dbContext.Dashboards
+                .Include(d => d.Sections.OrderBy(s => s.Position)).ThenInclude(s => s.Items.OrderBy(i => i.Position))
                 .Include(d => d.HeaderButtons.OrderBy(b => b.Position))
                 .AsNoTracking()
                 .FirstOrDefaultAsync();
-        }
 
         if (dashboard is null)
         {
             if (id.HasValue)
             {
                 logger.LogWarning("Dashboard with ID {DashboardId} not found.", id.Value);
-                return NotFound(new DashboardConfigVm(0, "Dashboard Not Found", $"Dashboard with ID {id.Value} was not found.", new List<SectionVm>(), new List<HeaderButtonVm>(), false));
+                return NotFound(new DashboardConfigVm(0, "Dashboard Not Found", $"Dashboard with ID {id.Value} was not found.", [], [], false));
             }
-            else
-            {
-                logger.LogWarning("No dashboard found in the database. Seeding might be required.");
-                return NotFound(new DashboardConfigVm(0, "No Dashboard Found", "Please seed the database.", new List<SectionVm>(), new List<HeaderButtonVm>(), false));
-            }
+            logger.LogWarning("No dashboard found in the database. Seeding might be required.");
+            return NotFound(new DashboardConfigVm(0, "No Dashboard Found", "Please seed the database.", [], [], false));
+        }
+
+        var etag = ComputeConfigETag(dashboard);
+        if (Request.Headers.IfNoneMatch.Contains(etag))
+        {
+            logger.LogDebug("Dashboard config not modified (ETag {ETag}). Returning 304.", etag);
+            return StatusCode(StatusCodes.Status304NotModified);
         }
 
         var configVm = new DashboardConfigVm(
@@ -76,9 +76,7 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
                     dbItem.Icon,
                     dbItem.Widget,
                     dbItem.SectionId,
-                    string.IsNullOrWhiteSpace(dbItem.OptionsJson)
-                        ? (JsonElement?)null
-                        : JsonDocument.Parse(dbItem.OptionsJson).RootElement.Clone(),
+                    string.IsNullOrWhiteSpace(dbItem.OptionsJson) ? (JsonElement?)null : JsonDocument.Parse(dbItem.OptionsJson).RootElement.Clone(),
                     dbItem.ParentItemId
                 )).ToList()
             )).ToList(),
@@ -91,6 +89,7 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
             dashboard.UseContainerWidgets
         );
 
+        Response.Headers.ETag = etag;
         return Ok(configVm);
     }
 
@@ -106,7 +105,6 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
             .Select(d => new DashboardListItemVm(d.Id, d.Title, d.Subtitle))
             .AsNoTracking()
             .ToListAsync();
-
         return Ok(dashboards);
     }
 
@@ -127,23 +125,14 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
             var newDashboard = new Dashboard
             {
                 Title = dashboardDto.Title,
-                Subtitle = dashboardDto.Subtitle
+                Subtitle = dashboardDto.Subtitle,
+                LastModifiedUtc = DateTime.UtcNow
             };
-
             dbContext.Dashboards.Add(newDashboard);
             await dbContext.SaveChangesAsync();
-
             logger.LogInformation("Created new dashboard '{DashboardTitle}' with ID {DashboardId}", newDashboard.Title, newDashboard.Id);
-
-            var configVm = new DashboardConfigVm(
-                newDashboard.Id,
-                newDashboard.Title,
-                newDashboard.Subtitle,
-                new List<SectionVm>(),
-                new List<HeaderButtonVm>(),
-                false
-            );
-
+            var configVm = new DashboardConfigVm(newDashboard.Id, newDashboard.Title, newDashboard.Subtitle, [], [], false);
+            Response.Headers.ETag = ComputeConfigETag(newDashboard);
             return CreatedAtAction(nameof(GetConfig), new { id = newDashboard.Id }, configVm);
         }
         catch (Exception ex)
@@ -160,23 +149,34 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
     [Consumes("application/json")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> UpdateDashboard(int id, [FromBody] UpdateDashboardDto updateDto)
     {
-        var dashboard = await dbContext.Dashboards.FindAsync(id);
-        if (dashboard is null)
+        var dashboard = await dbContext.Dashboards
+            .Include(d => d.Sections)
+            .Include(d => d.HeaderButtons)
+            .FirstOrDefaultAsync(d => d.Id == id);
+        if (dashboard is null) return NotFound();
+
+        // Concurrency: validate If-Match when provided
+        var currentEtag = ComputeConfigETag(dashboard);
+        if (Request.Headers.IfMatch.Count > 0 && !Request.Headers.IfMatch.Contains(currentEtag))
         {
-            return NotFound();
+            logger.LogWarning("ETag mismatch on update for dashboard {DashboardId}. Provided: {Provided}, Current: {Current}", id, string.Join(',', Request.Headers.IfMatch), currentEtag);
+            return StatusCode(StatusCodes.Status412PreconditionFailed, new { message = "Dashboard has changed. Refresh and retry." });
         }
 
         dashboard.Title = updateDto.Title;
         dashboard.Subtitle = updateDto.Subtitle;
+        dashboard.LastModifiedUtc = DateTime.UtcNow;
 
         try
         {
             await dbContext.SaveChangesAsync();
             logger.LogInformation("Dashboard {DashboardId} updated successfully", id);
-            return Ok();
+            Response.Headers.ETag = ComputeConfigETag(dashboard);
+            return Ok(new { success = true });
         }
         catch (Exception ex)
         {
@@ -199,13 +199,12 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
             {
                 return Ok("Database already has data.");
             }
-
             logger.LogInformation("No data found. Seeding new sample dashboard...");
-
             var dashboard = new Dashboard
             {
                 Title = "Dashy.Net Home Lab",
                 Subtitle = "Your new dashboard, ready to go!",
+                LastModifiedUtc = DateTime.UtcNow,
                 HeaderButtons =
                 [
                     new HeaderButton { Text = "GitHub", Url = "https://github.com/Lissy93/dashy", Position = 0 },
@@ -218,10 +217,11 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
                         Name = "Networking",
                         Icon = "fas fa-network-wired",
                         Position = 0,
+                        LastModifiedUtc = DateTime.UtcNow,
                         Items =
                         [
-                            new DashboardItem { Title = "Router", Widget = "static-link", Url = "#", Icon = "fas fa-road-bridge", Position = 0 },
-                            new DashboardItem { Title = "Pi-hole", Widget = "static-link", Url = "#", Icon = "fas fa-shield-alt", Position = 1 }
+                            new DashboardItem { Title = "Router", Widget = "static-link", Url = "#", Icon = "fas fa-road-bridge", Position = 0, LastModifiedUtc = DateTime.UtcNow },
+                            new DashboardItem { Title = "Pi-hole", Widget = "static-link", Url = "#", Icon = "fas fa-shield-alt", Position = 1, LastModifiedUtc = DateTime.UtcNow }
                         ]
                     },
                     new DashboardSection
@@ -229,18 +229,18 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
                         Name = "Media Servers",
                         Icon = "fas fa-photo-film",
                         Position = 1,
+                        LastModifiedUtc = DateTime.UtcNow,
                         Items =
                         [
-                            new DashboardItem { Title = "Jellyfin", Widget = "static-link", Url = "#", Icon = "fas fa-tv", Position = 0 }
+                            new DashboardItem { Title = "Jellyfin", Widget = "static-link", Url = "#", Icon = "fas fa-tv", Position = 0, LastModifiedUtc = DateTime.UtcNow }
                         ]
                     }
                 ]
             };
-
             dbContext.Dashboards.Add(dashboard);
             await dbContext.SaveChangesAsync();
-
             logger.LogInformation("Database was successfully seeded with a sample dashboard.");
+            Response.Headers.ETag = ComputeConfigETag(dashboard);
             return Ok("Database seeded with sample dashboard.");
         }
         catch (Exception ex)
@@ -258,15 +258,16 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> SetUseContainerWidgets(int id, [FromBody] ToggleContainerWidgetsDto dto)
     {
-        var dashboard = await dbContext.Dashboards.FindAsync(id);
-        if (dashboard is null)
-        {
-            return NotFound();
-        }
-
+        var dashboard = await dbContext.Dashboards
+            .Include(d => d.Sections)
+            .Include(d => d.HeaderButtons)
+            .FirstOrDefaultAsync(d => d.Id == id);
+        if (dashboard is null) return NotFound();
         dashboard.UseContainerWidgets = dto.Enabled;
+        dashboard.LastModifiedUtc = DateTime.UtcNow;
         await dbContext.SaveChangesAsync();
         logger.LogInformation("Dashboard {DashboardId} UseContainerWidgets set to {Enabled}", id, dto.Enabled);
+        Response.Headers.ETag = ComputeConfigETag(dashboard);
         return Ok(new { id = dashboard.Id, enabled = dashboard.UseContainerWidgets });
     }
 
@@ -314,6 +315,7 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
                 ci.ParentItemId
             )).ToList());
 
+        Response.Headers.ETag = ComputeConfigETag(dashboard);
         return Ok(new { rootItems, children = childrenLookup });
     }
 }

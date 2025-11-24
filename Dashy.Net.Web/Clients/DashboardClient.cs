@@ -1,5 +1,6 @@
 ﻿using Dashy.Net.Shared.Models;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -9,6 +10,8 @@ public class DashboardClient
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<DashboardClient> _logger;
+
+    private readonly Dictionary<int, (string etag, DashboardConfigVm config)> _cache = new();
 
     public ItemsClient Items { get; }
     public SectionsClient Sections { get; }
@@ -36,10 +39,28 @@ public class DashboardClient
             try
             {
                 retryCount++;
+                var id = dashboardId ?? 1;
                 var url = dashboardId.HasValue ? $"api/dashboard/config?id={dashboardId.Value}" : "api/dashboard/config";
-                var response = await _httpClient.GetFromJsonAsync<DashboardConfigVm>(url, cancellationToken);
-                success = response is not null && response.Id >= 0;
-                return response;
+                using var req = new HttpRequestMessage(HttpMethod.Get, url);
+                if (_cache.TryGetValue(id, out var cached) && !string.IsNullOrEmpty(cached.etag))
+                {
+                    req.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(cached.etag));
+                }
+                using var resp = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                if (resp.StatusCode == HttpStatusCode.NotModified)
+                {
+                    _logger.LogDebug("Dashboard {DashboardId} not modified (ETag). Using cached config.", id);
+                    return cached.config;
+                }
+                resp.EnsureSuccessStatusCode();
+                var result = await resp.Content.ReadFromJsonAsync<DashboardConfigVm>(cancellationToken: cancellationToken);
+                var etag = resp.Headers.ETag?.Tag;
+                if (result is not null && !string.IsNullOrEmpty(etag))
+                {
+                    _cache[id] = (etag!, result);
+                }
+                success = result is not null && result.Id >= 0;
+                return result;
             }
             catch (OperationCanceledException)
             {
@@ -75,8 +96,25 @@ public class DashboardClient
     {
         try
         {
-            var response = await _httpClient.PostAsJsonAsync($"api/dashboard/{dashboardId}/use-container-widgets", new { enabled }, cancellationToken);
-            return response.IsSuccessStatusCode;
+            using var req = new HttpRequestMessage(HttpMethod.Post, $"api/dashboard/{dashboardId}/use-container-widgets")
+            {
+                Content = JsonContent.Create(new { enabled })
+            };
+            if (_cache.TryGetValue(dashboardId, out var cached) && !string.IsNullOrEmpty(cached.etag))
+            {
+                req.Headers.IfMatch.Add(new EntityTagHeaderValue(cached.etag));
+            }
+            using var resp = await _httpClient.SendAsync(req, cancellationToken);
+            if (resp.IsSuccessStatusCode)
+            {
+                var etag = resp.Headers.ETag?.Tag;
+                if (!string.IsNullOrEmpty(etag) && _cache.TryGetValue(dashboardId, out var c))
+                {
+                    _cache[dashboardId] = (etag!, c.config);
+                }
+                return true;
+            }
+            return false;
         }
         catch (OperationCanceledException)
         {
@@ -98,6 +136,11 @@ public class DashboardClient
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<DashboardConfigVm>(cancellationToken: cancellationToken);
+                var etag = response.Headers.ETag?.Tag;
+                if (result is not null && !string.IsNullOrEmpty(etag))
+                {
+                    _cache[result.Id] = (etag!, result);
+                }
                 _logger.LogInformation("Successfully created new dashboard '{DashboardTitle}'", createDto.Title);
                 return result;
             }
@@ -123,8 +166,25 @@ public class DashboardClient
     {
         try
         {
-            var response = await _httpClient.PutAsJsonAsync($"api/dashboard/{id}", updateDto, cancellationToken);
-            return response.IsSuccessStatusCode;
+            using var req = new HttpRequestMessage(HttpMethod.Put, $"api/dashboard/{id}")
+            {
+                Content = JsonContent.Create(updateDto)
+            };
+            if (_cache.TryGetValue(id, out var cached) && !string.IsNullOrEmpty(cached.etag))
+            {
+                req.Headers.IfMatch.Add(new EntityTagHeaderValue(cached.etag));
+            }
+            using var resp = await _httpClient.SendAsync(req, cancellationToken);
+            if (resp.IsSuccessStatusCode)
+            {
+                var etag = resp.Headers.ETag?.Tag;
+                if (!string.IsNullOrEmpty(etag) && _cache.TryGetValue(id, out var c))
+                {
+                    _cache[id] = (etag!, c.config);
+                }
+                return true;
+            }
+            return false;
         }
         catch (OperationCanceledException)
         {
