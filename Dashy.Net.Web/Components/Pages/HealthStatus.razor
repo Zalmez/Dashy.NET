@@ -1,0 +1,84 @@
+@page "/status"
+@inject IConfiguration Config
+@inject IWebHostEnvironment Env
+@inject ILogger<HealthStatus> Logger
+
+<PageTitle>Status</PageTitle>
+
+<h1>Application Status</h1>
+
+@if (_loading)
+{
+    <p><span class="spinner-border spinner-border-sm" /> Loading...</p>
+}
+else
+{
+    <div class="status-grid">
+        <div class="status-card">
+            <h3>Environment</h3>
+            <ul>
+                <li><strong>Name:</strong> @Env.EnvironmentName</li>
+                <li><strong>Content Root:</strong> @Env.ContentRootPath</li>
+                <li><strong>Web Root:</strong> @Env.WebRootPath</li>
+            </ul>
+        </div>
+        <div class="status-card">
+            <h3>Storage</h3>
+            <ul>
+                <li><strong>Configured Path:</strong> @_storagePath ?? "(default wwwroot)"</li>
+                <li><strong>Exists:</strong> @_storageExists</li>
+                <li><strong>File Count (top 10):</strong> @_files?.Length ?? 0</li>
+            </ul>
+            @if (_files?.Length > 0)
+            {
+                <details>
+                    <summary>Files</summary>
+                    <ul>
+                        @foreach (var f in _files.Take(10))
+                        {
+                            <li>@f</li>
+                        }
+                    </ul>
+                </details>
+            }
+        </div>
+        <div class="status-card">
+            <h3>Authentication</h3>
+            <ul>
+                <li><strong>Authority set:</strong> @(!string.IsNullOrWhiteSpace(_authAuthority))</li>
+                <li><strong>ClientId set:</strong> @(!string.IsNullOrWhiteSpace(_authClientId))</li>
+            </ul>
+        </div>
+    </div>
+}
+
+@code {
+    private string? _storagePath;
+    private bool _storageExists;
+    private string[]? _files;
+    private string? _authAuthority;
+    private string? _authClientId;
+    private bool _loading = true;
+
+    protected override Task OnInitializedAsync()
+    {
+        _storagePath = Config["DASHYDOTNET_STORAGE_PATH"];
+        _storageExists = !string.IsNullOrWhiteSpace(_storagePath) && Directory.Exists(_storagePath);
+        if (_storageExists)
+        {
+            try
+            {
+                _files = Directory.GetFiles(_storagePath).Select(Path.GetFileName).ToArray();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to enumerate storage files");
+                _files = Array.Empty<string>();
+            }
+        }
+        _authAuthority = Environment.GetEnvironmentVariable("auth_authority");
+        _authClientId = Environment.GetEnvironmentVariable("auth_clientid");
+        _loading = false;
+        return Task.CompletedTask;
+    }
+}

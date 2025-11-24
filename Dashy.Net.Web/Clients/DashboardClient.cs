@@ -67,6 +67,11 @@ public class DashboardClient
                 _logger.LogWarning("Dashboard config request was cancelled (attempt {Attempt}/{Max})", retryCount, maxRetries);
                 return null;
             }
+            catch (OperationCanceledException)
+            {
+                _logger.LogWarning("Dashboard config request was cancelled (attempt {Attempt}/{Max})", retryCount, maxRetries);
+                return null;
+            }
             catch (HttpRequestException ex)
             {
                 _logger.LogError(ex, "Failed to fetch dashboard config from the API.");
@@ -87,7 +92,6 @@ public class DashboardClient
                             break;
                     }
                 }
-
             }
         }
         return new DashboardConfigVm(0, "Error: Cannot connect to API! (Unknown error)", null, new(), new(), false);
@@ -115,6 +119,11 @@ public class DashboardClient
                 }
                 return true;
             }
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("SetUseContainerWidgets cancelled for dashboard {DashboardId}", dashboardId);
             return false;
         }
         catch (OperationCanceledException)
@@ -185,6 +194,11 @@ public class DashboardClient
                 }
                 return true;
             }
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Update dashboard cancelled for {DashboardId}", id);
             return false;
         }
         catch (OperationCanceledException)

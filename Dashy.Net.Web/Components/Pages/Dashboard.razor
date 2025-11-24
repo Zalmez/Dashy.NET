@@ -11,6 +11,7 @@
 @inject DashboardStateService DashboardState
 @inject ViewOptionsService ViewOptions
 @inject EventSubscriptionManager SubscriptionManager
+@inject PersistentComponentState AppState
 @implements IDisposable
 
 <PageTitle>@DashboardState.Config?.Title</PageTitle>
@@ -84,40 +85,22 @@ else
                                 }
                             </div>
                             <div class="items-wrapper @GetItemsContainerClass(currentSection.Id)">
-                                @foreach (var currentItem in currentSection.Items)
+                                @if (!ViewOptions.IsEditMode && currentSection.Items.Count > 30 && !_collapsedSections.Contains(currentSection.Id))
                                 {
-                                    <div class="item" @key="currentItem.Id">
-                                        @switch (currentItem.Widget?.ToLower() ?? "static-link")
-                                        {
-                                            case "static-link":
-                                                <StaticLinkWidget Item="currentItem" OnItemDeleted="@(EventCallback.Factory.Create<ItemVm>(this, HandleItemDeleted))" OnItemEdited="@(EventCallback.Factory.Create(this, () => OpenEditModal(currentItem)))" />
-                                                break;
-                                            case "clock":
-                                                <ClockWidget Item="currentItem" OnItemDeleted="@(EventCallback.Factory.Create<ItemVm>(this, HandleItemDeleted))" OnItemEdited="@(EventCallback.Factory.Create(this, () => OpenEditModal(currentItem)))" />
-                                                break;
-                                            case "weather":
-                                                <WeatherWidget Item="currentItem" OnItemDeleted="@(EventCallback.Factory.Create<ItemVm>(this, HandleItemDeleted))" OnItemEdited="@(EventCallback.Factory.Create(this, () => OpenEditModal(currentItem)))" />
-                                                break;
-                                            case "public ip":
-                                                <PublicIPWidget Item="currentItem" OnItemDeleted="@(EventCallback.Factory.Create<ItemVm>(this, HandleItemDeleted))" OnItemEdited="@(EventCallback.Factory.Create(this, () => OpenEditModal(currentItem)))" />
-                                                break;
-                                            case "rss feed":
-                                                <RssWidget Item="currentItem" OnItemDeleted="@(EventCallback.Factory.Create<ItemVm>(this, HandleItemDeleted))" OnItemEdited="@(EventCallback.Factory.Create(this, () => OpenEditModal(currentItem)))" />
-                                                break;
-                                            case "vulnerability feed":
-                                                <VulnerabilityFeedWidget Item="currentItem" OnItemDeleted="@(EventCallback.Factory.Create<ItemVm>(this, HandleItemDeleted))" OnItemEdited="@(EventCallback.Factory.Create(this, () => OpenEditModal(currentItem)))" />
-                                                break;
-                                            case "section-container":
-                                                <SectionContainerWidget Item="currentItem"
-                                                                        OnAddChildToContainer="@(EventCallback.Factory.Create<int>(this, OpenAddChildItem))"
-                                                                        OnItemDeleted="@(EventCallback.Factory.Create<ItemVm>(this, HandleItemDeleted))"
-                                                                        OnItemEdited="@(EventCallback.Factory.Create(this, () => OpenEditModal(currentItem)))" />
-                                                break;
-                                            default:
-                                                <UnknownWidget Item="currentItem" Widget="@currentItem.Widget" OnItemDeleted="@(EventCallback.Factory.Create<ItemVm>(this, HandleItemDeleted))" OnItemEdited="@(EventCallback.Factory.Create(this, () => OpenEditModal(currentItem)))" />
-                                                break;
-                                        }
-                                    </div>
+                                    <Virtualize Items="currentSection.Items" Context="currentItem">
+                                        <div class="item" @key="currentItem.Id">
+                                            @RenderWidget(currentItem)
+                                        </div>
+                                    </Virtualize>
+                                }
+                                else
+                                {
+                                    @foreach (var currentItem in currentSection.Items)
+                                    {
+                                        <div class="item" @key="currentItem.Id">
+                                            @RenderWidget(currentItem)
+                                        </div>
+                                    }
                                 }
                                 @if (ViewOptions.IsEditMode && !_collapsedSections.Contains(currentSection.Id))
                                 {
@@ -162,27 +145,156 @@ else
 
 @code {
     [Parameter] public int? Id { get; set; }
-    
-    private bool _isItemModalOpen = false;
-    private string _itemModalTitle = "";
-    private ItemEditModel? _currentItemToEdit;
 
-    private bool _isSectionModalOpen = false;
+    private const string DashboardPersistenceKey = "dashboard-config";
+    private bool _restoredFromState;
+    private bool _isItemModalOpen;
+    private string _itemModalTitle = string.Empty;
+    private ItemEditModel? _currentItemToEdit;
+    private bool _isSectionModalOpen;
     private SectionVm? _sectionToEdit;
     private CreateSectionDto? _sectionModel;
     private HashSet<int> _collapsedSections = new();
-
     private bool _isDisposed;
-
-    private bool _isInitializing = false;
+    private bool _isInitializing;
     private string? _initError;
-
     private int? _pendingContainerId;
 
     private IEnumerable<SectionVm> FilteredSections =>
         DashboardState.Config?.Sections.Where(section =>
             string.IsNullOrWhiteSpace(ViewOptions.SearchTerm) || SectionMatchesSearch(section, ViewOptions.SearchTerm)
         ) ?? Enumerable.Empty<SectionVm>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        SubscriptionManager.AddSubscription(() => DashboardState.OnConfigLoaded -= OnConfigLoadedHandler);
+        SubscriptionManager.AddSubscription(() => ViewOptions.OnChange -= HandleOptionsChanged);
+        DashboardState.OnConfigLoaded += OnConfigLoadedHandler;
+        ViewOptions.OnChange += HandleOptionsChanged;
+
+        if (AppState.TryTakeFromJson<DashboardConfigVm>(DashboardPersistenceKey, out var cached) && cached is not null)
+        {
+            DashboardState.SetConfig(cached);
+            _restoredFromState = true;
+        }
+
+        AppState.RegisterOnPersisting(PersistDashboardConfig);
+        await base.OnInitializedAsync();
+    }
+
+    private Task PersistDashboardConfig()
+    {
+        if (DashboardState.Config is not null)
+        {
+            AppState.PersistAsJson(DashboardPersistenceKey, DashboardState.Config);
+        }
+        return Task.CompletedTask;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var dashboardId = Id ?? 1;
+        await ViewOptions.InitializeAsync(dashboardId);
+        if (DashboardState.Config?.Id != dashboardId && !_restoredFromState)
+        {
+            var config = await DashboardClient.GetConfigAsync(dashboardId);
+            if (!_isDisposed)
+            {
+                DashboardState.SetConfig(config);
+            }
+        }
+    }
+
+    private void HandleOptionsChanged() => InvokeAsync(StateHasChanged);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_restoredFromState)
+        {
+            var dashboardId = Id ?? 1;
+            var config = await DashboardClient.GetConfigAsync(dashboardId);
+            if (_isDisposed) return;
+            if (config is null && !_isInitializing)
+            {
+                await InitializeDashboard();
+            }
+            else
+            {
+                DashboardState.SetConfig(config);
+            }
+        }
+    }
+
+    private void OnConfigLoadedHandler()
+    {
+        if (_isDisposed) return;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private RenderFragment RenderWidget(ItemVm currentItem) => builder =>
+    {
+        switch (currentItem.Widget?.ToLower() ?? "static-link")
+        {
+            case "static-link":
+                builder.OpenComponent(0, typeof(StaticLinkWidget));
+                builder.AddAttribute(1, "Item", currentItem);
+                builder.AddAttribute(2, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, HandleItemDeleted));
+                builder.AddAttribute(3, "OnItemEdited", EventCallback.Factory.Create(this, () => OpenEditModal(currentItem)));
+                builder.CloseComponent();
+                break;
+            case "clock":
+                builder.OpenComponent(0, typeof(ClockWidget));
+                builder.AddAttribute(1, "Item", currentItem);
+                builder.AddAttribute(2, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, HandleItemDeleted));
+                builder.AddAttribute(3, "OnItemEdited", EventCallback.Factory.Create(this, () => OpenEditModal(currentItem)));
+                builder.CloseComponent();
+                break;
+            case "weather":
+                builder.OpenComponent(0, typeof(WeatherWidget));
+                builder.AddAttribute(1, "Item", currentItem);
+                builder.AddAttribute(2, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, HandleItemDeleted));
+                builder.AddAttribute(3, "OnItemEdited", EventCallback.Factory.Create(this, () => OpenEditModal(currentItem)));
+                builder.CloseComponent();
+                break;
+            case "public ip":
+                builder.OpenComponent(0, typeof(PublicIPWidget));
+                builder.AddAttribute(1, "Item", currentItem);
+                builder.AddAttribute(2, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, HandleItemDeleted));
+                builder.AddAttribute(3, "OnItemEdited", EventCallback.Factory.Create(this, () => OpenEditModal(currentItem)));
+                builder.CloseComponent();
+                break;
+            case "rss feed":
+                builder.OpenComponent(0, typeof(RssWidget));
+                builder.AddAttribute(1, "Item", currentItem);
+                builder.AddAttribute(2, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, HandleItemDeleted));
+                builder.AddAttribute(3, "OnItemEdited", EventCallback.Factory.Create(this, () => OpenEditModal(currentItem)));
+                builder.CloseComponent();
+                break;
+            case "vulnerability feed":
+                builder.OpenComponent(0, typeof(VulnerabilityFeedWidget));
+                builder.AddAttribute(1, "Item", currentItem);
+                builder.AddAttribute(2, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, HandleItemDeleted));
+                builder.AddAttribute(3, "OnItemEdited", EventCallback.Factory.Create(this, () => OpenEditModal(currentItem)));
+                builder.CloseComponent();
+                break;
+            case "section-container":
+                builder.OpenComponent(0, typeof(SectionContainerWidget));
+                builder.AddAttribute(1, "Item", currentItem);
+                builder.AddAttribute(2, "OnAddChildToContainer", EventCallback.Factory.Create<int>(this, OpenAddChildItem));
+                builder.AddAttribute(3, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, HandleItemDeleted));
+                builder.AddAttribute(4, "OnItemEdited", EventCallback.Factory.Create(this, () => OpenEditModal(currentItem)));
+                builder.CloseComponent();
+                break;
+            default:
+                builder.OpenComponent(0, typeof(UnknownWidget));
+                builder.AddAttribute(1, "Item", currentItem);
+                builder.AddAttribute(2, "Widget", currentItem.Widget);
+                builder.AddAttribute(3, "OnItemDeleted", EventCallback.Factory.Create<ItemVm>(this, HandleItemDeleted));
+                builder.AddAttribute(4, "OnItemEdited", EventCallback.Factory.Create(this, () => OpenEditModal(currentItem)));
+                builder.CloseComponent();
+                break;
+        }
+    };
 
     private bool SectionMatchesSearch(SectionVm section, string term)
     {
@@ -195,60 +307,6 @@ else
             if (childItems.Any(c => c.Title.Contains(term, StringComparison.OrdinalIgnoreCase))) return true;
         }
         return false;
-    }
-
-    protected override void OnInitialized()
-    {
-        SubscriptionManager.AddSubscription(() => DashboardState.OnConfigLoaded -= OnConfigLoadedHandler);
-        SubscriptionManager.AddSubscription(() => ViewOptions.OnChange -= HandleOptionsChanged);
-
-        DashboardState.OnConfigLoaded += OnConfigLoadedHandler;
-        ViewOptions.OnChange += HandleOptionsChanged;
-    }
-
-    protected override async Task OnParametersSetAsync()
-    {
-        var dashboardId = Id ?? 1;
-        
-        await ViewOptions.InitializeAsync(dashboardId);
-        
-        if (DashboardState.Config?.Id != dashboardId)
-        {
-            var config = await DashboardClient.GetConfigAsync(dashboardId);
-            if (!_isDisposed)
-            {
-                await InvokeAsync(() => DashboardState.SetConfig(config));
-            }
-        }
-    }
-
-    private void HandleOptionsChanged()
-    {
-        InvokeAsync(StateHasChanged);
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            var dashboardId = Id ?? 1;
-            var config = await DashboardClient.GetConfigAsync(dashboardId);
-            if (_isDisposed) return;
-            if (config is null && !_isInitializing)
-            {
-                await InitializeDashboard();
-            }
-            else
-            {
-                await InvokeAsync(() => DashboardState.SetConfig(config));
-            }
-        }
-    }
-
-    private void OnConfigLoadedHandler()
-    {
-        if (_isDisposed) return;
-        InvokeAsync(StateHasChanged);
     }
 
     private void OpenCreateModal(int sectionId, int? parentItemId = null)
@@ -682,4 +740,4 @@ else
         SubscriptionManager.Dispose();
         _isDisposed = true;
     }
-}
+}}
