@@ -73,9 +73,7 @@ public class UpdateSectionDto
     [StringLength(100)]
     public string Name { get; set; } = string.Empty;
     public string? Icon { get; set; }
-
     public UpdateSectionDto() { }
-
     public UpdateSectionDto(string name, string? icon)
     {
         Name = name;
@@ -161,7 +159,7 @@ public class AuthenticationProviderSettingDto
 // --- ViewModels (Models for the Blazor UI) ---
 public record DashboardConfigVm(int Id, string Title, string? Subtitle, List<SectionVm> Sections, List<HeaderButtonVm> HeaderButtons, bool UseContainerWidgets = false);
 public record DashboardListItemVm(int Id, string Title, string? Subtitle);
-[Obsolete("Sections will be replaced by container widgets; use ItemVm + section-container widget.")]
+[Obsolete("In Version 1.0 Sections will be replaced by container widgets; use ItemVm + section-container widget.")]
 public record SectionVm(int Id, string Name, string? Icon, int DashboardId, List<ItemVm> Items);
 public record HeaderButtonVm(int Id, string Text, string? Url, string? Icon);
 public record ItemVm(
