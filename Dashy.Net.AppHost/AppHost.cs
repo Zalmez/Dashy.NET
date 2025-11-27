@@ -2,6 +2,8 @@ using Aspire.Hosting;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
+builder.AddDockerComposeEnvironment("env");
+
 var config = builder.Configuration;
 var authAuthority = config["auth_authority"] ?? "";
 var authClientId = config["auth_clientid"] ?? "";
