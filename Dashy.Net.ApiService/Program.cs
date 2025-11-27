@@ -213,6 +213,7 @@ v1.MapGet("/version", (HttpContext httpContext) =>
 .WithSummary("Gets API version information")
 .WithDescription("Returns version metadata for the API service.");
 
+app.MapDefaultEndpoints();
 app.MapControllers();
 
 using(var scope = app.Services.CreateScope())
