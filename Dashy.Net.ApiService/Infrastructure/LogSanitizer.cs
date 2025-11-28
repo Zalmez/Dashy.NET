@@ -15,11 +15,12 @@ internal static class LogSanitizer
         {
             switch (ch)
             {
+                // Remove CR, LF, Unicode LS/PS, and other log-forging newlines entirely
                 case '\r':
-                    sb.Append("\\r");
-                    break;
                 case '\n':
-                    sb.Append("\\n");
+                case '\u2028': // Line Separator
+                case '\u2029': // Paragraph Separator
+                    // skip (do not append)
                     break;
                 default:
                     if (!char.IsControl(ch))
