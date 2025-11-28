@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using System.Text;
+using Dashy.Net.ApiService.Infrastructure;
 
 namespace Dashy.Net.ApiService.Controllers;
 
@@ -130,7 +131,7 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
             };
             dbContext.Dashboards.Add(newDashboard);
             await dbContext.SaveChangesAsync();
-            logger.LogInformation("Created new dashboard '{DashboardTitle}' with ID {DashboardId}", newDashboard.Title, newDashboard.Id);
+            logger.LogInformation("Created new dashboard '{DashboardTitle}' with ID {DashboardId}", LogSanitizer.Sanitize(newDashboard.Title), newDashboard.Id);
             var configVm = new DashboardConfigVm(newDashboard.Id, newDashboard.Title, newDashboard.Subtitle, [], [], false);
             Response.Headers.ETag = ComputeConfigETag(newDashboard);
             return CreatedAtAction(nameof(GetConfig), new { id = newDashboard.Id }, configVm);

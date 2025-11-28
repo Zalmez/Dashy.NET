@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Globalization;
 using System.Text.Json.Serialization;
+using Dashy.Net.ApiService.Infrastructure;
 
 namespace Dashy.Net.ApiService.Controllers
 {
@@ -28,7 +29,7 @@ namespace Dashy.Net.ApiService.Controllers
             var client = _httpClientFactory.CreateClient("WeatherApi");
             var url = $"v1/forecast?latitude={latitude.ToString(CultureInfo.InvariantCulture)}&longitude={longitude.ToString(CultureInfo.InvariantCulture)}&current_weather=true&temperature_unit={unit}";
 
-            _logger.LogInformation("Attempting to fetch weather from Open-Meteo with URL: {RequestUrl}", client.BaseAddress + url);
+            _logger.LogInformation("Attempting to fetch weather from Open-Meteo with URL: {RequestUrl}", LogSanitizer.Sanitize(client.BaseAddress + url));
 
             try
             {
@@ -39,7 +40,7 @@ namespace Dashy.Net.ApiService.Controllers
                     var errorBody = await responseMessage.Content.ReadAsStringAsync();
                     _logger.LogError("Open-Meteo API returned a non-success status code. Status: {StatusCode}, Response: {ErrorBody}",
                         responseMessage.StatusCode,
-                        errorBody);
+                        LogSanitizer.Sanitize(errorBody));
 
                     return StatusCode((int)responseMessage.StatusCode, errorBody);
                 }

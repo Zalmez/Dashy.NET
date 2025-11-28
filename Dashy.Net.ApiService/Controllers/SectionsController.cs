@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
+using Dashy.Net.ApiService.Infrastructure;
 
 namespace Dashy.Net.ApiService.Controllers;
 
@@ -39,7 +40,7 @@ public class SectionsController(AppDbContext dbContext, ILogger<SectionsControll
         dbContext.Sections.Add(newSection);
         await dbContext.SaveChangesAsync();
 
-        logger.LogInformation("Created new section '{SectionName}' in Dashboard {DashboardId}", newSection.Name, newSection.DashboardId);
+        logger.LogInformation("Created new section '{SectionName}' in Dashboard {DashboardId}", LogSanitizer.Sanitize(newSection.Name), newSection.DashboardId);
 
         var sectionVm = new SectionVm(newSection.Id, newSection.Name, newSection.Icon, newSection.DashboardId, new List<ItemVm>());
 
@@ -122,7 +123,7 @@ public class SectionsController(AppDbContext dbContext, ILogger<SectionsControll
         dbContext.Sections.Remove(section);
         await dbContext.SaveChangesAsync();
 
-        logger.LogInformation("Successfully deleted section '{SectionName}' with ID: {SectionId}", section.Name, id);
+        logger.LogInformation("Successfully deleted section '{SectionName}' with ID: {SectionId}", LogSanitizer.Sanitize(section.Name), id);
         return NoContent();
     }
 

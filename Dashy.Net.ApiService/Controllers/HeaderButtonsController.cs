@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http;
+using Dashy.Net.ApiService.Infrastructure;
 
 namespace Dashy.Net.ApiService.Controllers;
 
@@ -45,7 +46,7 @@ public class HeaderButtonsController(AppDbContext dbContext, ILogger<HeaderButto
         dbContext.HeaderButtons.Add(newButton);
         await dbContext.SaveChangesAsync();
 
-        logger.LogInformation("Created new header button '{ButtonText}'", newButton.Text);
+        logger.LogInformation("Created new header button '{ButtonText}'", LogSanitizer.Sanitize(newButton.Text));
         var buttonVm = new HeaderButtonVm(
             newButton.Id,
             newButton.Text,
