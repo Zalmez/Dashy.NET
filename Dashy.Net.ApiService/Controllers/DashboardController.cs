@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
-using System.Text;
 
 namespace Dashy.Net.ApiService.Controllers;
 
@@ -47,7 +46,7 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
         {
             if (id.HasValue)
             {
-                logger.LogWarning("Dashboard with ID {DashboardId} not found.", id.Value);
+                logger.LogWarning("Dashboard lookup failed.");
                 return NotFound(new DashboardConfigVm(0, "Dashboard Not Found", $"Dashboard with ID {id.Value} was not found.", [], [], false));
             }
             logger.LogWarning("No dashboard found in the database. Seeding might be required.");
@@ -57,7 +56,7 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
         var etag = ComputeConfigETag(dashboard);
         if (Request.Headers.IfNoneMatch.Contains(etag))
         {
-            logger.LogDebug("Dashboard config not modified (ETag {ETag}). Returning 304.", etag);
+            logger.LogDebug("Dashboard config not modified. Returning 304.");
             return StatusCode(StatusCodes.Status304NotModified);
         }
 
@@ -130,7 +129,7 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
             };
             dbContext.Dashboards.Add(newDashboard);
             await dbContext.SaveChangesAsync();
-            logger.LogInformation("Created new dashboard '{DashboardTitle}' with ID {DashboardId}", newDashboard.Title, newDashboard.Id);
+            logger.LogInformation("Created new dashboard.");
             var configVm = new DashboardConfigVm(newDashboard.Id, newDashboard.Title, newDashboard.Subtitle, [], [], false);
             Response.Headers.ETag = ComputeConfigETag(newDashboard);
             return CreatedAtAction(nameof(GetConfig), new { id = newDashboard.Id }, configVm);
@@ -163,7 +162,7 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
         var currentEtag = ComputeConfigETag(dashboard);
         if (Request.Headers.IfMatch.Count > 0 && !Request.Headers.IfMatch.Contains(currentEtag))
         {
-            logger.LogWarning("ETag mismatch on update for dashboard {DashboardId}. Provided: {Provided}, Current: {Current}", id, string.Join(',', Request.Headers.IfMatch), currentEtag);
+            logger.LogWarning("ETag mismatch on update.");
             return StatusCode(StatusCodes.Status412PreconditionFailed, new { message = "Dashboard has changed. Refresh and retry." });
         }
 
@@ -174,13 +173,13 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
         try
         {
             await dbContext.SaveChangesAsync();
-            logger.LogInformation("Dashboard {DashboardId} updated successfully", id);
+            logger.LogInformation("Dashboard updated successfully");
             Response.Headers.ETag = ComputeConfigETag(dashboard);
             return Ok(new { success = true });
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to update dashboard {DashboardId}", id);
+            logger.LogError(ex, "Failed to update dashboard");
             return Problem("Failed to update dashboard", statusCode: 500);
         }
     }
@@ -266,7 +265,7 @@ public class DashboardController(AppDbContext dbContext, ILogger<DashboardContro
         dashboard.UseContainerWidgets = dto.Enabled;
         dashboard.LastModifiedUtc = DateTime.UtcNow;
         await dbContext.SaveChangesAsync();
-        logger.LogInformation("Dashboard {DashboardId} UseContainerWidgets set to {Enabled}", id, dto.Enabled);
+        logger.LogInformation("Dashboard UseContainerWidgets set.");
         Response.Headers.ETag = ComputeConfigETag(dashboard);
         return Ok(new { id = dashboard.Id, enabled = dashboard.UseContainerWidgets });
     }

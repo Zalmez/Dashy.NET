@@ -28,7 +28,7 @@ namespace Dashy.Net.ApiService.Controllers
             var client = _httpClientFactory.CreateClient("WeatherApi");
             var url = $"v1/forecast?latitude={latitude.ToString(CultureInfo.InvariantCulture)}&longitude={longitude.ToString(CultureInfo.InvariantCulture)}&current_weather=true&temperature_unit={unit}";
 
-            _logger.LogInformation("Attempting to fetch weather from Open-Meteo with URL: {RequestUrl}", client.BaseAddress + url);
+            _logger.LogInformation("Attempting to fetch weather from Open-Meteo.");
 
             try
             {
@@ -37,9 +37,7 @@ namespace Dashy.Net.ApiService.Controllers
                 if (!responseMessage.IsSuccessStatusCode)
                 {
                     var errorBody = await responseMessage.Content.ReadAsStringAsync();
-                    _logger.LogError("Open-Meteo API returned a non-success status code. Status: {StatusCode}, Response: {ErrorBody}",
-                        responseMessage.StatusCode,
-                        errorBody);
+                    _logger.LogError("Open-Meteo API returned a non-success status code.");
 
                     return StatusCode((int)responseMessage.StatusCode, errorBody);
                 }
