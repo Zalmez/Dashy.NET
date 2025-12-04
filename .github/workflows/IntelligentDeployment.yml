@@ -172,7 +172,7 @@ jobs:
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435
 
       - name: Log in to the GitHub Container Registry
         uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef
@@ -206,7 +206,7 @@ jobs:
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435
 
       - name: Log in to the GitHub Container Registry
         uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef
@@ -228,7 +228,7 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.AUTHOR }}/${{ env.repository }}/webfrontend:${{ needs.detect-changes.outputs.webfrontend-version }}
             ${{ env.REGISTRY }}/${{ env.AUTHOR }}/${{ env.repository }}/webfrontend:${{ github.sha }}
-            ${{ env.REGISTRY }}/${{ env.AUTHOR }}/${{ env.repository }}/webfrontend:latest
+            ${{ env.REGISTRY }}/${{ env.repository }}/webfrontend:latest
 
   deployment-summary:
     runs-on: ubuntu-latest
