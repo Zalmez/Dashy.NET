@@ -171,6 +171,9 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349
+
       - name: Log in to the GitHub Container Registry
         uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef
         with:
@@ -183,6 +186,7 @@ jobs:
         with:
           context: .
           file: ./Dashy.Net.ApiService/Dockerfile
+          platforms: linux/amd64
           push: true
           build-args: |
             GITHUB_REF_NAME=${{ needs.detect-changes.outputs.apiservice-version }}
@@ -201,6 +205,9 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349
+
       - name: Log in to the GitHub Container Registry
         uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef
         with:
@@ -213,6 +220,7 @@ jobs:
         with:
           context: .
           file: ./Dashy.Net.Web/Dockerfile
+          platforms: linux/amd64
           push: true
           build-args: |
             GITHUB_REF_NAME=${{ needs.detect-changes.outputs.webfrontend-version }}
