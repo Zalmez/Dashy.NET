@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http;
-using Dashy.Net.ApiService.Infrastructure;
 
 namespace Dashy.Net.ApiService.Controllers;
 
@@ -28,7 +27,7 @@ public class HeaderButtonsController(AppDbContext dbContext, ILogger<HeaderButto
         var dashboard = await dbContext.Dashboards.FindAsync(buttonDto.DashboardId);
         if (dashboard is null)
         {
-            return BadRequest(new { message = $"Dashboard with ID {buttonDto.DashboardId} not found." });
+            return BadRequest(new { message = "Dashboard not found." });
         }
 
         var position = await dbContext.HeaderButtons.CountAsync(b => b.DashboardId == buttonDto.DashboardId);
@@ -46,7 +45,7 @@ public class HeaderButtonsController(AppDbContext dbContext, ILogger<HeaderButto
         dbContext.HeaderButtons.Add(newButton);
         await dbContext.SaveChangesAsync();
 
-        logger.LogInformation("Created new header button '{ButtonText}'", LogSanitizer.Sanitize(newButton.Text));
+        logger.LogInformation("Created new header button.");
         var buttonVm = new HeaderButtonVm(
             newButton.Id,
             newButton.Text,
@@ -80,7 +79,7 @@ public class HeaderButtonsController(AppDbContext dbContext, ILogger<HeaderButto
         button.Icon = buttonDto.Icon;
 
         await dbContext.SaveChangesAsync();
-        logger.LogInformation("Updated header button with ID {ButtonId}", id);
+        logger.LogInformation("Updated header button.");
         return Ok(new { message = "Header button updated successfully." });
     }
 
@@ -102,7 +101,7 @@ public class HeaderButtonsController(AppDbContext dbContext, ILogger<HeaderButto
 
         dbContext.HeaderButtons.Remove(button);
         await dbContext.SaveChangesAsync();
-        logger.LogInformation("Deleted header button with ID {ButtonId}", id);
+        logger.LogInformation("Deleted header button.");
         return Ok(new { message = "Header button deleted successfully." });
     }
 

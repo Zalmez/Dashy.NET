@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
-using Dashy.Net.ApiService.Infrastructure;
 
 namespace Dashy.Net.ApiService.Controllers;
 
@@ -25,7 +24,7 @@ public class SectionsController(AppDbContext dbContext, ILogger<SectionsControll
         var dashboard = await dbContext.Dashboards.FindAsync(sectionDto.DashboardId);
         if (dashboard is null)
         {
-            return BadRequest(new { message = $"Cannot create section in non-existent Dashboard ID {sectionDto.DashboardId}." });
+            return BadRequest(new { message = "Cannot create section in non-existent Dashboard." });
         }
 
         var newSection = new DashboardSection
@@ -40,7 +39,7 @@ public class SectionsController(AppDbContext dbContext, ILogger<SectionsControll
         dbContext.Sections.Add(newSection);
         await dbContext.SaveChangesAsync();
 
-        logger.LogInformation("Created new section '{SectionName}' in Dashboard {DashboardId}", LogSanitizer.Sanitize(newSection.Name), newSection.DashboardId);
+        logger.LogInformation("Created new section in Dashboard.");
 
         var sectionVm = new SectionVm(newSection.Id, newSection.Name, newSection.Icon, newSection.DashboardId, new List<ItemVm>());
 
@@ -72,14 +71,14 @@ public class SectionsController(AppDbContext dbContext, ILogger<SectionsControll
         var sectionToUpdate = await dbContext.Sections.FindAsync(id);
         if (sectionToUpdate is null)
         {
-            logger.LogWarning("Attempted to update non-existent section with ID: {SectionId}", id);
+            logger.LogWarning("Attempted to update non-existent section.");
             return NotFound();
         }
 
         sectionToUpdate.Name = sectionDto.Name;
         await dbContext.SaveChangesAsync();
 
-        logger.LogInformation("Updated section with ID: {SectionId}", id);
+        logger.LogInformation("Updated section.");
         return NoContent();
     }
 
@@ -117,13 +116,13 @@ public class SectionsController(AppDbContext dbContext, ILogger<SectionsControll
 
         if (section is null)
         {
-            logger.LogWarning("Attempted to delete non-existent section with ID: {SectionId}", id);
+            logger.LogWarning("Attempted to delete non-existent section.");
             return NotFound();
         }
         dbContext.Sections.Remove(section);
         await dbContext.SaveChangesAsync();
 
-        logger.LogInformation("Successfully deleted section '{SectionName}' with ID: {SectionId}", LogSanitizer.Sanitize(section.Name), id);
+        logger.LogInformation("Successfully deleted section.");
         return NoContent();
     }
 
@@ -136,7 +135,7 @@ public class SectionsController(AppDbContext dbContext, ILogger<SectionsControll
         var section = await dbContext.Sections.Include(s => s.Items).FirstOrDefaultAsync(s => s.Id == id);
         if (section is null)
         {
-            logger.LogWarning("Attempted to convert non-existent section with ID: {SectionId}", id);
+            logger.LogWarning("Attempted to convert non-existent section.");
             return NotFound();
         }
 
@@ -160,7 +159,7 @@ public class SectionsController(AppDbContext dbContext, ILogger<SectionsControll
         }
         await dbContext.SaveChangesAsync();
 
-        logger.LogInformation("Converted section {SectionId} to container widget {ContainerId}", id, container.Id);
+        logger.LogInformation("Converted section to container widget.");
         return Ok(new { containerId = container.Id });
     }
 }
