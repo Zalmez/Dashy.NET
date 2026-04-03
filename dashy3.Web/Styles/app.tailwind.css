@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+/* Configure Tailwind v4 */
+@source "../Components/**/*.razor";
+@source "../Pages/**/*.razor";
+
+/* Enable class-based dark mode */
+@variant dark (&:where(.dark, .dark *));
+
+/* Custom styles */
+.dialog-overlay {
+    @apply fixed inset-0 bg-black/50 flex items-center justify-center z-50;
+}
+
+.dialog-box {
+    @apply bg-white dark:bg-slate-900 rounded-xl p-6 w-96 max-w-[90vw] shadow-2xl border border-slate-200 dark:border-slate-700;
+}
+
+/* Widget drag over indicator */
+.widget-drag-over {
+    @apply ring-2 ring-blue-500 ring-offset-2;
+}
+
+/* Widget size classes - ensure responsive column spans are generated */
+@utility widget-small {
+    height: auto;
+    grid-column: span 1;
+}
+
+@utility widget-medium {
+    min-height: 240px;
+    grid-column: span 1;
+}
+
+@utility widget-large {
+    min-height: 320px;
+    grid-column: span 1;
+    @media (min-width: 768px) {
+        grid-column: span 2 / span 2;
+    }
+}

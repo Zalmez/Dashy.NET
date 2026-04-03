@@ -1,0 +1,1419 @@
+@page "/admin"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Admin")]
+@using dashy3.Web.Models
+@using dashy3.Web.Services
+@using System.Net.Http.Json
+@using System.Security.Claims
+@using System.Text.Json
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JS
+
+<PageTitle>Admin Panel — dashy3</PageTitle>
+
+<div class="p-6 max-w-5xl">
+    <h1 class="text-2xl font-bold text-slate-900 dark:text-white mb-1">Admin Panel</h1>
+    <p class="text-slate-500 dark:text-[#8b8b9e] text-sm mb-6">Manage users, SSO, and view application statistics</p>
+
+    <!-- Tabs -->
+    <div class="flex gap-1 mb-6 bg-slate-100 dark:bg-[#1a1a2e] p-1 rounded-lg w-fit border border-slate-200 dark:border-[#2a2a3e]">
+        @foreach (var tab in new[] { ("overview", "Overview"), ("users", "Users"), ("invites", "Invites"), ("oidc", "SSO / OIDC"), ("email", "Email"), ("apikeys", "API Keys") })
+        {
+            <button @onclick='() => _tab = tab.Item1'
+                    class="px-4 py-1.5 rounded-md text-sm font-medium transition-colors @(_tab == tab.Item1 ? "bg-[#7c5cbf] text-white" : "text-slate-600 dark:text-[#8b8b9e] hover:text-slate-900 dark:hover:text-white")">
+                @tab.Item2
+            </button>
+        }
+    </div>
+
+    <!-- ── Overview ─────────────────────────────────────────────────────────── -->
+    @if (_tab == "overview")
+    {
+        @if (_loadingStats)
+        {
+            <p class="text-slate-500 dark:text-[#8b8b9e] text-sm">Loading statistics...</p>
+        }
+        else if (_statsError is not null)
+        {
+            <p class="text-red-400 text-sm">Failed to load statistics: @_statsError</p>
+        }
+        else if (_stats is not null)
+        {
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white dark:bg-[#1a1a2e] border border-slate-200 dark:border-[#2a2a3e] rounded-xl p-4">
+                    <p class="text-xs text-slate-500 dark:text-[#8b8b9e] uppercase tracking-wide mb-1">Total Users</p>
+                    <p class="text-3xl font-bold text-slate-900 dark:text-white">@_stats.TotalUsers</p>
+                    <p class="text-xs text-slate-500 dark:text-[#8b8b9e] mt-1">@_stats.AdminCount admin@(_stats.AdminCount == 1 ? "" : "s")</p>
+                </div>
+                <div class="bg-white dark:bg-[#1a1a2e] border border-slate-200 dark:border-[#2a2a3e] rounded-xl p-4">
+                    <p class="text-xs text-slate-500 dark:text-[#8b8b9e] uppercase tracking-wide mb-1">Dashboards</p>
+                    <p class="text-3xl font-bold text-slate-900 dark:text-white">@_stats.TotalDashboards</p>
+                    <p class="text-xs text-slate-500 dark:text-[#8b8b9e] mt-1">@_stats.SharedDashboards shared</p>
+                </div>
+                <div class="bg-white dark:bg-[#1a1a2e] border border-slate-200 dark:border-[#2a2a3e] rounded-xl p-4">
+                    <p class="text-xs text-slate-500 dark:text-[#8b8b9e] uppercase tracking-wide mb-1">Widgets</p>
+                    <p class="text-3xl font-bold text-slate-900 dark:text-white">@_stats.TotalWidgets</p>
+                    <p class="text-xs text-slate-500 dark:text-[#8b8b9e] mt-1">@_stats.WidgetsByType.Count type@(_stats.WidgetsByType.Count == 1 ? "" : "s") in use</p>
+                </div>
+                <div class="bg-white dark:bg-[#1a1a2e] border border-slate-200 dark:border-[#2a2a3e] rounded-xl p-4">
+                    <p class="text-xs text-slate-500 dark:text-[#8b8b9e] uppercase tracking-wide mb-1">Uptime</p>
+                    <p class="text-3xl font-bold text-slate-900 dark:text-white">@_systemStats?.UptimeHours<span class="text-lg font-normal">h</span></p>
+                    <p class="text-xs text-slate-500 dark:text-[#8b8b9e] mt-1">@_systemStats?.ProcessorCount vCPUs</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <!-- Widget Type Breakdown -->
+                <div class="bg-white dark:bg-[#1a1a2e] border border-slate-200 dark:border-[#2a2a3e] rounded-xl p-5">
+                    <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-4">Widget Usage</h3>
+                    @if (_stats.TotalWidgets == 0)
+                    {
+                        <p class="text-sm text-slate-500 dark:text-[#8b8b9e]">No widgets yet.</p>
+                    }
+                    else
+                    {
+                        <div class="space-y-3">
+                            @foreach (var kv in _stats.WidgetsByType.OrderByDescending(x => x.Value))
+                            {
+                                var pct = _stats.TotalWidgets > 0 ? (kv.Value * 100.0 / _stats.TotalWidgets) : 0;
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1">
+                                        <span class="text-slate-700 dark:text-[#b0b0c3] capitalize">@kv.Key.Replace("-", " ")</span>
+                                        <span class="text-slate-500 dark:text-[#8b8b9e]">@kv.Value</span>
+                                    </div>
+                                    <div class="h-1.5 bg-slate-100 dark:bg-[#2a2a3e] rounded-full overflow-hidden">
+                                        <div class="h-full bg-[#7c5cbf] rounded-full transition-all duration-500"
+                                             style="width: @pct.ToString("F0")%"></div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <!-- System Health -->
+                <div class="bg-white dark:bg-[#1a1a2e] border border-slate-200 dark:border-[#2a2a3e] rounded-xl p-5">
+                    <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-4">System Health</h3>
+                    @if (_systemStats is null)
+                    {
+                        <p class="text-sm text-slate-500 dark:text-[#8b8b9e]">Unavailable</p>
+                    }
+                    else
+                    {
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span class="text-slate-700 dark:text-[#b0b0c3]">Memory</span>
+                                    <span class="text-slate-500 dark:text-[#8b8b9e]">@_systemStats.MemoryUsedMb MB / @_systemStats.MemoryTotalMb MB</span>
+                                </div>
+                                <div class="h-2 bg-slate-100 dark:bg-[#2a2a3e] rounded-full overflow-hidden">
+                                    <div class="h-full rounded-full transition-all duration-500 @(_systemStats.MemoryPercent > 80 ? "bg-red-500" : _systemStats.MemoryPercent > 60 ? "bg-yellow-500" : "bg-emerald-500")"
+                                         style="width: @_systemStats.MemoryPercent.ToString("F0")%"></div>
+                                </div>
+                                <p class="text-xs text-slate-500 dark:text-[#8b8b9e] mt-1">@_systemStats.MemoryPercent% used</p>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3 pt-1">
+                                <div class="bg-slate-50 dark:bg-[#0e0e10] rounded-lg p-3">
+                                    <p class="text-xs text-slate-500 dark:text-[#8b8b9e]">Uptime</p>
+                                    <p class="text-lg font-semibold text-slate-900 dark:text-white mt-0.5">@_systemStats.UptimeHours h</p>
+                                </div>
+                                <div class="bg-slate-50 dark:bg-[#0e0e10] rounded-lg p-3">
+                                    <p class="text-xs text-slate-500 dark:text-[#8b8b9e]">Processors</p>
+                                    <p class="text-lg font-semibold text-slate-900 dark:text-white mt-0.5">@_systemStats.ProcessorCount vCPU</p>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Recent Users -->
+            <div class="bg-white dark:bg-[#1a1a2e] border border-slate-200 dark:border-[#2a2a3e] rounded-xl p-5">
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-4">Recent Registrations</h3>
+                @if (_stats.RecentUsers.Count == 0)
+                {
+                    <p class="text-sm text-slate-500 dark:text-[#8b8b9e]">No users yet.</p>
+                }
+                else
+                {
+                    <div class="space-y-3">
+                        @foreach (var u in _stats.RecentUsers)
+                        {
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-7 h-7 rounded-full bg-[#7c5cbf]/20 flex items-center justify-center text-[#9d7de0] text-xs font-bold">
+                                        @(string.IsNullOrEmpty(u.DisplayName) ? "?" : u.DisplayName[0].ToString().ToUpper())
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-slate-900 dark:text-white">@u.DisplayName</p>
+                                        <p class="text-xs text-slate-500 dark:text-[#8b8b9e]">@u.Email</p>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-500 dark:text-[#8b8b9e]">@u.CreatedAt.ToString("MMM d, yyyy")</p>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    }
+
+    @if (_tab == "users")
+    {
+        <div class="flex items-center justify-between mb-4">
+            <p class="text-sm text-slate-500 dark:text-[#8b8b9e]">@_users.Count user@(_users.Count == 1 ? "" : "s")</p>
+            <button @onclick="() => _showInviteForm = !_showInviteForm"
+                    class="flex items-center gap-2 px-3 py-1.5 text-sm bg-[#7c5cbf] hover:bg-[#8d6dd0] text-white rounded-lg transition-colors">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+                </svg>
+                Invite User
+            </button>
+        </div>
+
+        <!-- Invite form -->
+        @if (_showInviteForm)
+        {
+            <div class="bg-white dark:bg-[#1a1a2e] border border-[#7c5cbf]/40 rounded-xl p-5 mb-4">
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-4">Invite New User</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 dark:text-[#b0b0c3] mb-1">Display Name</label>
+                        <input @bind="_inviteDisplayName" type="text" placeholder="Jane Doe"
+                               class="w-full bg-slate-50 dark:bg-[#0e0e10] border border-slate-200 dark:border-[#2a2a3e] rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-[#4a4a5e] focus:outline-none focus:border-[#7c5cbf] text-sm" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 dark:text-[#b0b0c3] mb-1">Email</label>
+                        <input @bind="_inviteEmail" type="email" placeholder="jane@example.com"
+                               class="w-full bg-slate-50 dark:bg-[#0e0e10] border border-slate-200 dark:border-[#2a2a3e] rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-[#4a4a5e] focus:outline-none focus:border-[#7c5cbf] text-sm" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 dark:text-[#b0b0c3] mb-1">Password</label>
+                        <input @bind="_invitePassword" type="password" placeholder="Min 8 characters"
+                               class="w-full bg-slate-50 dark:bg-[#0e0e10] border border-slate-200 dark:border-[#2a2a3e] rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-[#4a4a5e] focus:outline-none focus:border-[#7c5cbf] text-sm" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 dark:text-[#b0b0c3] mb-1">Role</label>
+                        <select @bind="_inviteRole"
+                                class="w-full bg-slate-50 dark:bg-[#0e0e10] border border-slate-200 dark:border-[#2a2a3e] rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-[#7c5cbf] text-sm">
+                            <option value="User">User</option>
+                            <option value="Admin">Admin</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button @onclick="InviteUser" disabled="@_inviting"
+                            class="px-4 py-2 text-sm bg-[#7c5cbf] hover:bg-[#8d6dd0] disabled:opacity-50 text-white rounded-lg transition-colors">
+                        @(_inviting ? "Inviting..." : "Create User")
+                    </button>
+                    <button @onclick="() => _showInviteForm = false"
+                            class="px-4 py-2 text-sm border border-slate-200 dark:border-[#2a2a3e] text-slate-600 dark:text-[#8b8b9e] hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                    @if (!string.IsNullOrEmpty(_inviteMessage))
+                    {
+                        <p class="text-sm @(_inviteError ? "text-red-400" : "text-emerald-400")">@_inviteMessage</p>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (_loadingUsers)
+        {
+            <p class="text-slate-500 dark:text-[#8b8b9e] text-sm">Loading users...</p>
+        }
+        else
+        {
+            <div class="bg-white dark:bg-[#1a1a2e] border border-slate-200 dark:border-[#2a2a3e] rounded-xl overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-slate-200 dark:border-[#2a2a3e]">
+                            <th class="text-left text-slate-500 dark:text-[#8b8b9e] font-medium px-4 py-3">User</th>
+                            <th class="text-left text-slate-500 dark:text-[#8b8b9e] font-medium px-4 py-3">Role</th>
+                            <th class="text-left text-slate-500 dark:text-[#8b8b9e] font-medium px-4 py-3 hidden md:table-cell">Joined</th>
+                            <th class="text-left text-slate-500 dark:text-[#8b8b9e] font-medium px-4 py-3 hidden lg:table-cell">Last Active</th>
+                            <th class="text-right text-slate-500 dark:text-[#8b8b9e] font-medium px-4 py-3">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in _users)
+                        {
+                            <tr class="border-b border-slate-200 dark:border-[#2a2a3e] last:border-0 hover:bg-slate-50 dark:hover:bg-[#2a2a3e]/30">
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-full bg-[#7c5cbf]/20 flex items-center justify-center text-[#9d7de0] text-xs font-bold flex-shrink-0">
+                                            @user.Initials
+                                        </div>
+                                        <div>
+                                            <div class="text-slate-900 dark:text-white font-medium">@user.DisplayName</div>
+                                            <div class="text-slate-500 dark:text-[#8b8b9e] text-xs">@user.Email</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <div class="flex gap-1 flex-wrap">
+                                        @foreach (var role in user.Roles)
+                                        {
+                                            <span class="px-2 py-0.5 rounded-full text-xs @(role == "Admin" ? "bg-[#7c5cbf]/20 text-[#9d7de0]" : "bg-slate-100 dark:bg-[#2a2a3e] text-slate-600 dark:text-[#8b8b9e]")">
+                                                @role
+                                            </span>
+                                        }
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3 text-slate-500 dark:text-[#8b8b9e] hidden md:table-cell">
+                                    @user.CreatedAt.ToString("MMM d, yyyy")
+                                </td>
+                                <td class="px-4 py-3 text-slate-500 dark:text-[#8b8b9e] hidden lg:table-cell">
+                                    @(user.LastLoginAt.HasValue ? user.LastLoginAt.Value.ToString("MMM d, yyyy") : "Never")
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    <div class="flex items-center justify-end gap-2">
+                                        @if (user.Roles.Contains("Admin"))
+                                        {
+                                            <button @onclick='() => ChangeRole(user.Id, "Admin", "remove")'
+                                                    class="text-xs px-2 py-1 bg-slate-100 dark:bg-[#2a2a3e] hover:bg-slate-200 dark:hover:bg-[#3a3a4e] text-slate-600 dark:text-[#8b8b9e] hover:text-slate-900 dark:hover:text-white rounded transition-colors">
+                                                Remove Admin
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button @onclick='() => ChangeRole(user.Id, "Admin", "add")'
+                                                    class="text-xs px-2 py-1 bg-slate-100 dark:bg-[#2a2a3e] hover:bg-slate-200 dark:hover:bg-[#3a3a4e] text-slate-600 dark:text-[#8b8b9e] hover:text-slate-900 dark:hover:text-white rounded transition-colors">
+                                                Make Admin
+                                            </button>
+                                        }
+                                        @if (user.Id != _currentUserId)
+                                        {
+                                            <button @onclick="() => DeleteUser(user.Id)"
+                                                    class="text-xs px-2 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded transition-colors">
+                                                Delete
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        @if (!string.IsNullOrEmpty(_userMessage))
+        {
+            <p class="mt-3 text-sm @(_userMessageError ? "text-red-400" : "text-emerald-400")">@_userMessage</p>
+        }
+    }
+
+    <!-- ── Invites Tab ─────────────────────────────────────────────────────────── -->
+    @if (_tab == "invites")
+    {
+        <div class="flex items-center justify-between mb-4">
+            <p class="text-sm text-slate-500 dark:text-[#8b8b9e]">@_invites.Count pending invite@(_invites.Count == 1 ? "" : "s")</p>
+            <button @onclick="() => _showInviteForm = !_showInviteForm"
+                    class="flex items-center gap-2 px-3 py-1.5 text-sm bg-[#7c5cbf] hover:bg-[#8d6dd0] text-white rounded-lg transition-colors">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+                </svg>
+                Create Invite
+            </button>
+        </div>
+
+        <!-- Invite form -->
+        @if (_showInviteForm)
+        {
+            <div class="bg-white dark:bg-[#1a1a2e] border border-[#7c5cbf]/40 rounded-xl p-5 mb-4">
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-4">Create Invite Link</h3>
+                <p class="text-xs text-slate-500 dark:text-[#8b8b9e] mb-4">
+                    Create an invite link that allows someone to create their own account. The link expires in 7 days.
+                </p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 dark:text-[#b0b0c3] mb-1">Email</label>
+                        <input @bind="_inviteEmail" type="email" placeholder="jane@example.com"
+                               class="w-full bg-slate-50 dark:bg-[#0e0e10] border border-slate-200 dark:border-[#2a2a3e] rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-[#4a4a5e] focus:outline-none focus:border-[#7c5cbf] text-sm" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 dark:text-[#b0b0c3] mb-1">Role</label>
+                        <select @bind="_inviteRole"
+                                class="w-full bg-slate-50 dark:bg-[#0e0e10] border border-slate-200 dark:border-[#2a2a3e] rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-[#7c5cbf] text-sm">
+                            <option value="User">User</option>
+                            <option value="Admin">Admin</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button @onclick="CreateInvite" disabled="@_inviting"
+                            class="px-4 py-2 text-sm bg-[#7c5cbf] hover:bg-[#8d6dd0] disabled:opacity-50 text-white rounded-lg transition-colors">
+                        @(_inviting ? "Creating..." : "Create Invite")
+                    </button>
+                    <button @onclick="() => _showInviteForm = false"
+                            class="px-4 py-2 text-sm border border-slate-200 dark:border-[#2a2a3e] text-slate-600 dark:text-[#8b8b9e] hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                    @if (!string.IsNullOrEmpty(_inviteMessage))
+                    {
+                        <p class="text-sm @(_inviteError ? "text-red-400" : "text-emerald-400")">@_inviteMessage</p>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- Created invite link display -->
+        @if (!string.IsNullOrEmpty(_createdInviteLink))
+        {
+            <div class="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-700 rounded-xl p-4 mb-4">
+                <div class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-emerald-800 dark:text-emerald-300">Invite Created!</p>
+                        <p class="text-xs text-emerald-600 dark:text-emerald-400 mt-1">Share this link with the user:</p>
+                        <div class="flex items-center gap-2 mt-2">
+                            <input type="text" readonly value="@_createdInviteLink"
+                                   class="flex-1 bg-white dark:bg-[#0e0e10] border border-emerald-300 dark:border-emerald-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white text-sm cursor-default select-all" />
+                            <button @onclick="CopyInviteLink" title="Copy to clipboard"
+                                    class="flex-shrink-0 px-3 py-2 text-xs font-medium rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white transition-colors">
+                                Copy
+                            </button>
+                        </div>
+                    </div>
+                    <button @onclick="() => _createdInviteLink = null" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-200">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        }
+
+        @if (_loadingInvites)
+        {
+            <p class="text-slate-500 dark:text-[#8b8b9e] text-sm">Loading invites...</p>
+        }
+        else if (_invites.Count == 0)
+        {
+            <div class="bg-white dark:bg-[#1a1a2e] border border-slate-200 dark:border-[#2a2a3e] rounded-xl p-8 text-center">
+                <svg class="w-12 h-12 mx-auto text-slate-300 dark:text-[#3a3a4e] mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <p class="text-slate-500 dark:text-[#8b8b9e] text-sm">No pending invites</p>
+            </div>
+        }
+        else
+        {
+            <div class="bg-white dark:bg-[#1a1a2e] border border-slate-200 dark:border-[#2a2a3e] rounded-xl overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-slate-200 dark:border-[#2a2a3e]">
+                            <th class="text-left text-slate-500 dark:text-[#8b8b9e] font-medium px-4 py-3">Email</th>
+                            <th class="text-left text-slate-500 dark:text-[#8b8b9e] font-medium px-4 py-3">Role</th>
+                            <th class="text-left text-slate-500 dark:text-[#8b8b9e] font-medium px-4 py-3 hidden md:table-cell">Status</th>
+                            <th class="text-left text-slate-500 dark:text-[#8b8b9e] font-medium px-4 py-3 hidden lg:table-cell">Expires</th>
+                            <th class="text-right text-slate-500 dark:text-[#8b8b9e] font-medium px-4 py-3">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var invite in _invites)
+                        {
+                            var isExpired = invite.ExpiresAt <= DateTime.UtcNow;
+                            <tr class="border-b border-slate-200 dark:border-[#2a2a3e] last:border-0 hover:bg-slate-50 dark:hover:bg-[#2a2a3e]/30">
+                                <td class="px-4 py-3">
+                                    <span class="text-slate-900 dark:text-white">@invite.Email</span>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="px-2 py-0.5 rounded-full text-xs font-medium @(invite.Role == "Admin" ? "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300" : "bg-slate-100 dark:bg-[#2a2a3e] text-slate-600 dark:text-[#8b8b9e]")">
+                                        @invite.Role
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 hidden md:table-cell">
+                                    @if (invite.IsUsed)
+                                    {
+                                        <span class="text-xs text-emerald-500">Accepted</span>
+                                    }
+                                    else if (isExpired)
+                                    {
+                                        <span class="text-xs text-red-400">Expired</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-xs text-amber-500">Pending</span>
+                                    }
+                                </td>
+                                <td class="px-4 py-3 hidden lg:table-cell">
+                                    <span class="text-slate-500 dark:text-[#8b8b9e] text-xs">@invite.ExpiresAt.ToString("MMM d, yyyy")</span>
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    <div class="flex justify-end gap-2">
+                                        @if (!invite.IsUsed && !isExpired)
+                                        {
+                                            <button @onclick="() => CopyInviteLinkForInvite(invite)"
+                                                    class="text-xs px-2 py-1 bg-slate-100 dark:bg-[#2a2a3e] hover:bg-slate-200 dark:hover:bg-[#3a3a4e] text-slate-600 dark:text-[#8b8b9e] hover:text-slate-900 dark:hover:text-white rounded transition-colors">
+                                                Copy Link
+                                            </button>
+                                        }
+                                        @if (!invite.IsUsed)
+                                        {
+                                            <button @onclick="() => DeleteInvite(invite.Id)"
+                                                    class="text-xs px-2 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded transition-colors">
+                                                Delete
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+
+    <!-- ── Email Configuration Tab ─────────────────────────────────────────────── -->
+    @if (_tab == "email")
+    {
+        <div class="bg-white dark:bg-[#1a1a2e] border border-slate-200 dark:border-[#2a2a3e] rounded-xl p-6 max-w-lg">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h2 class="text-slate-900 dark:text-white font-medium">Email Configuration</h2>
+                    <p class="text-slate-500 dark:text-[#8b8b9e] text-xs mt-0.5">Configure email delivery for invite notifications</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" @bind="_emailEnabled" class="sr-only peer" />
+                    <div class="w-10 h-5 bg-slate-200 dark:bg-[#2a2a3e] peer-focus:ring-2 peer-focus:ring-[#7c5cbf] rounded-full peer peer-checked:bg-[#7c5cbf] after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
+                    <span class="ml-2 text-sm text-slate-700 dark:text-[#b0b0c3]">Enabled</span>
+                </label>
+            </div>
+
+            @if (_loadingEmail)
+            {
+                <p class="text-slate-500 dark:text-[#8b8b9e] text-sm">Loading...</p>
+            }
+            else
+            {
+                <div class="space-y-4">
+                    <!-- Provider Selection -->
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 dark:text-[#b0b0c3] mb-1">Provider</label>
+                        <select @bind="_emailProvider"
+                                class="w-full bg-slate-50 dark:bg-[#0e0e10] border border-slate-200 dark:border-[#2a2a3e] rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-[#7c5cbf] text-sm">
+                            <option value="None">None</option>
+                            <option value="Smtp">SMTP</option>
+                            <option value="MicrosoftGraph">Microsoft Graph</option>
+                        </select>
+                    </div>
+
+                    @if (_emailProvider == "Smtp")
+                    {
+                        <!-- SMTP Settings -->
+                        <div class="space-y-3 pt-2 border-t border-slate-200 dark:border-[#2a2a3e]">
+                            <div class="grid grid-cols-3 gap-3">
+                                <div class="col-span-2">
+                                    <label class="block text-xs font-medium text-slate-600 dark:text-[#b0b0c3] mb-1">SMTP Host</label>
+                                    <input @bind="_smtpHost" type="text" placeholder="smtp.example.com"
+                                           class="w-full bg-slate-50 dark:bg-[#0e0e10] border border-slate-200 dark:border-[#2a2a3e] rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-[#4a4a5e] focus:outline-none focus:border-[#7c5cbf] text-sm" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-600 dark:text-[#b0b0c3] mb-1">Port</label>
+                                    <input @bind="_smtpPort" type="number" placeholder="587"
+                                           class="w-full bg-slate-50 dark:bg-[#0e0e10] border border-slate-200 dark:border-[#2a2a3e] rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-[#4a4a5e] focus:outline-none focus:border-[#7c5cbf] text-sm" />
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" @bind="_smtpUseSsl" id="smtpSsl" class="rounded border-slate-300 dark:border-[#3a3a4e] text-[#7c5cbf] focus:ring-[#7c5cbf]" />
+                                <label for="smtpSsl" class="text-sm text-slate-600 dark:text-[#b0b0c3]">Use SSL/TLS</label>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-600 dark:text-[#b0b0c3] mb-1">Username</label>
+                                    <input @bind="_smtpUsername" type="text" placeholder="user@example.com"
+                                           class="w-full bg-slate-50 dark:bg-[#0e0e10] border border-slate-200 dark:border-[#2a2a3e] rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-[#4a4a5e] focus:outline-none focus:border-[#7c5cbf] text-sm" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-600 dark:text-[#b0b0c3] mb-1">Password</label>
+                                    <input @bind="_smtpPassword" type="password" placeholder="Leave blank to keep current"
+                                           class="w-full bg-slate-50 dark:bg-[#0e0e10] border border-slate-200 dark:border-[#2a2a3e] rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-[#4a4a5e] focus:outline-none focus:border-[#7c5cbf] text-sm" />
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-600 dark:text-[#b0b0c3] mb-1">From Email</label>
+                                    <input @bind="_smtpFromEmail" type="email" placeholder="noreply@example.com"
+                                           class="w-full bg-slate-50 dark:bg-[#0e0e10] border border-slate-200 dark:border-[#2a2a3e] rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-[#4a4a5e] focus:outline-none focus:border-[#7c5cbf] text-sm" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-600 dark:text-[#b0b0c3] mb-1">From Name</label>
+                                    <input @bind="_smtpFromName" type="text" placeholder="Dashy"
+                                           class="w-full bg-slate-50 dark:bg-[#0e0e10] border border-slate-200 dark:border-[#2a2a3e] rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-[#4a4a5e] focus:outline-none focus:border-[#7c5cbf] text-sm" />
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    @if (_emailProvider == "MicrosoftGraph")
+                    {
+                        <!-- Microsoft Graph Settings -->
+                        <div class="space-y-3 pt-2 border-t border-slate-200 dark:border-[#2a2a3e]">
+                            <p class="text-xs text-slate-500 dark:text-[#8b8b9e]">
+                                Configure an Azure AD app registration with <code class="bg-slate-100 dark:bg-[#2a2a3e] px-1 rounded">Mail.Send</code> application permission.
+                            </p>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 dark:text-[#b0b0c3] mb-1">Tenant ID</label>
+                                <input @bind="_graphTenantId" type="text" placeholder="00000000-0000-0000-0000-000000000000"
+                                       class="w-full bg-slate-50 dark:bg-[#0e0e10] border border-slate-200 dark:border-[#2a2a3e] rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-[#4a4a5e] focus:outline-none focus:border-[#7c5cbf] text-sm font-mono" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 dark:text-[#b0b0c3] mb-1">Client ID</label>
+                                <input @bind="_graphClientId" type="text" placeholder="00000000-0000-0000-0000-000000000000"
+                                       class="w-full bg-slate-50 dark:bg-[#0e0e10] border border-slate-200 dark:border-[#2a2a3e] rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-[#4a4a5e] focus:outline-none focus:border-[#7c5cbf] text-sm font-mono" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 dark:text-[#b0b0c3] mb-1">Client Secret</label>
+                                <input @bind="_graphClientSecret" type="password" placeholder="Leave blank to keep current"
+                                       class="w-full bg-slate-50 dark:bg-[#0e0e10] border border-slate-200 dark:border-[#2a2a3e] rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-[#4a4a5e] focus:outline-none focus:border-[#7c5cbf] text-sm" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 dark:text-[#b0b0c3] mb-1">From Email (must be a mailbox in your tenant)</label>
+                                <input @bind="_graphFromEmail" type="email" placeholder="noreply@yourdomain.com"
+                                       class="w-full bg-slate-50 dark:bg-[#0e0e10] border border-slate-200 dark:border-[#2a2a3e] rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-[#4a4a5e] focus:outline-none focus:border-[#7c5cbf] text-sm" />
+                            </div>
+                        </div>
+                    }
+
+                    <div class="flex items-center gap-3 pt-2">
+                        <button @onclick="SaveEmailConfig" disabled="@_savingEmail"
+                                class="px-4 py-2 text-sm bg-[#7c5cbf] hover:bg-[#8d6dd0] disabled:opacity-50 text-white rounded-lg transition-colors">
+                            @(_savingEmail ? "Saving..." : "Save Configuration")
+                        </button>
+                        @if (!string.IsNullOrEmpty(_emailMessage))
+                        {
+                            <p class="text-sm @(_emailError ? "text-red-400" : "text-emerald-400")">@_emailMessage</p>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    @if (_tab == "oidc")
+    {
+        <div class="bg-white dark:bg-[#1a1a2e] border border-slate-200 dark:border-[#2a2a3e] rounded-xl p-6 max-w-lg">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h2 class="text-slate-900 dark:text-white font-medium">OpenID Connect (SSO)</h2>
+                    <p class="text-slate-500 dark:text-[#8b8b9e] text-xs mt-0.5">Configure a generic OIDC provider (Authentik, Keycloak, Google, etc.)</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" @bind="_oidcEnabled" class="sr-only peer" />
+                    <div class="w-10 h-5 bg-slate-200 dark:bg-[#2a2a3e] peer-focus:ring-2 peer-focus:ring-[#7c5cbf] rounded-full peer peer-checked:bg-[#7c5cbf] after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
+                    <span class="ml-2 text-sm text-slate-700 dark:text-[#b0b0c3]">Enabled</span>
+                </label>
+            </div>
+
+            @if (_loadingOidc)
+            {
+                <p class="text-slate-500 dark:text-[#8b8b9e] text-sm">Loading...</p>
+            }
+            else
+            {
+                <div class="space-y-4">
+                    <!-- Redirect URI — read-only, copy to clipboard -->
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 dark:text-[#b0b0c3] mb-1">
+                            Redirect URI
+                            <span class="ml-1 text-slate-400 dark:text-[#6b6b7e] font-normal">(enter this in your Identity Provider)</span>
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <input type="text" readonly value="@_redirectUri"
+                                   class="flex-1 bg-slate-100 dark:bg-[#0e0e10]/60 border border-slate-200 dark:border-[#2a2a3e] rounded-lg px-3 py-2 text-slate-500 dark:text-[#8b8b9e] text-sm cursor-default select-all" />
+                            <button @onclick="CopyRedirectUri" title="Copy to clipboard"
+                                    class="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-colors
+                                           @(_copySuccess ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-700 text-emerald-600 dark:text-emerald-400"
+                                                          : "bg-slate-50 dark:bg-[#1a1a2e] border-slate-200 dark:border-[#2a2a3e] text-slate-600 dark:text-[#b0b0c3] hover:border-[#7c5cbf] hover:text-[#7c5cbf]")">
+                                @if (_copySuccess)
+                                {
+                                    <!-- checkmark -->
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                    <span>Copied</span>
+                                }
+                                else
+                                {
+                                    <!-- clipboard icon -->
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3"/>
+                                    </svg>
+                                    <span>Copy</span>
+                                }
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 dark:text-[#b0b0c3] mb-1">Authority URL</label>
+                        <input @bind="_oidcAuthority" type="url" placeholder="https://auth.example.com/realms/myrealm"
+                               class="w-full bg-slate-50 dark:bg-[#0e0e10] border border-slate-200 dark:border-[#2a2a3e] rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-[#4a4a5e] focus:outline-none focus:border-[#7c5cbf] text-sm" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 dark:text-[#b0b0c3] mb-1">Client ID</label>
+                        <input @bind="_oidcClientId" type="text" placeholder="dashy3"
+                               class="w-full bg-slate-50 dark:bg-[#0e0e10] border border-slate-200 dark:border-[#2a2a3e] rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-[#4a4a5e] focus:outline-none focus:border-[#7c5cbf] text-sm" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 dark:text-[#b0b0c3] mb-1">Client Secret</label>
+                        <input @bind="_oidcClientSecret" type="password" placeholder="Leave blank to keep existing secret"
+                               class="w-full bg-slate-50 dark:bg-[#0e0e10] border border-slate-200 dark:border-[#2a2a3e] rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-[#4a4a5e] focus:outline-none focus:border-[#7c5cbf] text-sm" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 dark:text-[#b0b0c3] mb-1">Scopes</label>
+                        <input @bind="_oidcScopes" type="text" placeholder="openid profile email"
+                               class="w-full bg-slate-50 dark:bg-[#0e0e10] border border-slate-200 dark:border-[#2a2a3e] rounded-lg px-3 py-2 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-[#4a4a5e] focus:outline-none focus:border-[#7c5cbf] text-sm" />
+                    </div>
+
+                    <!-- Auto-registration toggle -->
+                    <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-[#0e0e10] border border-slate-200 dark:border-[#2a2a3e] rounded-lg">
+                        <div>
+                            <p class="text-sm text-slate-700 dark:text-[#b0b0c3] font-medium">Allow Auto-Registration</p>
+                            <p class="text-xs text-slate-500 dark:text-[#6b6b7e] mt-0.5">When disabled, SSO users must be pre-invited before they can sign in.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" @bind="_oidcAllowAutoRegistration" class="sr-only peer" />
+                            <div class="w-10 h-5 bg-slate-200 dark:bg-[#2a2a3e] peer-focus:ring-2 peer-focus:ring-[#7c5cbf] rounded-full peer peer-checked:bg-[#7c5cbf] after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
+                        </label>
+                    </div>
+
+                    <div class="pt-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-lg text-xs text-amber-700 dark:text-amber-400">
+                        ⚠️ Enabling or disabling OIDC requires an application restart to take effect.
+                    </div>
+
+                    <button @onclick="SaveOidc" disabled="@_savingOidc"
+                            class="w-full bg-[#7c5cbf] hover:bg-[#8d6dd0] disabled:opacity-50 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm">
+                        @(_savingOidc ? "Saving..." : "Save OIDC Settings")
+                    </button>
+
+                    @if (_oidcNeedsRestart)
+                    {
+                        <div class="p-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 rounded-lg">
+                            <p class="text-sm text-emerald-700 dark:text-emerald-400 font-medium mb-2">✓ Settings saved — restart required to apply changes.</p>
+                            <button @onclick="RestartApplication"
+                                    class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium py-1.5 px-3 rounded-lg transition-colors">
+                                Restart Application Now
+                            </button>
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(_oidcMessage))
+                    {
+                        <p class="text-sm @(_oidcMessageError ? "text-red-400" : "text-emerald-400")">@_oidcMessage</p>
+                    }
+                </div>
+            }
+        </div>
+    }
+
+    <!-- ── API Keys ──────────────────────────────────────────────────────────── -->
+    @if (_tab == "apikeys")
+    {
+        <!-- Create form -->
+        <div class="bg-white dark:bg-[#1a1a2e] border border-slate-200 dark:border-[#2a2a3e] rounded-xl p-5 mb-6">
+            <h3 class="text-base font-semibold text-slate-900 dark:text-white mb-4">Create API Key</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Name <span class="text-red-400">*</span></label>
+                    <input type="text" @bind="_ak_name" placeholder="e.g. CI Pipeline Key"
+                           class="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7c5cbf]" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Expires in</label>
+                    <select @bind="_ak_expiry"
+                            class="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7c5cbf]">
+                        <option value="never">No expiry</option>
+                        <option value="30">30 days</option>
+                        <option value="90">90 days</option>
+                        <option value="365">1 year</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                <div class="flex items-center gap-3">
+                    <input type="checkbox" id="adminGlobalToggle" @bind="_ak_isGlobal"
+                           class="w-4 h-4 rounded border-slate-300 text-[#7c5cbf] focus:ring-[#7c5cbf]" />
+                    <label for="adminGlobalToggle" class="text-sm font-medium text-slate-700 dark:text-slate-300">Global key (access all dashboards)</label>
+                </div>
+                @if (!_ak_isGlobal)
+                {
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Allowed Dashboard IDs</label>
+                        <input type="text" @bind="_ak_allowedIds" placeholder="id1, id2, id3"
+                               class="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7c5cbf]" />
+                        <p class="text-xs text-slate-500 dark:text-[#8b8b9e] mt-1">Comma-separated dashboard IDs</p>
+                    </div>
+                }
+            </div>
+            @if (_ak_error is not null)
+            {
+                <p class="text-red-400 text-sm mb-3">@_ak_error</p>
+            }
+            <button @onclick="AdminCreateKeyAsync" disabled="@_ak_creating"
+                    class="bg-[#7c5cbf] hover:bg-[#6a4da8] disabled:opacity-50 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors">
+                @(_ak_creating ? "Creating..." : "Create Key")
+            </button>
+        </div>
+
+        <!-- New key reveal banner -->
+        @if (_ak_newKey is not null)
+        {
+            <div class="bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700 rounded-xl p-5 mb-6">
+                <div class="flex items-start gap-3 mb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <div>
+                        <p class="text-sm font-semibold text-amber-800 dark:text-amber-200">This key will not be shown again. Copy it now.</p>
+                        <p class="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Store it securely — you cannot retrieve it after closing this banner.</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <code class="flex-1 px-3 py-2 bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 rounded-lg text-sm font-mono text-slate-900 dark:text-white break-all">@_ak_newKey.Key</code>
+                    <button @onclick="AdminCopyNewKey"
+                            class="flex-shrink-0 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium transition-colors">
+                        @(_ak_keyCopied ? "Copied!" : "Copy")
+                    </button>
+                </div>
+                <button @onclick="() => _ak_newKey = null" class="mt-3 text-xs text-amber-600 dark:text-amber-400 hover:underline">Dismiss</button>
+            </div>
+        }
+
+        <!-- Key list -->
+        @if (_ak_loading)
+        {
+            <p class="text-slate-500 dark:text-[#8b8b9e] text-sm">Loading keys...</p>
+        }
+        else if (_ak_keys.Count == 0)
+        {
+            <div class="bg-white dark:bg-[#1a1a2e] border border-slate-200 dark:border-[#2a2a3e] rounded-xl p-10 text-center">
+                <p class="text-slate-500 dark:text-[#8b8b9e] text-sm">No API keys yet.</p>
+            </div>
+        }
+        else
+        {
+            <div class="bg-white dark:bg-[#1a1a2e] border border-slate-200 dark:border-[#2a2a3e] rounded-xl overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead class="border-b border-slate-200 dark:border-[#2a2a3e]">
+                        <tr class="text-left text-xs font-medium text-slate-500 dark:text-[#8b8b9e] uppercase tracking-wide">
+                            <th class="px-4 py-3">Name</th>
+                            <th class="px-4 py-3">Prefix</th>
+                            <th class="px-4 py-3 hidden sm:table-cell">Created</th>
+                            <th class="px-4 py-3 hidden md:table-cell">Expires</th>
+                            <th class="px-4 py-3 hidden lg:table-cell">Last Used</th>
+                            <th class="px-4 py-3 hidden xl:table-cell">Global</th>
+                            <th class="px-4 py-3">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-[#2a2a3e]">
+                        @foreach (var key in _ak_keys)
+                        {
+                            <tr class="hover:bg-slate-50 dark:hover:bg-[#16162a] transition-colors">
+                                <td class="px-4 py-3 font-medium text-slate-900 dark:text-white">@key.Name</td>
+                                <td class="px-4 py-3">
+                                    <code class="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono text-slate-700 dark:text-slate-300">@key.Prefix…</code>
+                                </td>
+                                <td class="px-4 py-3 text-slate-500 dark:text-[#8b8b9e] hidden sm:table-cell">@key.CreatedAt.ToString("MMM d, yyyy")</td>
+                                <td class="px-4 py-3 hidden md:table-cell">
+                                    @if (key.ExpiresAt.HasValue)
+                                    {
+                                        var expired = key.ExpiresAt.Value < DateTime.UtcNow;
+                                        <span class="@(expired ? "text-red-400" : "text-slate-500 dark:text-[#8b8b9e]")">
+                                            @(expired ? "Expired " : "")@key.ExpiresAt.Value.ToString("MMM d, yyyy")
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-slate-400 dark:text-slate-600">Never</span>
+                                    }
+                                </td>
+                                <td class="px-4 py-3 text-slate-500 dark:text-[#8b8b9e] hidden lg:table-cell">
+                                    @(key.LastUsedAt.HasValue ? key.LastUsedAt.Value.ToString("MMM d, yyyy") : "—")
+                                </td>
+                                <td class="px-4 py-3 hidden xl:table-cell">
+                                    @if (key.IsGlobal)
+                                    {
+                                        <span class="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-xs font-medium">Global</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-slate-400 dark:text-slate-600 text-xs">User</span>
+                                    }
+                                </td>
+                                <td class="px-4 py-3">
+                                    @if (_ak_confirmDeleteId == key.Id)
+                                    {
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-xs text-slate-500 dark:text-[#8b8b9e]">Revoke?</span>
+                                            <button @onclick="() => AdminDeleteKeyAsync(key.Id)"
+                                                    class="bg-red-500 hover:bg-red-600 text-white rounded-lg px-3 py-1.5 text-xs font-medium transition-colors">Yes</button>
+                                            <button @onclick="() => _ak_confirmDeleteId = null"
+                                                    class="px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">No</button>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <button @onclick="() => _ak_confirmDeleteId = key.Id"
+                                                class="bg-red-500 hover:bg-red-600 text-white rounded-lg px-3 py-1.5 text-sm transition-colors">Revoke</button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private string _tab = "overview";
+    private string? _currentUserId;
+
+    // Overview tab
+    private bool _loadingStats = true;
+    private string? _statsError;
+    private AdminStatsDto? _stats;
+    private SystemStatsDto? _systemStats;
+
+    // Users tab
+    private List<UserInfo> _users = [];
+    private bool _loadingUsers = true;
+    private string? _userMessage;
+    private bool _userMessageError;
+
+    // Invite form
+    private bool _showInviteForm;
+    private string _inviteDisplayName = "";
+    private string _inviteEmail = "";
+    private string _invitePassword = "";
+    private string _inviteRole = "User";
+    private string? _inviteMessage;
+    private bool _inviteError;
+    private bool _inviting;
+
+    // OIDC tab
+    private bool _loadingOidc = true;
+    private bool _oidcEnabled;
+    private bool _oidcAllowAutoRegistration = true;
+    private string _oidcAuthority = "";
+    private string _oidcClientId = "";
+    private string _oidcClientSecret = "";
+    private string _oidcScopes = "openid profile email";
+    private string? _oidcMessage;
+    private bool _oidcMessageError;
+    private bool _savingOidc;
+    private bool _oidcNeedsRestart;
+    private bool _copySuccess;
+    private string _redirectUri => Nav.BaseUri.TrimEnd('/') + "/signin-oidc";
+
+    // Invites tab
+    private List<InviteDto> _invites = [];
+    private bool _loadingInvites = true;
+    private string? _createdInviteLink;
+
+    // Email tab
+    private bool _loadingEmail = true;
+    private bool _emailEnabled;
+    private string _emailProvider = "None";
+    private string _smtpHost = "";
+    private int _smtpPort = 587;
+    private bool _smtpUseSsl = true;
+    private string _smtpUsername = "";
+    private string _smtpPassword = "";
+    private string _smtpFromEmail = "";
+    private string _smtpFromName = "Dashy";
+    private string _graphTenantId = "";
+    private string _graphClientId = "";
+    private string _graphClientSecret = "";
+    private string _graphFromEmail = "";
+    private string? _emailMessage;
+    private bool _emailError;
+    private bool _savingEmail;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _currentUserId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        await Task.WhenAll(LoadStatsAsync(), LoadUsersAsync(), LoadOidcAsync(), LoadAdminKeysAsync(), LoadInvitesAsync(), LoadEmailConfigAsync());
+    }
+
+    private HttpClient GetClient()
+    {
+        var client = HttpClientFactory.CreateClient("dashboards-api");
+        client.DefaultRequestHeaders.Remove("X-User-Id");
+        if (!string.IsNullOrEmpty(_currentUserId))
+            client.DefaultRequestHeaders.Add("X-User-Id", _currentUserId);
+        return client;
+    }
+
+    private async Task LoadStatsAsync()
+    {
+        try
+        {
+            _loadingStats = true;
+            _statsError = null;
+            var http = GetClient();
+            var statsTask = http.GetFromJsonAsync<AdminStatsDto>("/api/admin/stats");
+            var sysTask = http.GetFromJsonAsync<SystemStatsDto>("/api/stats");
+            await Task.WhenAll(statsTask, sysTask);
+            _stats = await statsTask;
+            _systemStats = await sysTask;
+        }
+        catch (Exception ex) { _statsError = ex.Message; }
+        finally { _loadingStats = false; }
+    }
+
+    private async Task LoadUsersAsync()
+    {
+        try
+        {
+            _loadingUsers = true;
+            var users = await GetClient().GetFromJsonAsync<List<UserInfo>>("/api/admin/users");
+            _users = users ?? [];
+        }
+        catch { _users = []; }
+        finally { _loadingUsers = false; }
+    }
+
+    private async Task LoadOidcAsync()
+    {
+        try
+        {
+            _loadingOidc = true;
+            var config = await GetClient().GetFromJsonAsync<OidcConfigDto>("/api/settings/oidc");
+            if (config is not null)
+            {
+                _oidcEnabled = config.IsEnabled;
+                _oidcAllowAutoRegistration = config.AllowAutoRegistration;
+                _oidcAuthority = config.Authority;
+                _oidcClientId = config.ClientId;
+                _oidcScopes = config.Scopes;
+            }
+        }
+        catch { }
+        finally { _loadingOidc = false; }
+    }
+
+    private async Task LoadInvitesAsync()
+    {
+        try
+        {
+            _loadingInvites = true;
+            var invites = await GetClient().GetFromJsonAsync<List<InviteDto>>("/api/admin/invites");
+            _invites = invites?.Where(i => !i.IsUsed).ToList() ?? [];
+        }
+        catch { _invites = []; }
+        finally { _loadingInvites = false; }
+    }
+
+    private async Task LoadEmailConfigAsync()
+    {
+        try
+        {
+            _loadingEmail = true;
+            var config = await GetClient().GetFromJsonAsync<EmailConfigDto>("/api/settings/email");
+            if (config is not null)
+            {
+                _emailEnabled = config.IsEnabled;
+                _emailProvider = config.Provider;
+                _smtpHost = config.SmtpHost;
+                _smtpPort = config.SmtpPort;
+                _smtpUseSsl = config.SmtpUseSsl;
+                _smtpUsername = config.SmtpUsername;
+                _smtpFromEmail = config.SmtpFromEmail;
+                _smtpFromName = config.SmtpFromName;
+                _graphTenantId = config.GraphTenantId;
+                _graphClientId = config.GraphClientId;
+                _graphFromEmail = config.GraphFromEmail;
+            }
+        }
+        catch { }
+        finally { _loadingEmail = false; }
+    }
+
+    private async Task CreateInvite()
+    {
+        if (string.IsNullOrWhiteSpace(_inviteEmail))
+        {
+            _inviteMessage = "Please enter an email address.";
+            _inviteError = true;
+            return;
+        }
+        _inviting = true;
+        _inviteMessage = null;
+        _createdInviteLink = null;
+        try
+        {
+            var res = await GetClient().PostAsJsonAsync("/api/admin/invites", new
+            {
+                email = _inviteEmail,
+                role = _inviteRole
+            });
+            if (res.IsSuccessStatusCode)
+            {
+                var invite = await res.Content.ReadFromJsonAsync<InviteDto>();
+                if (invite is not null)
+                {
+                    _createdInviteLink = $"{Nav.BaseUri.TrimEnd('/')}/invite/{invite.Token}";
+                }
+                _inviteMessage = "Invite created successfully!";
+                _inviteError = false;
+                _inviteEmail = "";
+                _inviteRole = "User";
+                _showInviteForm = false;
+                await LoadInvitesAsync();
+            }
+            else
+            {
+                var err = await res.Content.ReadFromJsonAsync<JsonElement>();
+                _inviteMessage = err.TryGetProperty("error", out var e) ? e.GetString() ?? "Failed." : "Failed.";
+                _inviteError = true;
+            }
+        }
+        catch (Exception ex) { _inviteMessage = ex.Message; _inviteError = true; }
+        finally { _inviting = false; }
+    }
+
+    private async Task DeleteInvite(string id)
+    {
+        try
+        {
+            await GetClient().DeleteAsync($"/api/admin/invites/{id}");
+            await LoadInvitesAsync();
+        }
+        catch { }
+    }
+
+    private async Task CopyInviteLink()
+    {
+        if (!string.IsNullOrEmpty(_createdInviteLink))
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", _createdInviteLink);
+        }
+    }
+
+    private async Task CopyInviteLinkForInvite(InviteDto invite)
+    {
+        var link = $"{Nav.BaseUri.TrimEnd('/')}/invite/{invite.Token}";
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", link);
+    }
+
+    private async Task SaveEmailConfig()
+    {
+        _savingEmail = true;
+        _emailMessage = null;
+        try
+        {
+            var res = await GetClient().PutAsJsonAsync("/api/settings/email", new
+            {
+                provider = _emailProvider,
+                isEnabled = _emailEnabled,
+                smtpHost = _smtpHost,
+                smtpPort = _smtpPort,
+                smtpUseSsl = _smtpUseSsl,
+                smtpUsername = _smtpUsername,
+                smtpPassword = string.IsNullOrEmpty(_smtpPassword) ? null : _smtpPassword,
+                smtpFromEmail = _smtpFromEmail,
+                smtpFromName = _smtpFromName,
+                graphTenantId = _graphTenantId,
+                graphClientId = _graphClientId,
+                graphClientSecret = string.IsNullOrEmpty(_graphClientSecret) ? null : _graphClientSecret,
+                graphFromEmail = _graphFromEmail
+            });
+            if (res.IsSuccessStatusCode)
+            {
+                _emailMessage = "Email settings saved.";
+                _emailError = false;
+                _smtpPassword = "";
+                _graphClientSecret = "";
+            }
+            else
+            {
+                _emailMessage = "Failed to save settings.";
+                _emailError = true;
+            }
+        }
+        catch (Exception ex) { _emailMessage = ex.Message; _emailError = true; }
+        finally { _savingEmail = false; }
+    }
+
+    private async Task InviteUser()
+    {
+        if (string.IsNullOrWhiteSpace(_inviteEmail) || string.IsNullOrWhiteSpace(_inviteDisplayName) || string.IsNullOrWhiteSpace(_invitePassword))
+        {
+            _inviteMessage = "Please fill in all fields.";
+            _inviteError = true;
+            return;
+        }
+        _inviting = true;
+        _inviteMessage = null;
+        try
+        {
+            var res = await GetClient().PostAsJsonAsync("/api/admin/users/invite", new
+            {
+                email = _inviteEmail,
+                displayName = _inviteDisplayName,
+                password = _invitePassword,
+                role = _inviteRole
+            });
+            if (res.IsSuccessStatusCode)
+            {
+                _inviteMessage = $"{_inviteDisplayName} has been added.";
+                _inviteError = false;
+                _inviteEmail = _inviteDisplayName = _invitePassword = "";
+                _inviteRole = "User";
+                await LoadUsersAsync();
+                await LoadStatsAsync();
+            }
+            else
+            {
+                var err = await res.Content.ReadFromJsonAsync<JsonElement>();
+                _inviteMessage = err.TryGetProperty("error", out var e) ? e.GetString() ?? "Failed." : "Failed.";
+                _inviteError = true;
+            }
+        }
+        catch (Exception ex) { _inviteMessage = ex.Message; _inviteError = true; }
+        finally { _inviting = false; }
+    }
+
+    private async Task ChangeRole(string userId, string role, string action)
+    {
+        try
+        {
+            var res = await GetClient().PutAsJsonAsync($"/api/admin/users/{userId}/role", new { role, action });
+            if (res.IsSuccessStatusCode)
+            {
+                _userMessage = "Role updated.";
+                _userMessageError = false;
+                await LoadUsersAsync();
+                await LoadStatsAsync();
+            }
+            else
+            {
+                _userMessage = "Failed to update role.";
+                _userMessageError = true;
+            }
+        }
+        catch (Exception ex) { _userMessage = ex.Message; _userMessageError = true; }
+    }
+
+    private async Task DeleteUser(string userId)
+    {
+        try
+        {
+            var res = await GetClient().DeleteAsync($"/api/admin/users/{userId}");
+            if (res.IsSuccessStatusCode)
+            {
+                _userMessage = "User deleted.";
+                _userMessageError = false;
+                await LoadUsersAsync();
+                await LoadStatsAsync();
+            }
+            else
+            {
+                _userMessage = "Failed to delete user.";
+                _userMessageError = true;
+            }
+        }
+        catch (Exception ex) { _userMessage = ex.Message; _userMessageError = true; }
+    }
+
+    private async Task SaveOidc()
+    {
+        _savingOidc = true;
+        _oidcMessage = null;
+        _oidcNeedsRestart = false;
+        try
+        {
+            var res = await GetClient().PutAsJsonAsync("/api/settings/oidc", new
+            {
+                authority = _oidcAuthority,
+                clientId = _oidcClientId,
+                clientSecret = string.IsNullOrEmpty(_oidcClientSecret) ? (string?)null : _oidcClientSecret,
+                scopes = _oidcScopes,
+                callbackPath = "/signin-oidc",
+                isEnabled = _oidcEnabled,
+                allowAutoRegistration = _oidcAllowAutoRegistration
+            });
+            if (res.IsSuccessStatusCode)
+            {
+                _oidcMessage = "Settings saved.";
+                _oidcMessageError = false;
+                _oidcNeedsRestart = true;
+            }
+            else
+            {
+                _oidcMessage = "Failed to save settings.";
+                _oidcMessageError = true;
+            }
+        }
+        catch (Exception ex) { _oidcMessage = ex.Message; _oidcMessageError = true; }
+        finally { _savingOidc = false; }
+    }
+
+    private async Task CopyRedirectUri()
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", _redirectUri);
+        _copySuccess = true;
+        StateHasChanged();
+        await Task.Delay(2000);
+        _copySuccess = false;
+    }
+
+    private async Task RestartApplication()    {
+        try
+        {
+            // Navigate to the static restarting page first — the Blazor circuit will die
+            // when the app stops, so we must leave before triggering the shutdown.
+            _ = GetClient().PostAsync("/management/restart", null);
+            Nav.NavigateTo("/restarting?returnUrl=/admin", forceLoad: true);
+        }
+        catch (Exception ex) { _oidcMessage = ex.Message; _oidcMessageError = true; }
+    }
+
+    // ── API Keys tab ─────────────────────────────────────────────────────────
+    private bool _ak_loading = true;
+    private bool _ak_creating;
+    private string _ak_name = "";
+    private string _ak_expiry = "never";
+    private bool _ak_isGlobal;
+    private string _ak_allowedIds = "";
+    private string? _ak_error;
+    private AdminApiKeyCreated? _ak_newKey;
+    private bool _ak_keyCopied;
+    private string? _ak_confirmDeleteId;
+    private List<AdminApiKeyItem> _ak_keys = [];
+
+    private async Task LoadAdminKeysAsync()
+    {
+        _ak_loading = true;
+        try
+        {
+            var keys = await GetClient().GetFromJsonAsync<List<AdminApiKeyItem>>("/api/keys");
+            _ak_keys = keys ?? [];
+        }
+        catch { _ak_keys = []; }
+        finally { _ak_loading = false; }
+    }
+
+    private async Task AdminCreateKeyAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_ak_name))
+        {
+            _ak_error = "Name is required.";
+            return;
+        }
+        _ak_creating = true;
+        _ak_error = null;
+        try
+        {
+            DateTime? expiresAt = _ak_expiry switch
+            {
+                "30" => DateTime.UtcNow.AddDays(30),
+                "90" => DateTime.UtcNow.AddDays(90),
+                "365" => DateTime.UtcNow.AddDays(365),
+                _ => null
+            };
+
+            var allowedIds = string.IsNullOrWhiteSpace(_ak_allowedIds)
+                ? null
+                : _ak_allowedIds.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+
+            var body = new
+            {
+                name = _ak_name.Trim(),
+                expiresAt,
+                isGlobal = _ak_isGlobal,
+                allowedDashboardIds = _ak_isGlobal ? null : allowedIds
+            };
+
+            var res = await GetClient().PostAsJsonAsync("/api/keys", body);
+            if (res.IsSuccessStatusCode)
+            {
+                _ak_newKey = await res.Content.ReadFromJsonAsync<AdminApiKeyCreated>();
+                _ak_keyCopied = false;
+                _ak_name = "";
+                _ak_expiry = "never";
+                _ak_isGlobal = false;
+                _ak_allowedIds = "";
+                await LoadAdminKeysAsync();
+            }
+            else
+            {
+                _ak_error = $"Failed to create key ({(int)res.StatusCode}).";
+            }
+        }
+        catch (Exception ex) { _ak_error = ex.Message; }
+        finally { _ak_creating = false; }
+    }
+
+    private async Task AdminDeleteKeyAsync(string id)
+    {
+        try
+        {
+            var res = await GetClient().DeleteAsync($"/api/keys/{id}");
+            if (res.IsSuccessStatusCode)
+                _ak_keys.RemoveAll(k => k.Id == id);
+        }
+        catch { }
+        finally { _ak_confirmDeleteId = null; }
+    }
+
+    private async Task AdminCopyNewKey()
+    {
+        if (_ak_newKey is null) return;
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", _ak_newKey.Key);
+        _ak_keyCopied = true;
+        StateHasChanged();
+        await Task.Delay(2000);
+        _ak_keyCopied = false;
+    }
+
+    // ── Local DTOs ────────────────────────────────────────────────────────────
+    private record OidcConfigDto(string Authority, string ClientId, string ClientSecret, string Scopes, string CallbackPath, bool IsEnabled, bool AllowAutoRegistration, DateTime UpdatedAt);
+
+    private record InviteDto(string Id, string Token, string Email, string Role, string? InvitedByUserId, DateTime CreatedAt, DateTime ExpiresAt, bool IsUsed, DateTime? UsedAt);
+
+    private record EmailConfigDto(
+        string Provider,
+        bool IsEnabled,
+        string SmtpHost,
+        int SmtpPort,
+        bool SmtpUseSsl,
+        string SmtpUsername,
+        string SmtpFromEmail,
+        string SmtpFromName,
+        string GraphTenantId,
+        string GraphClientId,
+        string GraphFromEmail,
+        DateTime UpdatedAt);
+
+    private record AdminStatsDto(
+        int TotalUsers,
+        int AdminCount,
+        int TotalDashboards,
+        int SharedDashboards,
+        int TotalWidgets,
+        Dictionary<string, int> WidgetsByType,
+        List<RecentUserDto> RecentUsers);
+
+    private record RecentUserDto(string DisplayName, string Email, DateTime CreatedAt, DateTime? LastLoginAt);
+
+    private record SystemStatsDto(
+        double MemoryUsedMb,
+        double MemoryTotalMb,
+        double MemoryPercent,
+        double UptimeHours,
+        int ProcessCount,
+        int ProcessorCount);
+
+    private record AdminApiKeyCreated(string Id, string Name, string Key, string Prefix, DateTime CreatedAt, DateTime? ExpiresAt);
+    private record AdminApiKeyItem(string Id, string Name, string Prefix, DateTime CreatedAt, DateTime? ExpiresAt, DateTime? LastUsedAt, bool IsGlobal, List<string>? AllowedDashboardIds);
+}
+

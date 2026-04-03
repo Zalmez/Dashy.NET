@@ -1,0 +1,69 @@
+@inherits LayoutComponentBase
+@inject IJSRuntime JS
+@inject IDashboardService DashboardService
+@inject IThemeService ThemeService
+@inject IAuthService AuthService
+@inject NavigationManager Nav
+@implements IDisposable
+
+<div class="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
+    <Sidebar Collapsed="_sidebarCollapsed" OnToggleCollapse="ToggleSidebar" />
+    <div class="flex-1 flex flex-col overflow-hidden min-w-0">
+        <Header />
+        <main class="flex-1 overflow-hidden">
+            @Body
+        </main>
+    </div>
+</div>
+
+<ToastNotification />
+
+<div id="blazor-error-ui" class="blazor-error-boundary" style="display:none">
+    An unhandled error has occurred.
+    <a href="" class="underline">Reload</a>
+    <button class="ml-2" onclick="document.getElementById('blazor-error-ui').style.display='none'">🗙</button>
+</div>
+
+@code {
+    private bool _sidebarCollapsed;
+
+    protected override void OnInitialized()
+    {
+        DashboardService.StateChanged += OnStateChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Detect stale session: valid cookie but user record deleted from DB (explicit 404 only)
+            if (await AuthService.IsGhostSessionAsync())
+            {
+                Nav.NavigateTo("/logout", forceLoad: true);
+                return;
+            }
+
+            // Initialize dashboard data after the interactive connection is established
+            await DashboardService.InitializeAsync();
+
+            // JS interop is only available after render (not during pre-render)
+            try
+            {
+                var saved = await JS.InvokeAsync<string?>("themeInterop.getSavedTheme");
+                var isDark = saved != "light"; // default to dark
+                ThemeService.SetDarkMode(isDark);
+                await JS.InvokeVoidAsync("themeInterop.setDarkMode", isDark);
+            }
+            catch { /* ignore JS interop errors during prerender */ }
+        }
+    }
+
+    private void OnStateChanged() => InvokeAsync(StateHasChanged);
+
+    private void ToggleSidebar() => _sidebarCollapsed = !_sidebarCollapsed;
+
+    public void Dispose()
+    {
+        DashboardService.StateChanged -= OnStateChanged;
+    }
+}

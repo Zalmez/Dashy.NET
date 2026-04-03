@@ -1,0 +1,66 @@
+@* Link widget configuration fields used inside AddWidgetDialog *@
+
+<!-- URL -->
+<div class="mb-4">
+    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+        URL <span class="text-red-500">*</span>
+    </label>
+    <div class="relative">
+        <input type="url"
+               class="input-field pr-10 @(_urlError ? "border-red-500 focus:ring-red-500" : "")"
+               placeholder="https://example.com"
+               value="@Url"
+               @oninput="OnUrlInput"
+               @onblur="ValidateUrl" />
+        @if (Uri.TryCreate(Url, UriKind.Absolute, out _))
+        {
+            <a href="@Url" target="_blank" rel="noopener noreferrer"
+               class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-500 transition-colors"
+               title="Preview URL">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </a>
+        }
+    </div>
+    @if (_urlError)
+    {
+        <p class="text-xs text-red-500 mt-1">Please enter a valid URL (e.g. https://github.com)</p>
+    }
+</div>
+
+<!-- Description -->
+<div class="mb-4">
+    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+        Description <span class="text-xs text-slate-400">(optional)</span>
+    </label>
+    <input type="text"
+           class="input-field"
+           placeholder="Short description shown below the link..."
+           value="@Description"
+           @oninput="e => DescriptionChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" />
+</div>
+
+@code {
+    [Parameter] public string Url { get; set; } = "https://";
+    [Parameter] public EventCallback<string> UrlChanged { get; set; }
+    [Parameter] public string Description { get; set; } = "";
+    [Parameter] public EventCallback<string> DescriptionChanged { get; set; }
+    [Parameter] public EventCallback<string> OnUrlChanged { get; set; }
+
+    private bool _urlError;
+
+    private async Task OnUrlInput(ChangeEventArgs e)
+    {
+        var val = e.Value?.ToString() ?? "";
+        _urlError = false;
+        await UrlChanged.InvokeAsync(val);
+        if (Uri.TryCreate(val, UriKind.Absolute, out _))
+            await OnUrlChanged.InvokeAsync(val);
+    }
+
+    private void ValidateUrl()
+    {
+        _urlError = !string.IsNullOrWhiteSpace(Url)
+                    && Url != "https://"
+                    && !Uri.TryCreate(Url, UriKind.Absolute, out _);
+    }
+}

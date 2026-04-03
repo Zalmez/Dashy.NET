@@ -1,0 +1,278 @@
+@inject IDashboardService DashboardService
+@inject IToastService Toast
+@rendermode InteractiveServer
+
+@* Floating + button and Add Widget dialog *@
+
+<!-- Floating Action Button -->
+<button class="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center z-40"
+        @onclick="Open"
+        title="Add Widget">
+    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+</button>
+
+@if (_open)
+{
+    <!-- Modal Overlay -->
+    <div class="dialog-overlay" @onclick="Close">
+        <div class="dialog-box max-w-2xl w-full" style="max-height: 90vh; overflow-y: auto;" @onclick:stopPropagation="true">
+
+            <!-- Header -->
+            <div class="flex items-center justify-between mb-1">
+                <div>
+                    <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Add New Widget</h2>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                        @if (_step == 1) { <span>Choose a widget type</span> }
+                        else { <span>Configure your @(WidgetType.All.FirstOrDefault(t => t.Type == _selectedType)?.Name ?? "widget")</span> }
+                    </p>
+                </div>
+                <button class="p-1 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        @onclick="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+
+            <!-- Step indicator -->
+            <div class="flex items-center gap-2 my-4">
+                <div class="flex items-center gap-1.5">
+                    <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold @(_step >= 1 ? "bg-blue-600 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-500")">1</div>
+                    <span class="text-xs text-slate-500 dark:text-slate-400">Type</span>
+                </div>
+                <div class="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
+                <div class="flex items-center gap-1.5">
+                    <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold @(_step >= 2 ? "bg-blue-600 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-500")">2</div>
+                    <span class="text-xs text-slate-500 dark:text-slate-400">Configure</span>
+                </div>
+            </div>
+
+            @if (_step == 1)
+            {
+                <!-- Step 1: Widget Type Grid -->
+                <div class="grid grid-cols-2 gap-3 mb-6">
+                    @foreach (var wt in WidgetType.All)
+                    {
+                        var isSelected = _selectedType == wt.Type;
+                        <button class="p-4 rounded-lg border-2 transition-all text-left @(isSelected ? "border-blue-500 bg-blue-50 dark:bg-blue-950" : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600")"
+                                @onclick="() => _selectedType = wt.Type">
+                            <div class="flex items-start gap-3">
+                                <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 @(isSelected ? "bg-blue-500" : "bg-slate-200 dark:bg-slate-700")">
+                                    <WidgetIcon Type="@wt.Type" />
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="font-medium text-slate-900 dark:text-white text-sm mb-0.5">@wt.Name</div>
+                                    <div class="text-xs text-slate-500 dark:text-slate-400">@wt.Description</div>
+                                </div>
+                            </div>
+                        </button>
+                    }
+                </div>
+
+                <button class="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+                        @onclick="GoToStep2">
+                    Next
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg>
+                </button>
+            }
+            else
+            {
+                <!-- Step 2: Common + type-specific config -->
+
+                <!-- Title -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Widget Title</label>
+                    <input type="text"
+                           class="input-field"
+                           placeholder="Enter a title..."
+                           @bind="_title" @bind:event="oninput" />
+                </div>
+
+                <!-- Size -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Size</label>
+                    <select class="input-field" @bind="_size">
+                        <option value="@WidgetSize.Small">Small</option>
+                        <option value="@WidgetSize.Medium">Medium</option>
+                        <option value="@WidgetSize.Large">Large</option>
+                    </select>
+                </div>
+
+                <div class="h-px bg-slate-200 dark:bg-slate-700 mb-4"></div>
+
+                <!-- Type-specific config -->
+                @if (_selectedType == WidgetType.Link)
+                {
+                    <LinkWidgetConfig @bind-Url="_linkUrl"
+                                      @bind-Description="_linkDescription"
+                                      OnUrlChanged="SuggestLinkTitle" />
+                }
+                else if (_selectedType == WidgetType.Weather)
+                {
+                    <WeatherWidgetConfig @bind-Location="_weatherLocation"
+                                         @bind-Unit="_weatherUnit" />
+                }
+                else if (_selectedType == WidgetType.Markdown)
+                {
+                    <MarkdownWidgetConfig @bind-Content="_markdownContent" />
+                }
+                else if (_selectedType == WidgetType.Status)
+                {
+                    <StatusWidgetConfig Services="_statusServices"
+                                        ServicesChanged="s => _statusServices = s" />
+                }
+                else if (_selectedType == WidgetType.Rss)
+                {
+                    <RssWidgetConfig @bind-Url="_rssUrl" @bind-Limit="_rssLimit" />
+                }
+                else
+                {
+                    <p class="text-sm text-slate-500 dark:text-slate-400 italic mb-4">No extra configuration required for this widget type.</p>
+                }
+
+                <!-- Actions -->
+                <div class="flex gap-3 mt-4">
+                    <button class="flex-1 py-2.5 text-sm font-medium rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            @onclick="BackToStep1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15,18 9,12 15,6"/></svg>
+                        Back
+                    </button>
+                    <button class="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors"
+                            disabled="@(!IsValid())"
+                            @onclick="AddWidget">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Add Widget
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private bool _open;
+    private int _step = 1;
+    private string _selectedType = WidgetType.Link;
+    private string _title = "";
+    private WidgetSize _size = WidgetSize.Small;
+
+    // Link config fields
+    private string _linkUrl = "https://";
+    private string _linkDescription = "";
+
+    // Weather config fields
+    private string _weatherLocation = "";
+    private string _weatherUnit = "celsius";
+
+    // Markdown config fields
+    private string _markdownContent = "# New Note\n\nStart writing...";
+
+    // Status config fields
+    private List<StatusWidgetConfig.StatusServiceEntry> _statusServices = [];
+
+    // RSS config fields
+    private string _rssUrl = "";
+    private int _rssLimit = 10;
+
+    private void Open()
+    {
+        _step = 1;
+        _selectedType = WidgetType.Link;
+        _title = "";
+        _size = WidgetSize.Small;
+        _linkUrl = "https://";
+        _linkDescription = "";
+        _weatherLocation = "";
+        _weatherUnit = "celsius";
+        _markdownContent = "# New Note\n\nStart writing...";
+        _statusServices = [];
+        _rssUrl = "";
+        _rssLimit = 10;
+        _open = true;
+    }
+
+    private void Close() => _open = false;
+
+    private void GoToStep2()
+    {
+        _step = 2;
+        _title = "";
+        _size = _selectedType switch
+        {
+            WidgetType.Link        => WidgetSize.Small,
+            WidgetType.Weather     => WidgetSize.Small,
+            WidgetType.SystemStats => WidgetSize.Medium,
+            WidgetType.Markdown    => WidgetSize.Medium,
+            WidgetType.Media       => WidgetSize.Medium,
+            WidgetType.Status      => WidgetSize.Large,
+            WidgetType.Rss         => WidgetSize.Large,
+            _                      => WidgetSize.Medium
+        };
+        _linkUrl = "https://";
+        _linkDescription = "";
+        _weatherLocation = "";
+        _weatherUnit = "celsius";
+        _markdownContent = "# New Note\n\nStart writing...";
+        _statusServices = [];
+        _rssUrl = "";
+        _rssLimit = 10;
+    }
+
+    private void BackToStep1() => _step = 1;
+
+    private void SuggestLinkTitle(string url)
+    {
+        if (!string.IsNullOrWhiteSpace(_title)) return;
+        try
+        {
+            var uri = new Uri(url);
+            _title = uri.Host.Replace("www.", "");
+        }
+        catch { }
+    }
+
+    private bool IsValid() => _selectedType switch
+    {
+        WidgetType.Link    => Uri.TryCreate(_linkUrl, UriKind.Absolute, out _),
+        WidgetType.Weather => !string.IsNullOrWhiteSpace(_weatherLocation),
+        WidgetType.Status  => _statusServices.Count > 0 && _statusServices.All(s => !string.IsNullOrWhiteSpace(s.Name)),
+        WidgetType.Rss     => Uri.TryCreate(_rssUrl, UriKind.Absolute, out _),
+        _                  => true
+    };
+
+    private Dictionary<string, object> BuildConfig() => _selectedType switch
+    {
+        WidgetType.Link     => new() { ["url"] = _linkUrl, ["description"] = _linkDescription },
+        WidgetType.Weather  => new() { ["location"] = _weatherLocation, ["unit"] = _weatherUnit },
+        WidgetType.Markdown => new() { ["content"] = _markdownContent },
+        WidgetType.Status   => new() { ["services"] = _statusServices
+                                    .Select(s => new Dictionary<string, object>
+                                    {
+                                        ["name"]   = s.Name,
+                                        ["url"]    = s.Url,
+                                        ["status"] = "unknown"
+                                    }).ToList<object>() },
+        WidgetType.Rss      => new() { ["url"] = _rssUrl, ["limit"] = _rssLimit },
+        _                   => []
+    };
+
+    private async Task AddWidget()
+    {
+        if (!IsValid()) return;
+
+        var typeInfo = WidgetType.All.FirstOrDefault(t => t.Type == _selectedType);
+        if (typeInfo is null) return;
+
+        var title = string.IsNullOrWhiteSpace(_title) ? typeInfo.Name : _title.Trim();
+
+        await DashboardService.AddWidgetAsync(new Widget
+        {
+            Type   = _selectedType,
+            Title  = title,
+            Size   = _size,
+            Config = BuildConfig(),
+            Order  = 0
+        });
+
+        Toast.ShowSuccess($"'{title}' added!");
+        Close();
+    }
+}

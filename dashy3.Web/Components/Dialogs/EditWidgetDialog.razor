@@ -1,0 +1,442 @@
+@inject IDashboardService DashboardService
+@inject IToastService Toast
+@inject IJSRuntime JS
+@rendermode InteractiveServer
+
+@if (Widget is not null)
+{
+    <div class="dialog-overlay" @onclick="Close">
+        <div class="dialog-box max-w-2xl w-full" style="max-height: 90vh; overflow-y: auto;" @onclick:stopPropagation="true">
+
+            <!-- Header -->
+            <div class="flex items-center justify-between mb-1">
+                <div>
+                    <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Edit Widget</h2>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                        Update configuration for this @(WidgetType.All.FirstOrDefault(t => t.Type == Widget.Type)?.Name ?? "widget")
+                    </p>
+                </div>
+                <button class="p-1 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        @onclick="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+
+            <!-- Title -->
+            <div class="mb-4 mt-4">
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Widget Title</label>
+                <input type="text"
+                       class="input-field"
+                       placeholder="Enter a title..."
+                       @bind="_title" @bind:event="oninput" />
+            </div>
+
+            <!-- Size -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Size</label>
+                <select class="input-field" @bind="_size">
+                    <option value="@WidgetSize.Small">Small</option>
+                    <option value="@WidgetSize.Medium">Medium</option>
+                    <option value="@WidgetSize.Large">Large</option>
+                </select>
+            </div>
+
+            <div class="h-px bg-slate-200 dark:bg-slate-700 mb-4"></div>
+
+            <!-- Type-specific config -->
+            @if (Widget.Type == WidgetType.Link)
+            {
+                <LinkWidgetConfig @bind-Url="_linkUrl"
+                                  @bind-Description="_linkDescription" />
+            }
+            else if (Widget.Type == WidgetType.Weather)
+            {
+                <WeatherWidgetConfig @bind-Location="_weatherLocation"
+                                     @bind-Unit="_weatherUnit" />
+            }
+            else if (Widget.Type == WidgetType.Markdown)
+            {
+                <MarkdownWidgetConfig @bind-Content="_markdownContent" />
+            }
+            else if (Widget.Type == WidgetType.Status)
+            {
+                <StatusWidgetConfig Services="_statusServices"
+                                    ServicesChanged="s => _statusServices = s" />
+            }
+            else if (Widget.Type == WidgetType.LinkGrid)
+            {
+                <div class="space-y-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Grid Columns</label>
+                        <div class="flex gap-2">
+                            <button type="button"
+                                    class="flex-1 py-2 text-sm font-medium rounded-lg border-2 transition-colors @(_linkGridColumns == 3 ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300" : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300")"
+                                    @onclick='() => _linkGridColumns = 3'>
+                                3 × 3
+                            </button>
+                            <button type="button"
+                                    class="flex-1 py-2 text-sm font-medium rounded-lg border-2 transition-colors @(_linkGridColumns == 4 ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300" : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300")"
+                                    @onclick='() => _linkGridColumns = 4'>
+                                4 × 4
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Links</label>
+                        <div class="space-y-2">
+                            @for (var i = 0; i < _linkGridItems.Count; i++)
+                            {
+                                var idx = i;
+                                <div class="flex gap-2 items-start">
+                                    <div class="flex-1 flex flex-col gap-1">
+                                        <input type="url" class="input-field" placeholder="https://example.com"
+                                               value="@_linkGridItems[idx].Url"
+                                               @oninput="e => UpdateLinkGridItem(idx, e.Value?.ToString() ?? string.Empty, _linkGridItems[idx].Label)" />
+                                        <input type="text" class="input-field text-xs" placeholder="Label (optional)"
+                                               value="@_linkGridItems[idx].Label"
+                                               @oninput="e => UpdateLinkGridItem(idx, _linkGridItems[idx].Url, e.Value?.ToString() ?? string.Empty)" />
+                                    </div>
+                                    <button type="button"
+                                            class="mt-1.5 p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950 transition-colors flex-shrink-0"
+                                            @onclick="() => RemoveLinkGridItem(idx)">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                        <button type="button"
+                                class="mt-2 w-full py-2 text-sm font-medium rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-blue-400 hover:text-blue-500 transition-colors"
+                                @onclick="AddLinkGridItem">
+                            + Add Link
+                        </button>
+                    </div>
+                </div>
+            }
+            else if (Widget.Type == WidgetType.Rss){
+                <div class="space-y-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Feed URL</label>
+                        <input type="url" class="input-field" placeholder="https://example.com/feed.xml" @bind="_rssUrl" @bind:event="oninput" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Max Items</label>
+                        <input type="number" class="input-field" min="1" max="50" @bind="_rssLimit" />
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-slate-700 dark:text-slate-300">Auto-scroll</p>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Automatically scroll through items. Pauses on hover.</p>
+                        </div>
+                        <button type="button"
+                                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors @(_rssAutoScroll ? "bg-blue-600" : "bg-slate-200 dark:bg-slate-700")"
+                                @onclick="() => _rssAutoScroll = !_rssAutoScroll">
+                            <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform @(_rssAutoScroll ? "translate-x-6" : "translate-x-1")"></span>
+                        </button>
+                    </div>
+                    @if (_rssAutoScroll)
+                    {
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Scroll Speed</label>
+                            <select class="input-field" @bind="_rssScrollSpeed">
+                                <option value="slow">Slow</option>
+                                <option value="medium">Medium</option>
+                                <option value="fast">Fast</option>
+                            </select>
+                        </div>
+                    }
+                </div>
+            }
+            else if (Widget.Type == WidgetType.Cve)
+            {
+                <div class="space-y-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">CVE Source</label>
+                        <select class="input-field" @bind="_cveSource">
+                            <option value="nvd">NVD (National Vulnerability Database)</option>
+                            <option value="euvd">EUVD (EU Vulnerability Database)</option>
+                        </select>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                            @(_cveSource == "euvd" ? "European Union Agency for Cybersecurity database" : "US NIST National Vulnerability Database")
+                        </p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Max Items</label>
+                        <input type="number" class="input-field" min="5" max="50" @bind="_cveLimit" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Filter Keywords</label>
+                        <input type="text" class="input-field" placeholder="apache, linux, microsoft" @bind="_cveKeywords" @bind:event="oninput" />
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                            Comma-separated keywords to filter CVEs by product, vendor, or description. Leave empty to show all.
+                        </p>
+                    </div>
+                    <div class="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs text-amber-700 dark:text-amber-300">
+                        <strong>Note:</strong> Only HIGH and CRITICAL severity CVEs with a CVSS score ≥ 7.0 are displayed. Results are sorted with the most recent first.
+                    </div>
+                </div>
+            }
+            else if (Widget.Type == WidgetType.Api)
+            {
+                <div class="space-y-4 mb-4">
+                    <div class="p-3 rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-300">
+                        Content is set externally via the API. Use your API key to push HTML/CSS to this widget.
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Widget ID</label>
+                        <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-700 rounded-lg px-3 py-2">
+                            <code class="text-xs font-mono text-slate-800 dark:text-slate-100 flex-1 select-all break-all">@Widget.Id</code>
+                            <button type="button"
+                                    title="Copy widget ID"
+                                    class="flex-shrink-0 p-1 rounded-md text-slate-400 hover:text-blue-500 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                                    @onclick="CopyApiWidgetIdAsync">
+                                @if (_apiIdCopied)
+                                {
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
+                                }
+                                else
+                                {
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                }
+                            </button>
+                        </div>
+                        @if (_apiIdCopied)
+                        {
+                            <p class="text-xs text-green-500 mt-1">Copied!</p>
+                        }
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(Widget.GetConfig("content", "")))
+                    {
+                        <button type="button"
+                                class="w-full py-2 text-sm font-medium rounded-lg border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
+                                @onclick="ClearApiContentAsync">
+                            Clear Content
+                        </button>
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="text-sm text-slate-500 dark:text-slate-400 italic mb-4">No extra configuration required for this widget type.</p>
+            }
+
+            <!-- Actions -->
+            <div class="flex gap-3 mt-4">
+                <button class="flex-1 py-2.5 text-sm font-medium rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        @onclick="Close">
+                    Cancel
+                </button>
+                <button class="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors"
+                        disabled="@(!IsValid())"
+                        @onclick="SaveAsync">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg>
+                    Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Widget? Widget { get; set; }
+    [Parameter] public EventCallback OnSaved { get; set; }
+
+    private string _title = "";
+    private WidgetSize _size = WidgetSize.Medium;
+
+    private string _linkUrl = "https://";
+    private string _linkDescription = "";
+    private string _weatherLocation = "";
+    private string _weatherUnit = "celsius";
+    private string _markdownContent = "";
+    private List<StatusWidgetConfig.StatusServiceEntry> _statusServices = [];
+    private string _rssUrl = "";
+    private int _rssLimit = 10;
+    private bool _rssAutoScroll = false;
+    private string _rssScrollSpeed = "medium";
+    private List<(string Url, string Label)> _linkGridItems = [];
+    private int _linkGridColumns = 3;
+
+    private string _cveSource = "nvd";
+    private int _cveLimit = 10;
+    private string _cveKeywords = "";
+
+    private bool _apiIdCopied;
+
+    private string? _lastWidgetId;
+
+    protected override void OnParametersSet()
+    {
+        if (Widget is null || Widget.Id == _lastWidgetId) return;
+
+        _lastWidgetId = Widget.Id;
+        _title = Widget.Title;
+        _size = Widget.Size;
+
+        switch (Widget.Type)
+        {
+            case WidgetType.Link:
+                _linkUrl = Widget.GetConfig<string>("url", "https://");
+                _linkDescription = Widget.GetConfig<string>("description", "");
+                break;
+
+            case WidgetType.Weather:
+                _weatherLocation = Widget.GetConfig<string>("location", "");
+                _weatherUnit = Widget.GetConfig<string>("unit", "celsius");
+                break;
+
+            case WidgetType.Markdown:
+                _markdownContent = Widget.GetConfig<string>("content", "");
+                break;
+
+            case WidgetType.Status:
+                var rawServices = Widget.GetConfig<List<Dictionary<string, object>>>("services", []);
+                _statusServices = rawServices
+                    .Select(d => new StatusWidgetConfig.StatusServiceEntry(
+                        GetDictString(d, "name"),
+                        GetDictString(d, "url")))
+                    .ToList();
+                break;
+
+            case WidgetType.Rss:
+                _rssUrl = Widget.GetConfig<string>("url", "");
+                _rssLimit = Widget.GetConfig<int>("limit", 10);
+                _rssAutoScroll = Widget.GetConfig<bool>("autoScroll", false);
+                _rssScrollSpeed = Widget.GetConfig<string>("scrollSpeed", "medium");
+                break;
+
+            case WidgetType.Cve:
+                _cveSource = Widget.GetConfig<string>("source", "nvd");
+                _cveLimit = Widget.GetConfig<int>("limit", 10);
+                _cveKeywords = Widget.GetConfig<string>("keywords", "");
+                break;
+
+            case WidgetType.LinkGrid:
+                _linkGridColumns = Widget.GetConfig<int>("columns", 3);
+                var rawLinks = Widget.GetConfig<List<Dictionary<string, object>>>("links", []);
+                _linkGridItems = rawLinks
+                    .Select(d => (GetDictString(d, "url"), GetDictString(d, "label")))
+                    .Where(l => !string.IsNullOrWhiteSpace(l.Item1))
+                    .ToList();
+                break;
+
+            case WidgetType.Api:
+                // No local fields to initialise — content is managed externally
+                break;
+        }
+    }
+
+    private static string GetDictString(Dictionary<string, object> d, string key)
+    {
+        if (!d.TryGetValue(key, out var val)) return "";
+        return val is System.Text.Json.JsonElement je ? je.GetString() ?? "" : val?.ToString() ?? "";
+    }
+
+    private bool IsValid()
+    {
+        if (Widget is null) return false;
+        return Widget.Type switch
+        {
+            WidgetType.Link    => Uri.TryCreate(_linkUrl, UriKind.Absolute, out _),
+            WidgetType.Weather => !string.IsNullOrWhiteSpace(_weatherLocation),
+            WidgetType.Status  => _statusServices.Count > 0 && _statusServices.All(s => !string.IsNullOrWhiteSpace(s.Name)),
+            WidgetType.Rss     => Uri.TryCreate(_rssUrl, UriKind.Absolute, out _),
+            WidgetType.LinkGrid => _linkGridItems.Count > 0 && _linkGridItems.All(l => Uri.TryCreate(l.Url, UriKind.Absolute, out _)),
+            _                  => true
+        };
+    }
+
+    private Dictionary<string, object> BuildConfig()
+    {
+        if (Widget is null) return [];
+        return Widget.Type switch
+        {
+            WidgetType.Link     => new() { ["url"] = _linkUrl, ["description"] = _linkDescription },
+            WidgetType.Weather  => new() { ["location"] = _weatherLocation, ["unit"] = _weatherUnit },
+            WidgetType.Markdown => new() { ["content"] = _markdownContent },
+            WidgetType.Status   => new()
+            {
+                ["services"] = _statusServices
+                    .Select(s => new Dictionary<string, object>
+                    {
+                        ["name"]   = s.Name,
+                        ["url"]    = s.Url,
+                        ["status"] = "unknown"
+                    }).ToList<object>()
+            },
+            WidgetType.Rss => new()
+            {
+                ["url"]         = _rssUrl,
+                ["limit"]       = _rssLimit,
+                ["autoScroll"]  = _rssAutoScroll,
+                ["scrollSpeed"] = _rssScrollSpeed,
+            },
+            WidgetType.Cve => new()
+            {
+                ["source"] = _cveSource,
+                ["limit"]  = _cveLimit,
+                ["keywords"] = _cveKeywords,
+            },
+            WidgetType.LinkGrid => new()
+            {
+                ["columns"] = _linkGridColumns,
+                ["links"]   = _linkGridItems
+                    .Select(l => new Dictionary<string, object> { ["url"] = l.Url, ["label"] = l.Label })
+                    .ToList()  // must stay List<Dictionary<string,object>> so GetConfig<T> type-check succeeds
+            },
+            WidgetType.Api => new Dictionary<string, object>(Widget.Config),  // preserve externally-set content/css
+            _ => new Dictionary<string, object>()
+        };
+    }
+
+    private void AddLinkGridItem() =>
+        _linkGridItems.Add(("", ""));
+
+    private void RemoveLinkGridItem(int index) =>
+        _linkGridItems.RemoveAt(index);
+
+    private void UpdateLinkGridItem(int index, string url, string label) =>
+        _linkGridItems[index] = (url, label);
+
+    private async Task CopyApiWidgetIdAsync()
+    {
+        if (Widget is null) return;
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", Widget.Id);
+        _apiIdCopied = true;
+        StateHasChanged();
+        await Task.Delay(2000);
+        _apiIdCopied = false;
+        StateHasChanged();
+    }
+
+    private async Task ClearApiContentAsync()
+    {
+        if (Widget is null) return;
+        Widget.Config.Remove("content");
+        Widget.Config.Remove("css");
+        await DashboardService.SaveWidgetAsync(Widget);
+        Toast.ShowSuccess("API widget content cleared.");
+        StateHasChanged();
+    }
+
+    private void Close()
+    {
+        _lastWidgetId = null;
+        OnSaved.InvokeAsync();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (Widget is null || !IsValid()) return;
+
+        Widget.Title = string.IsNullOrWhiteSpace(_title) ? Widget.Title : _title.Trim();
+        Widget.Size = _size;
+        Widget.Config = BuildConfig();
+
+        await DashboardService.SaveWidgetAsync(Widget);
+        Toast.ShowSuccess($"'{Widget.Title}' updated!");
+
+        _lastWidgetId = null;
+        await OnSaved.InvokeAsync();
+    }
+}

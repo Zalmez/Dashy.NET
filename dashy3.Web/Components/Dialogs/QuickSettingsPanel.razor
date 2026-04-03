@@ -1,0 +1,215 @@
+@inject IDashboardService DashboardService
+@inject IToastService Toast
+@inject IJSRuntime JS
+@rendermode InteractiveServer
+
+@if (IsOpen)
+{
+    <div class="quick-settings-overlay" @onclick="Close"></div>
+    <div class="quick-settings-panel p-6">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Dashboard Settings</h2>
+            <button class="p-1 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    @onclick="Close">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+
+        @if (DashboardService.ActiveDashboard is { } dashboard)
+        {
+            <!-- Dashboard Name -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Dashboard Name</label>
+                <input type="text" class="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                       value="@_dashboardName"
+                       @oninput="e => _dashboardName = e.Value?.ToString() ?? dashboard.Name"
+                       @onblur="SaveName" />
+            </div>
+
+            <div class="h-px bg-slate-200 dark:bg-slate-700 mb-6"></div>
+
+            <!-- Stats -->
+            <div class="mb-6">
+                <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Statistics</h4>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg">
+                        <div class="text-2xl font-bold text-slate-900 dark:text-white">@dashboard.Widgets.Count</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400">Total Widgets</div>
+                    </div>
+                    <div class="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg">
+                        <div class="text-2xl font-bold text-slate-900 dark:text-white">@dashboard.Widgets.Count(w => w.Type == WidgetType.Section)</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400">Sections</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="h-px bg-slate-200 dark:bg-slate-700 mb-6"></div>
+
+            <!-- Actions -->
+            <div class="mb-6">
+                <h4 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Actions</h4>
+                <button class="w-full flex items-center gap-2 px-4 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors mb-2"
+                        @onclick="ExportDashboard">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Export Dashboard
+                </button>
+                <button class="w-full flex items-center gap-2 px-4 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled="@_importing"
+                        @onclick="ImportDashboard">
+                    @if (_importing)
+                    {
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                        <span>Importing…</span>
+                    }
+                    else
+                    {
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <span>Import Dashboard</span>
+                    }
+                </button>
+            </div>
+
+            <div class="h-px bg-slate-200 dark:bg-slate-700 mb-6"></div>
+
+            <!-- Danger Zone -->
+            <div>
+                <h4 class="text-sm font-medium text-red-600 dark:text-red-400 mb-3">Danger Zone</h4>
+                <button class="w-full flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors"
+                        disabled="@(DashboardService.Dashboards.Count <= 1)"
+                        @onclick="OpenDeleteConfirm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14a2,2,0,0,1-2,2H8a2,2,0,0,1-2-2L5,6"/><path d="M10,11v6"/><path d="M14,11v6"/><path d="M9,6V4a1,1,0,0,1,1-1h4a1,1,0,0,1,1,1V6"/></svg>
+                    Delete Dashboard
+                </button>
+            </div>
+        }
+    </div>
+}
+
+<ConfirmDialog IsVisible="_showDeleteConfirm"
+               Title="Delete Dashboard?"
+               Description="This action cannot be undone. All widgets in this dashboard will be permanently deleted."
+               ConfirmLabel="Delete"
+               OnConfirm="DeleteDashboard"
+               OnCancel="CloseDeleteConfirm" />
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private string _dashboardName = "";
+    private bool _showDeleteConfirm;
+    private bool _importing;
+
+    protected override void OnParametersSet()
+    {
+        _dashboardName = DashboardService.ActiveDashboard?.Name ?? "";
+    }
+
+    private async Task SaveName()
+    {
+        if (!string.IsNullOrWhiteSpace(_dashboardName))
+        {
+            await DashboardService.RenameDashboardAsync(DashboardService.ActiveDashboardId, _dashboardName.Trim());
+            Toast.ShowSuccess("Dashboard renamed successfully");
+        }
+    }
+
+    private async Task ExportDashboard()
+    {
+        var dashboard = DashboardService.ActiveDashboard;
+        if (dashboard is null) return;
+
+        var json = System.Text.Json.JsonSerializer.Serialize(dashboard,
+            new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        var filename = $"{dashboard.Name.Replace(" ", "-").ToLowerInvariant()}.json";
+        await JS.InvokeVoidAsync("downloadFile", filename, json);
+    }
+
+    private async Task ImportDashboard()
+    {
+        _importing = true;
+        try
+        {
+            string json;
+            try
+            {
+                json = await JS.InvokeAsync<string>("readFileAsText");
+            }
+            catch
+            {
+                // User cancelled the file picker — not an error
+                return;
+            }
+
+            var opts = new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)
+            {
+                Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+            };
+            var imported = System.Text.Json.JsonSerializer.Deserialize<Dashboard>(json, opts);
+
+            if (imported is null || string.IsNullOrWhiteSpace(imported.Name))
+            {
+                Toast.ShowError("Invalid dashboard file: missing name");
+                return;
+            }
+
+            var importedName = imported.Name.Trim() + " (Imported)";
+            var created = await DashboardService.CreateDashboardAsync(importedName);
+
+            // Build mapping of old section widget IDs to new IDs
+            var sectionIdMap = new Dictionary<string, string>();
+            var sectionWidgets = imported.Widgets.Where(w => w.Type == WidgetType.Section).ToList();
+            foreach (var section in sectionWidgets)
+            {
+                var oldId = section.Id;
+                section.Id = System.Guid.NewGuid().ToString("N")[..8];
+                section.ParentWidgetId = null; // Top-level sections
+                sectionIdMap[oldId] = section.Id;
+                await DashboardService.AddWidgetAsync(section);
+            }
+
+            // Add non-section widgets, remapping ParentWidgetId if needed
+            var nonSectionWidgets = imported.Widgets.Where(w => w.Type != WidgetType.Section).ToList();
+            for (int i = 0; i < nonSectionWidgets.Count; i++)
+            {
+                var widget = nonSectionWidgets[i];
+                widget.Id = System.Guid.NewGuid().ToString("N")[..8];
+                widget.Order = i;
+                // Remap ParentWidgetId to new section ID if it was in a section
+                if (widget.ParentWidgetId is not null && sectionIdMap.TryGetValue(widget.ParentWidgetId, out var newParentId))
+                    widget.ParentWidgetId = newParentId;
+                else
+                    widget.ParentWidgetId = null;
+                await DashboardService.AddWidgetAsync(widget);
+            }
+
+            Toast.ShowSuccess($"Dashboard \"{importedName}\" imported successfully.");
+        }
+        catch (Exception ex)
+        {
+            Toast.ShowError($"Import failed: {ex.Message}");
+        }
+        finally
+        {
+            _importing = false;
+        }
+    }
+
+    private void OpenDeleteConfirm() => _showDeleteConfirm = true;
+    private void CloseDeleteConfirm() => _showDeleteConfirm = false;
+
+    private async Task DeleteDashboard()
+    {
+        if (DashboardService.Dashboards.Count <= 1)
+        {
+            Toast.ShowError("Cannot delete the last dashboard");
+            return;
+        }
+        await DashboardService.DeleteDashboardAsync(DashboardService.ActiveDashboardId);
+        Toast.ShowSuccess("Dashboard deleted");
+        _showDeleteConfirm = false;
+        await Close();
+    }
+
+    private async Task Close() => await OnClose.InvokeAsync();
+}

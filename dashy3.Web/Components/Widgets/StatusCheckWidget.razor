@@ -1,0 +1,84 @@
+@* Status Check Widget - monitors service health *@
+
+<div class="h-full flex flex-col gap-4">
+    <!-- Summary -->
+    <div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
+        <div>
+            <div class="text-sm text-slate-500 dark:text-slate-400">System Status</div>
+            <div class="text-2xl font-bold text-slate-900 dark:text-white">@_onlineCount/@_services.Count Online</div>
+        </div>
+        <div class="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg>
+        </div>
+    </div>
+
+    <!-- Services -->
+    <div class="flex-1 overflow-auto space-y-2">
+        @foreach (var service in _services)
+        {
+            var (bgClass, iconColor, badgeClass) = GetStatusClasses(service.Status);
+            <div class="@bgClass rounded-lg p-3 border border-slate-200 dark:border-slate-700">
+                <div class="flex items-center justify-between mb-1">
+                    <div class="flex items-center gap-2">
+                        <StatusIcon Status="@service.Status" CssColor="@iconColor" />
+                        <span class="font-medium text-slate-900 dark:text-white text-sm">@service.Name</span>
+                    </div>
+                    <span class="px-2 py-0.5 text-xs rounded-full text-white @badgeClass">@service.Status</span>
+                </div>
+                @if (!string.IsNullOrEmpty(service.Uptime) || !string.IsNullOrEmpty(service.ResponseTime))
+                {
+                    <div class="flex gap-4 text-xs text-slate-600 dark:text-slate-400 mt-1">
+                        @if (!string.IsNullOrEmpty(service.Uptime))
+                        {
+                            <span><strong>Uptime:</strong> @service.Uptime</span>
+                        }
+                        @if (!string.IsNullOrEmpty(service.ResponseTime))
+                        {
+                            <span><strong>Response:</strong> @service.ResponseTime</span>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Widget Widget { get; set; } = default!;
+
+    private List<ServiceInfo> _services = [];
+    private int _onlineCount;
+
+    protected override void OnParametersSet()
+    {
+        var configServices = Widget.GetConfig<List<ServiceInfo>>("services", []);
+        _services = configServices.Count > 0
+            ? configServices
+            :
+            [
+                new() { Name = "API Server", Status = "online", Uptime = "99.9%", ResponseTime = "45ms" },
+                new() { Name = "Database",   Status = "online", Uptime = "99.8%", ResponseTime = "12ms" },
+                new() { Name = "Cache",      Status = "warning", Uptime = "98.5%", ResponseTime = "156ms" },
+            ];
+        _onlineCount = _services.Count(s => s.Status == "online");
+    }
+
+    private static (string bg, string icon, string badge) GetStatusClasses(string status) => status switch
+    {
+        "online"      => ("bg-green-50 dark:bg-green-950/30",  "text-green-500",  "bg-green-500"),
+        "warning"     => ("bg-yellow-50 dark:bg-yellow-950/30","text-yellow-500", "bg-yellow-500"),
+        "offline"     => ("bg-red-50 dark:bg-red-950/30",      "text-red-500",    "bg-red-500"),
+        "maintenance" => ("bg-blue-50 dark:bg-blue-950/30",    "text-blue-500",   "bg-blue-500"),
+        "unknown"     => ("bg-slate-50 dark:bg-slate-900",      "text-slate-400",  "bg-slate-400"),
+        _             => ("bg-slate-50 dark:bg-slate-900",      "text-slate-500",  "bg-slate-500"),
+    };
+
+    private class ServiceInfo
+    {
+        public string Name { get; set; } = "";
+        public string? Url { get; set; }
+        public string Status { get; set; } = "unknown";
+        public string? Uptime { get; set; }
+        public string? ResponseTime { get; set; }
+    }
+}

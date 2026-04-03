@@ -1,0 +1,467 @@
+@inject IDashboardService DashboardService
+@inject ISearchService SearchService
+@inject IToastService Toast
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<aside class="flex flex-col h-screen bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 @(Collapsed ? "w-16" : "w-64") flex-shrink-0">
+    <!-- Header -->
+    <div class="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
+        @if (!Collapsed)
+        {
+            <div class="flex items-center gap-2">
+                <img src="@Assets["img/logo.svg"]" class="w-12"/>
+                <span class="font-semibold text-slate-900 dark:text-white">Dashy</span>
+            </div>
+        }
+        <button class="ml-auto p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                @onclick="OnToggleCollapse">
+            @if (Collapsed)
+            {
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg>
+            }
+            else
+            {
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15,18 9,12 15,6"/></svg>
+            }
+        </button>
+    </div>
+
+    <!-- Search -->
+    @if (!Collapsed)
+    {
+        <div class="p-4">
+            <div class="relative">
+                <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" placeholder="Search widgets..."
+                       class="w-full pl-10 pr-4 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                       value="@SearchService.SearchQuery" @oninput="OnSearchInput" />
+                @if (!string.IsNullOrEmpty(SearchService.SearchQuery))
+                {
+                    <button class="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                            @onclick="ClearSearch">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Scrollable content -->
+    <div class="flex-1 overflow-y-auto">
+        <!-- My Dashboards -->
+        @{ var myDashboards = FilteredDashboards.Where(d => d.OwnerId == _currentUser?.Id).ToList(); }
+        @if (myDashboards.Any())
+        {
+            <div class="p-4 pb-2">
+                @if (!Collapsed)
+                {
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">My Dashboards</span>
+                        <button class="p-1 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                @onclick="OpenCreateDialog" title="New Dashboard">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <button class="w-full flex justify-center p-1 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors mb-2"
+                            @onclick="OpenCreateDialog" title="New Dashboard">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </button>
+                }
+                <div class="space-y-1">
+                    @foreach (var dashboard in myDashboards)
+                    {
+                        @DashboardRow(dashboard)
+                    }
+                </div>
+            </div>
+        }
+        else if (!Collapsed)
+        {
+            <!-- Show header + add button even when no dashboards owned -->
+            <div class="p-4 pb-2">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">My Dashboards</span>
+                    <button class="p-1 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            @onclick="OpenCreateDialog" title="New Dashboard">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </button>
+                </div>
+            </div>
+        }
+
+        <!-- Shared with Me (collaborator dashboards, not owned) -->
+        @{ var sharedWithMe = FilteredDashboards.Where(d => d.OwnerId != _currentUser?.Id && d.Visibility != "Shared").ToList(); }
+        @if (sharedWithMe.Any())
+        {
+            <div class="px-4 pb-2">
+                @if (!Collapsed)
+                {
+                    <span class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide block mb-2">Shared with Me</span>
+                }
+                <div class="space-y-1">
+                    @foreach (var dashboard in sharedWithMe)
+                    {
+                        @DashboardRow(dashboard)
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- Public Dashboards (Visibility = Shared, not owned) -->
+        @{ var publicDashboards = FilteredDashboards.Where(d => d.OwnerId != _currentUser?.Id && d.Visibility == "Shared").ToList(); }
+        @if (publicDashboards.Any())
+        {
+            <div class="px-4 pb-2">
+                @if (!Collapsed)
+                {
+                    <span class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide block mb-2">Public Dashboards</span>
+                }
+                <div class="space-y-1">
+                    @foreach (var dashboard in publicDashboards)
+                    {
+                        @DashboardRow(dashboard)
+                    }
+                </div>
+            </div>
+        }
+
+        <div class="h-px bg-slate-200 dark:bg-slate-700 mx-4 my-2"></div>
+
+        <!-- API Keys (all authenticated users) -->
+        @if (_currentUser is not null)
+        {
+            <div class="px-4 pb-2 space-y-1">
+                <NavButton Icon="key" Label="API Keys" Href="/api-keys" Collapsed="@Collapsed" />
+            </div>
+        }
+
+        <!-- Management (Admin only) -->
+        @if (_currentUser?.IsAdmin == true)
+        {
+            <div class="p-4 space-y-1">
+                @if (!Collapsed)
+                {
+                    <span class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Management</span>
+                }
+                <NavButton Icon="admin-panel" Label="Admin Panel" Href="/admin" Collapsed="@Collapsed" />
+            </div>
+        }
+    </div>
+
+    <!-- User Profile -->
+    <div class="p-4 border-t border-slate-200 dark:border-slate-800">
+        <div class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors @(Collapsed ? "justify-center" : "")"
+             @onclick="() => _profileModalOpen = true">
+            <!-- Avatar -->
+            <div class="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden">
+                @if (!string.IsNullOrEmpty(_currentUser?.AvatarUrl))
+                {
+                    <img src="@_currentUser.AvatarUrl" alt="@_currentUser.DisplayName" class="w-full h-full object-cover" />
+                }
+                else
+                {
+                    <div class="w-full h-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold">
+                        @(_currentUser?.Initials ?? "?")
+                    </div>
+                }
+            </div>
+            @if (!Collapsed)
+            {
+                <!-- Name + email -->
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium text-slate-900 dark:text-white truncate">@(_currentUser?.DisplayName ?? "User")</div>
+                    <div class="text-xs text-slate-500 dark:text-slate-400 truncate">@(_currentUser?.Email ?? "")</div>
+                </div>
+                <!-- Logout button -->
+                <form method="post" action="/logout" class="flex-shrink-0">
+                    <AntiforgeryToken />
+                    <button type="submit"
+                            title="Sign out"
+                            class="p-1.5 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-md transition-colors">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                    </button>
+                </form>
+            }
+        </div>
+    </div>
+</aside>
+
+<UserProfileModal IsOpen="_profileModalOpen"
+                  OnClose="() => _profileModalOpen = false"
+                  User="_currentUser" />
+
+<!-- Create Dashboard Dialog -->
+@if (_showCreateDialog)
+{
+    <div class="dialog-overlay" @onclick="CloseCreateDialog">
+        <div class="dialog-box" @onclick:stopPropagation="true">
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-1">Create New Dashboard</h3>
+            <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">Give your new dashboard a name to get started.</p>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Dashboard Name</label>
+                <input type="text" class="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                       placeholder="My Dashboard"
+                       @bind="_newDashboardName"
+                       @onkeydown="HandleCreateKeyDown" />
+            </div>
+            <div class="flex gap-3 justify-end">
+                <button class="px-4 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        @onclick="CloseCreateDialog">Cancel</button>
+                        <button class="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+                                @onclick="CreateDashboard">Create Dashboard</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Share Dashboard Dialog -->
+<ShareDashboardDialog IsOpen="_shareDialogOpen"
+                      Dashboard="_shareDashboard"
+                      OnClose="CloseShareDialog" />
+
+<!-- Delete Confirmation Dialog -->
+<ConfirmDialog IsVisible="_showDeleteConfirm"
+               Title="Delete Dashboard?"
+               Description="@($"Are you sure you want to delete \"{_contextMenuDashboard?.Name}\"? This action cannot be undone.")"
+               ConfirmLabel="Delete"
+               OnConfirm="DeleteDashboard"
+               OnCancel="() => _showDeleteConfirm = false" />
+
+<!-- Context Menu -->
+@if (_contextMenuOpen && _contextMenuDashboard is not null)
+{
+    <div class="fixed inset-0 z-[100]" @onclick="CloseContextMenu" @oncontextmenu="CloseContextMenu" @oncontextmenu:preventDefault="true"></div>
+    <div class="fixed z-[101] min-w-[160px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg py-1"
+         style="left: @(_contextMenuX)px; top: @(_contextMenuY)px;">
+        @{
+            var canShare = _contextMenuDashboard.UserPermission == "Owner" || _contextMenuDashboard.UserPermission == "Editor";
+            var canDelete = _contextMenuDashboard.UserPermission == "Owner";
+        }
+        @if (canShare)
+        {
+            <button class="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                    @onclick="ContextMenuShare">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                Share
+            </button>
+        }
+        @if (canDelete)
+        {
+            <button class="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled="@(DashboardService.Dashboards.Count <= 1)"
+                    @onclick="ContextMenuDelete">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <polyline points="3,6 5,6 21,6"/>
+                    <path d="M19,6l-1,14a2,2,0,0,1-2,2H8a2,2,0,0,1-2-2L5,6"/>
+                    <path d="M10,11v6"/>
+                    <path d="M14,11v6"/>
+                    <path d="M9,6V4a1,1,0,0,1,1-1h4a1,1,0,0,1,1,1V6"/>
+                </svg>
+                Delete
+            </button>
+        }
+        @if (!canShare && !canDelete)
+        {
+            <div class="px-3 py-2 text-sm text-slate-500 dark:text-slate-400 italic">No actions available</div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public bool Collapsed { get; set; }
+    [Parameter] public EventCallback OnToggleCollapse { get; set; }
+
+    private bool _showCreateDialog;
+    private bool _profileModalOpen;
+    private bool _shareDialogOpen;
+    private Dashboard? _shareDashboard;
+    private string _newDashboardName = "";
+    private UserInfo? _currentUser;
+
+    // Context menu state
+    private bool _contextMenuOpen;
+    private double _contextMenuX;
+    private double _contextMenuY;
+    private Dashboard? _contextMenuDashboard;
+    private bool _showDeleteConfirm;
+
+    private IEnumerable<Dashboard> FilteredDashboards => 
+        string.IsNullOrWhiteSpace(SearchService.SearchQuery)
+            ? DashboardService.Dashboards
+            : DashboardService.Dashboards.Where(d => SearchService.Matches(d.Name));
+
+    // Render fragment for a dashboard row (avoids duplication across 3 sections)
+    private RenderFragment DashboardRow(Dashboard dashboard) => __builder =>
+    {
+        var isOnRoot = Navigation.ToBaseRelativePath(Navigation.Uri) == "";
+        var isActive = isOnRoot && dashboard.Id == DashboardService.ActiveDashboardId;
+        var canShare = dashboard.UserPermission == "Owner" || dashboard.UserPermission == "Editor";
+        __builder.OpenElement(0, "div");
+        __builder.AddAttribute(1, "class", $"group flex items-center rounded-lg transition-colors {(isActive ? "bg-blue-50 dark:bg-blue-950" : "hover:bg-slate-100 dark:hover:bg-slate-800")}");
+        __builder.AddAttribute(2, "oncontextmenu", EventCallback.Factory.Create<MouseEventArgs>(this, e => OpenContextMenu(e, dashboard)));
+        __builder.AddEventPreventDefaultAttribute(3, "oncontextmenu", true);
+        __builder.OpenElement(4, "button");
+        __builder.AddAttribute(5, "onclick", EventCallback.Factory.Create(this, () => SelectDashboard(dashboard.Id)));
+        __builder.AddAttribute(6, "class", $"flex-1 flex items-center gap-3 px-3 py-2 text-sm font-medium {(Collapsed ? "justify-center" : "")} {(isActive ? "text-blue-600 dark:text-blue-400" : "text-slate-700 dark:text-slate-300")}");
+        __builder.AddAttribute(7, "title", dashboard.Name);
+        __builder.AddMarkupContent(8, """<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>""");
+        if (!Collapsed)
+        {
+            __builder.OpenElement(9, "span");
+            __builder.AddAttribute(10, "class", "truncate");
+            __builder.AddContent(11, dashboard.Name);
+            __builder.CloseElement();
+        }
+        __builder.CloseElement(); // button
+
+        if (!Collapsed && canShare)
+        {
+            __builder.OpenElement(12, "button");
+            __builder.AddAttribute(13, "onclick", EventCallback.Factory.Create(this, () => OpenShareDialog(dashboard)));
+            __builder.AddAttribute(14, "onclick:stopPropagation", true);
+            __builder.AddAttribute(15, "title", "Share dashboard");
+            __builder.AddAttribute(16, "class", $"p-1 mr-1 rounded opacity-30 group-hover:opacity-100 transition-opacity {(dashboard.Visibility == "Shared" ? "text-blue-500 dark:text-blue-400" : "text-slate-400 dark:text-slate-500")} hover:text-slate-700 dark:hover:text-slate-200");
+            if (dashboard.Visibility == "Shared")
+            {
+                __builder.AddMarkupContent(17, """<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>""");
+            }
+            else
+            {
+                __builder.AddMarkupContent(17, """<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>""");
+            }
+            __builder.CloseElement(); // share button
+        }
+
+        __builder.CloseElement(); // outer div
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        DashboardService.StateChanged += OnStateChanged;
+        SearchService.SearchChanged += OnStateChanged;
+        Navigation.LocationChanged += OnLocationChanged;
+        _currentUser = await AuthService.GetCurrentUserAsync();
+    }
+
+    private void OnStateChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+        => InvokeAsync(StateHasChanged);
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        SearchService.SetSearchQuery(e.Value?.ToString() ?? "");
+    }
+
+    private void ClearSearch()
+    {
+        SearchService.SetSearchQuery("");
+    }
+
+    private void SelectDashboard(string id)
+    {
+        DashboardService.SetActiveDashboard(id);
+        if (!Navigation.Uri.EndsWith("/") && Navigation.ToBaseRelativePath(Navigation.Uri) != "")
+            Navigation.NavigateTo("/");
+    }
+
+    private void OpenShareDialog(Dashboard dashboard)
+    {
+        _shareDashboard = dashboard;
+        _shareDialogOpen = true;
+    }
+
+    private void CloseShareDialog()
+    {
+        _shareDialogOpen = false;
+        _shareDashboard = null;
+    }
+
+    // ── Dashboard dialog ───────────────────────────────────────────────────────
+
+    private void OpenCreateDialog()
+    {
+        _newDashboardName = "";
+        _showCreateDialog = true;
+    }
+
+    private void CloseCreateDialog() => _showCreateDialog = false;
+
+    private async Task CreateDashboard()
+    {
+        if (!string.IsNullOrWhiteSpace(_newDashboardName))
+        {
+            await DashboardService.CreateDashboardAsync(_newDashboardName.Trim());
+            Toast.ShowSuccess("Dashboard created successfully!");
+            CloseCreateDialog();
+        }
+    }
+
+    private async Task HandleCreateKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await CreateDashboard();
+        else if (e.Key == "Escape") CloseCreateDialog();
+    }
+
+    // ── Context menu ───────────────────────────────────────────────────────────
+
+    private void OpenContextMenu(MouseEventArgs e, Dashboard dashboard)
+    {
+        _contextMenuX = e.ClientX;
+        _contextMenuY = e.ClientY;
+        _contextMenuDashboard = dashboard;
+        _contextMenuOpen = true;
+    }
+
+    private void CloseContextMenu()
+    {
+        _contextMenuOpen = false;
+        _contextMenuDashboard = null;
+    }
+
+    private void ContextMenuShare()
+    {
+        if (_contextMenuDashboard is not null)
+        {
+            OpenShareDialog(_contextMenuDashboard);
+        }
+        CloseContextMenu();
+    }
+
+    private void ContextMenuDelete()
+    {
+        if (_contextMenuDashboard is not null && DashboardService.Dashboards.Count > 1)
+        {
+            _showDeleteConfirm = true;
+        }
+        CloseContextMenu();
+    }
+
+    private async Task DeleteDashboard()
+    {
+        if (_contextMenuDashboard is not null)
+        {
+            await DashboardService.DeleteDashboardAsync(_contextMenuDashboard.Id);
+            Toast.ShowSuccess("Dashboard deleted");
+        }
+        _showDeleteConfirm = false;
+        _contextMenuDashboard = null;
+    }
+
+    public void Dispose()
+    {
+        DashboardService.StateChanged -= OnStateChanged;
+        SearchService.SearchChanged -= OnStateChanged;
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+}

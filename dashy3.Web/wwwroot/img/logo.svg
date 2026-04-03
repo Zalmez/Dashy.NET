@@ -1,0 +1,84 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+
+  <defs>
+    <!-- Background gradient -->
+    <radialGradient id="spaceGrad" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#1e2a78"/>
+      <stop offset="60%" stop-color="#0b0f2d"/>
+      <stop offset="100%" stop-color="#02030a"/>
+    </radialGradient>
+
+    <!-- Swoosh gradient -->
+    <linearGradient id="swooshGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4facfe"/>
+      <stop offset="100%" stop-color="#8f5cff"/>
+    </linearGradient>
+
+    <!-- Planet gradient -->
+    <radialGradient id="planetGrad">
+      <stop offset="0%" stop-color="#9b7cff"/>
+      <stop offset="100%" stop-color="#3b2a82"/>
+    </radialGradient>
+
+    <!-- Glow -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+  </defs>
+
+  <!-- Background -->
+  <rect x="0" y="0" width="512" height="512" rx="110" fill="url(#spaceGrad)"/>
+
+  <!-- Stars -->
+  <g fill="white" opacity="0.8">
+    <circle cx="60" cy="80" r="1.5"/>
+    <circle cx="120" cy="40" r="1"/>
+    <circle cx="450" cy="120" r="1.5"/>
+    <circle cx="390" cy="60" r="1"/>
+    <circle cx="420" cy="320" r="1.2"/>
+    <circle cx="80" cy="420" r="1.3"/>
+  </g>
+
+  <!-- Planet -->
+  <circle cx="420" cy="90" r="30" fill="url(#planetGrad)" filter="url(#glow)"/>
+
+  <!-- Dashboard card -->
+  <rect x="140" y="140" width="240" height="180" rx="20" fill="#12162e"/>
+
+  <!-- Graph widget -->
+  <rect x="250" y="160" width="110" height="40" rx="10" fill="#1d2245"/>
+  <polyline points="260,185 280,170 300,180 320,165 340,175"
+            fill="none"
+            stroke="#3df07f"
+            stroke-width="3"/>
+
+  <!-- Weather widget -->
+  <rect x="180" y="210" width="90" height="40" rx="10" fill="#1d2245"/>
+  <circle cx="205" cy="225" r="7" fill="#ffc857"/>
+  <ellipse cx="220" cy="235" rx="10" ry="6" fill="#e8eefc"/>
+
+  <!-- RSS widget -->
+  <rect x="280" y="210" width="80" height="50" rx="10" fill="#1d2245"/>
+  <circle cx="295" cy="245" r="3" fill="#ff9f43"/>
+  <path d="M295 235 A15 15 0 0 1 310 250" stroke="#ff9f43" stroke-width="3" fill="none"/>
+  <path d="M295 225 A25 25 0 0 1 320 250" stroke="#ff9f43" stroke-width="3" fill="none"/>
+
+  <!-- Left stacked widgets -->
+  <rect x="110" y="170" width="28" height="28" rx="6" fill="#4facfe"/>
+  <rect x="110" y="205" width="38" height="18" rx="5" fill="#ff4d4d"/>
+  <rect x="110" y="230" width="38" height="18" rx="5" fill="#3df07f"/>
+
+  <!-- Swoosh -->
+  <path d="M100 310 C180 380, 330 380, 420 300"
+        stroke="url(#swooshGrad)"
+        stroke-width="18"
+        fill="none"
+        stroke-linecap="round"
+        filter="url(#glow)"/>
+
+</svg>

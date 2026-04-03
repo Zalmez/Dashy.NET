@@ -1,0 +1,77 @@
+@rendermode InteractiveServer
+
+@* Media Widget - music player controls *@
+
+<div class="h-full flex flex-col gap-4">
+    <!-- Album Art -->
+    <div class="flex-1 flex items-center justify-center">
+        <div class="w-32 h-32 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg flex items-center justify-center">
+            @if (_isPlaying)
+            {
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+            }
+            else
+            {
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 text-white ml-1" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+            }
+        </div>
+    </div>
+
+    <!-- Track Info -->
+    <div class="text-center">
+        <h4 class="font-semibold text-slate-900 dark:text-white">Current Track Name</h4>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Artist Name</p>
+    </div>
+
+    <!-- Progress -->
+    <div class="space-y-1">
+        <input type="range" class="w-full accent-purple-500" min="0" max="100" @bind="_progress" @bind:event="oninput" />
+        <div class="flex justify-between text-xs text-slate-500 dark:text-slate-400">
+            <span>@FormatTime(_progress)</span>
+            <span>3:45</span>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="flex items-center justify-center gap-4">
+        <button class="p-2 rounded-full text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="19,20 9,12 19,4"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+        </button>
+        <button class="w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white flex items-center justify-center shadow-md transition-all"
+                @onclick="TogglePlay">
+            @if (_isPlaying)
+            {
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+            }
+            else
+            {
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 ml-0.5" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+            }
+        </button>
+        <button class="p-2 rounded-full text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5,4 15,12 5,20"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+        </button>
+    </div>
+
+    <!-- Volume -->
+    <div class="flex items-center gap-3">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        <input type="range" class="flex-1 accent-purple-500" min="0" max="100" @bind="_volume" @bind:event="oninput" />
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Widget Widget { get; set; } = default!;
+
+    private bool _isPlaying;
+    private int _progress = 35;
+    private int _volume = 70;
+
+    private void TogglePlay() => _isPlaying = !_isPlaying;
+
+    private static string FormatTime(int percent)
+    {
+        var totalSeconds = (int)(percent / 100.0 * 225); // 3:45 total
+        return $"{totalSeconds / 60}:{(totalSeconds % 60):D2}";
+    }
+}

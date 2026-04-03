@@ -1,0 +1,153 @@
+@* Weather Widget - displays current weather conditions *@
+@inject IHttpClientFactory HttpClientFactory
+
+<div class="h-full flex flex-col">
+    @if (_loading)
+    {
+        <div class="flex-1 flex items-center justify-center text-slate-400 dark:text-slate-500">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+            </svg>
+        </div>
+    }
+    else if (_error != null)
+    {
+        <div class="flex-1 flex flex-col items-center justify-center text-center px-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-red-400 mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <div class="text-sm text-red-500 dark:text-red-400">@_error</div>
+            <div class="text-xs text-slate-400 mt-1">@_location</div>
+        </div>
+    }
+    else
+    {
+        <!-- Current weather -->
+        <div class="flex-1 flex flex-col items-center justify-center">
+            @WeatherIcon(_weatherCode)
+            <div class="text-5xl font-bold text-slate-900 dark:text-white mb-2">@_temperature°@_unit</div>
+            <div class="text-lg text-slate-600 dark:text-slate-400 mb-1">@_description</div>
+            <div class="text-sm text-slate-500 dark:text-slate-500">@_location</div>
+        </div>
+
+        <!-- Weather details -->
+        <div class="grid grid-cols-3 gap-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+            <div class="flex flex-col items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-blue-500 mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                <div class="text-xs text-slate-500 dark:text-slate-400">Humidity</div>
+                <div class="text-sm font-semibold text-slate-900 dark:text-white">@_humidity%</div>
+            </div>
+            <div class="flex flex-col items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg>
+                <div class="text-xs text-slate-500 dark:text-slate-400">Wind</div>
+                <div class="text-sm font-semibold text-slate-900 dark:text-white">@_windSpeed km/h</div>
+            </div>
+            <div class="flex flex-col items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+                <div class="text-xs text-slate-500 dark:text-slate-400">Clouds</div>
+                <div class="text-sm font-semibold text-slate-900 dark:text-white">@_cloudCover%</div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Widget Widget { get; set; } = default!;
+
+    private string _location = "";
+    private string _unit = "C";
+    private string _temperature = "--";
+    private string _description = "";
+    private int _humidity;
+    private double _windSpeed;
+    private int _cloudCover;
+    private int _weatherCode;
+    private bool _loading = true;
+    private string? _error;
+
+    private string _lastLocation = "";
+    private string _lastUnit = "";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var loc = Widget.GetConfig("location", "San Francisco");
+        var unit = Widget.GetConfig("unit", "celsius");
+
+        if (loc == _lastLocation && unit == _lastUnit)
+            return;
+
+        _lastLocation = loc;
+        _lastUnit = unit;
+        _location = loc;
+        _unit = string.Equals(unit, "fahrenheit", StringComparison.OrdinalIgnoreCase) ? "F" : "C";
+
+        _loading = true;
+        _error = null;
+
+        try
+        {
+            var http = HttpClientFactory.CreateClient("dashboards-api");
+            var url = $"/api/weather?location={Uri.EscapeDataString(loc)}&unit={Uri.EscapeDataString(unit)}";
+            var result = await http.GetFromJsonAsync<WeatherResult>(url);
+
+            if (result is not null)
+            {
+                _location = result.Location;
+                _temperature = result.Temperature.ToString("0.#");
+                _unit = result.TemperatureUnit;
+                _description = result.Description;
+                _humidity = result.Humidity;
+                _windSpeed = result.WindSpeed;
+                _cloudCover = result.CloudCover;
+                _weatherCode = result.WeatherCode;
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Could not load weather data: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static RenderFragment WeatherIcon(int code) => builder =>
+    {
+        if (code == 0 || code == 1)
+        {
+            // Sunny
+            builder.AddMarkupContent(0, """<svg xmlns="http://www.w3.org/2000/svg" class="w-20 h-20 text-yellow-500 mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>""");
+        }
+        else if (code >= 71 && code <= 77)
+        {
+            // Snow
+            builder.AddMarkupContent(0, """<svg xmlns="http://www.w3.org/2000/svg" class="w-20 h-20 text-blue-200 mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="2" x2="12" y2="22"/><line x1="12" y1="2" x2="8" y2="6"/><line x1="12" y1="2" x2="16" y2="6"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="12" x2="6" y2="8"/><line x1="2" y1="12" x2="6" y2="16"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/><line x1="4.93" y1="4.93" x2="8" y2="7.5"/><line x1="19.07" y1="19.07" x2="16" y2="16.5"/><line x1="4.93" y1="19.07" x2="19.07" y2="4.93"/><line x1="4.93" y1="19.07" x2="8" y2="16.5"/><line x1="19.07" y1="4.93" x2="16" y2="7.5"/></svg>""");
+        }
+        else if (code >= 95)
+        {
+            // Storm
+            builder.AddMarkupContent(0, """<svg xmlns="http://www.w3.org/2000/svg" class="w-20 h-20 text-yellow-400 mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 9"/><polyline points="13 11 9 17 15 17 11 23"/></svg>""");
+        }
+        else if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82))
+        {
+            // Rain
+            builder.AddMarkupContent(0, """<svg xmlns="http://www.w3.org/2000/svg" class="w-20 h-20 text-blue-400 mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="8" y1="19" x2="8" y2="21"/><line x1="8" y1="13" x2="8" y2="15"/><line x1="16" y1="19" x2="16" y2="21"/><line x1="16" y1="13" x2="16" y2="15"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="12" y1="15" x2="12" y2="17"/><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/></svg>""");
+        }
+        else
+        {
+            // Cloudy (2-3, fog, default)
+            builder.AddMarkupContent(0, """<svg xmlns="http://www.w3.org/2000/svg" class="w-20 h-20 text-slate-400 mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>""");
+        }
+    };
+
+    private record WeatherResult(
+        string Location,
+        double Temperature,
+        string TemperatureUnit,
+        string Description,
+        int Humidity,
+        double WindSpeed,
+        int CloudCover,
+        int WeatherCode);
+}

@@ -1,0 +1,315 @@
+@page "/api-keys"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using System.Net.Http.Json
+@using System.Security.Claims
+@inject IHttpClientFactory HttpClientFactory
+@inject IAuthService AuthService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JS
+
+<PageTitle>API Keys — dashy3</PageTitle>
+
+<div class="p-6 max-w-5xl">
+    <div class="flex items-center justify-between mb-1">
+        <h1 class="text-2xl font-bold text-slate-900 dark:text-white">API Keys</h1>
+        <button @onclick="() => _showCreate = !_showCreate"
+                class="bg-[#7c5cbf] hover:bg-[#6a4da8] text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors">
+            @(_showCreate ? "Cancel" : "Create New Key")
+        </button>
+    </div>
+    <p class="text-slate-500 dark:text-[#8b8b9e] text-sm mb-6">Manage API keys for programmatic access to your dashboards</p>
+
+    <!-- Create form (slide-down) -->
+    @if (_showCreate)
+    {
+        <div class="bg-white dark:bg-[#1a1a2e] border border-slate-200 dark:border-[#2a2a3e] rounded-xl p-5 mb-6">
+            <h3 class="text-base font-semibold text-slate-900 dark:text-white mb-4">Create New API Key</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Name <span class="text-red-400">*</span></label>
+                    <input type="text" @bind="_createName" placeholder="e.g. CI Pipeline Key"
+                           class="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7c5cbf]" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Expires in</label>
+                    <select @bind="_createExpiry"
+                            class="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7c5cbf]">
+                        <option value="never">No expiry</option>
+                        <option value="30">30 days</option>
+                        <option value="90">90 days</option>
+                        <option value="365">1 year</option>
+                    </select>
+                </div>
+            </div>
+
+            @if (_isAdmin)
+            {
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" id="globalToggle" @bind="_createIsGlobal"
+                               class="w-4 h-4 rounded border-slate-300 text-[#7c5cbf] focus:ring-[#7c5cbf]" />
+                        <label for="globalToggle" class="text-sm font-medium text-slate-700 dark:text-slate-300">Global key (access all dashboards)</label>
+                    </div>
+                    @if (!_createIsGlobal)
+                    {
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Allowed Dashboard IDs</label>
+                            <input type="text" @bind="_createAllowedIds" placeholder="id1, id2, id3"
+                                   class="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7c5cbf]" />
+                            <p class="text-xs text-slate-500 dark:text-[#8b8b9e] mt-1">Comma-separated dashboard IDs</p>
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (_createError is not null)
+            {
+                <p class="text-red-400 text-sm mb-3">@_createError</p>
+            }
+
+            <button @onclick="CreateKeyAsync" disabled="@_creating"
+                    class="bg-[#7c5cbf] hover:bg-[#6a4da8] disabled:opacity-50 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors">
+                @(_creating ? "Creating..." : "Create Key")
+            </button>
+        </div>
+    }
+
+    <!-- New key reveal banner -->
+    @if (_newKey is not null)
+    {
+        <div class="bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700 rounded-xl p-5 mb-6">
+            <div class="flex items-start gap-3 mb-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <div>
+                    <p class="text-sm font-semibold text-amber-800 dark:text-amber-200">This key will not be shown again. Copy it now.</p>
+                    <p class="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Store it securely — you cannot retrieve it after closing this banner.</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <code class="flex-1 px-3 py-2 bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 rounded-lg text-sm font-mono text-slate-900 dark:text-white break-all">@_newKey.Key</code>
+                <button @onclick="CopyNewKey"
+                        class="flex-shrink-0 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium transition-colors">
+                    @(_keyCopied ? "Copied!" : "Copy")
+                </button>
+            </div>
+            <button @onclick="() => _newKey = null" class="mt-3 text-xs text-amber-600 dark:text-amber-400 hover:underline">Dismiss</button>
+        </div>
+    }
+
+    <!-- Key list -->
+    @if (_loading)
+    {
+        <p class="text-slate-500 dark:text-[#8b8b9e] text-sm">Loading keys...</p>
+    }
+    else if (_keys.Count == 0)
+    {
+        <div class="bg-white dark:bg-[#1a1a2e] border border-slate-200 dark:border-[#2a2a3e] rounded-xl p-10 text-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 mx-auto mb-3 text-slate-300 dark:text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+            <p class="text-slate-500 dark:text-[#8b8b9e] text-sm">No API keys yet. Create one to get started.</p>
+        </div>
+    }
+    else
+    {
+        <div class="bg-white dark:bg-[#1a1a2e] border border-slate-200 dark:border-[#2a2a3e] rounded-xl overflow-hidden">
+            <table class="w-full text-sm">
+                <thead class="border-b border-slate-200 dark:border-[#2a2a3e]">
+                    <tr class="text-left text-xs font-medium text-slate-500 dark:text-[#8b8b9e] uppercase tracking-wide">
+                        <th class="px-4 py-3">Name</th>
+                        <th class="px-4 py-3">Prefix</th>
+                        <th class="px-4 py-3 hidden sm:table-cell">Created</th>
+                        <th class="px-4 py-3 hidden md:table-cell">Expires</th>
+                        <th class="px-4 py-3 hidden lg:table-cell">Last Used</th>
+                        @if (_isAdmin)
+                        {
+                            <th class="px-4 py-3 hidden xl:table-cell">Global</th>
+                        }
+                        <th class="px-4 py-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-[#2a2a3e]">
+                    @foreach (var key in _keys)
+                    {
+                        <tr class="hover:bg-slate-50 dark:hover:bg-[#16162a] transition-colors">
+                            <td class="px-4 py-3 font-medium text-slate-900 dark:text-white">@key.Name</td>
+                            <td class="px-4 py-3">
+                                <code class="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono text-slate-700 dark:text-slate-300">@key.Prefix…</code>
+                            </td>
+                            <td class="px-4 py-3 text-slate-500 dark:text-[#8b8b9e] hidden sm:table-cell">@key.CreatedAt.ToString("MMM d, yyyy")</td>
+                            <td class="px-4 py-3 hidden md:table-cell">
+                                @if (key.ExpiresAt.HasValue)
+                                {
+                                    var expired = key.ExpiresAt.Value < DateTime.UtcNow;
+                                    <span class="@(expired ? "text-red-400" : "text-slate-500 dark:text-[#8b8b9e]")">
+                                        @(expired ? "Expired " : "")@key.ExpiresAt.Value.ToString("MMM d, yyyy")
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-slate-400 dark:text-slate-600">Never</span>
+                                }
+                            </td>
+                            <td class="px-4 py-3 text-slate-500 dark:text-[#8b8b9e] hidden lg:table-cell">
+                                @(key.LastUsedAt.HasValue ? key.LastUsedAt.Value.ToString("MMM d, yyyy") : "—")
+                            </td>
+                            @if (_isAdmin)
+                            {
+                                <td class="px-4 py-3 hidden xl:table-cell">
+                                    @if (key.IsGlobal)
+                                    {
+                                        <span class="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-xs font-medium">Global</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-slate-400 dark:text-slate-600 text-xs">User</span>
+                                    }
+                                </td>
+                            }
+                            <td class="px-4 py-3">
+                                @if (_confirmDeleteId == key.Id)
+                                {
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-slate-500 dark:text-[#8b8b9e]">Revoke?</span>
+                                        <button @onclick="() => DeleteKeyAsync(key.Id)"
+                                                class="bg-red-500 hover:bg-red-600 text-white rounded-lg px-3 py-1.5 text-xs font-medium transition-colors">Yes</button>
+                                        <button @onclick="() => _confirmDeleteId = null"
+                                                class="px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">No</button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <button @onclick="() => _confirmDeleteId = key.Id"
+                                            class="bg-red-500 hover:bg-red-600 text-white rounded-lg px-3 py-1.5 text-sm transition-colors">Revoke</button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private bool _loading = true;
+    private bool _showCreate;
+    private bool _creating;
+    private bool _isAdmin;
+    private string? _currentUserId;
+    private string _createName = "";
+    private string _createExpiry = "never";
+    private bool _createIsGlobal;
+    private string _createAllowedIds = "";
+    private string? _createError;
+    private ApiKeyCreated? _newKey;
+    private bool _keyCopied;
+    private string? _confirmDeleteId;
+    private List<ApiKeyItem> _keys = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _currentUserId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var user = await AuthService.GetCurrentUserAsync();
+        _isAdmin = user?.IsAdmin == true;
+        await LoadKeysAsync();
+    }
+
+    private HttpClient GetClient()
+    {
+        var client = HttpClientFactory.CreateClient("dashboards-api");
+        client.DefaultRequestHeaders.Remove("X-User-Id");
+        if (!string.IsNullOrEmpty(_currentUserId))
+            client.DefaultRequestHeaders.Add("X-User-Id", _currentUserId);
+        return client;
+    }
+
+    private async Task LoadKeysAsync()
+    {
+        _loading = true;
+        try
+        {
+            var keys = await GetClient().GetFromJsonAsync<List<ApiKeyItem>>("/api/keys");
+            _keys = keys ?? [];
+        }
+        catch { _keys = []; }
+        finally { _loading = false; }
+    }
+
+    private async Task CreateKeyAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_createName))
+        {
+            _createError = "Name is required.";
+            return;
+        }
+        _creating = true;
+        _createError = null;
+        try
+        {
+            DateTime? expiresAt = _createExpiry switch
+            {
+                "30" => DateTime.UtcNow.AddDays(30),
+                "90" => DateTime.UtcNow.AddDays(90),
+                "365" => DateTime.UtcNow.AddDays(365),
+                _ => null
+            };
+
+            var allowedIds = string.IsNullOrWhiteSpace(_createAllowedIds)
+                ? null
+                : _createAllowedIds.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+
+            var body = new
+            {
+                name = _createName.Trim(),
+                expiresAt,
+                isGlobal = _isAdmin && _createIsGlobal,
+                allowedDashboardIds = (_isAdmin && !_createIsGlobal) ? allowedIds : null
+            };
+
+            var res = await GetClient().PostAsJsonAsync("/api/keys", body);
+            if (res.IsSuccessStatusCode)
+            {
+                _newKey = await res.Content.ReadFromJsonAsync<ApiKeyCreated>();
+                _keyCopied = false;
+                _createName = "";
+                _createExpiry = "never";
+                _createIsGlobal = false;
+                _createAllowedIds = "";
+                _showCreate = false;
+                await LoadKeysAsync();
+            }
+            else
+            {
+                _createError = $"Failed to create key ({(int)res.StatusCode}).";
+            }
+        }
+        catch (Exception ex) { _createError = ex.Message; }
+        finally { _creating = false; }
+    }
+
+    private async Task DeleteKeyAsync(string id)
+    {
+        try
+        {
+            var res = await GetClient().DeleteAsync($"/api/keys/{id}");
+            if (res.IsSuccessStatusCode)
+                _keys.RemoveAll(k => k.Id == id);
+        }
+        catch { }
+        finally { _confirmDeleteId = null; }
+    }
+
+    private async Task CopyNewKey()
+    {
+        if (_newKey is null) return;
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", _newKey.Key);
+        _keyCopied = true;
+        StateHasChanged();
+        await Task.Delay(2000);
+        _keyCopied = false;
+    }
+
+    private record ApiKeyCreated(string Id, string Name, string Key, string Prefix, DateTime CreatedAt, DateTime? ExpiresAt);
+    private record ApiKeyItem(string Id, string Name, string Prefix, DateTime CreatedAt, DateTime? ExpiresAt, DateTime? LastUsedAt, bool IsGlobal, List<string>? AllowedDashboardIds);
+}

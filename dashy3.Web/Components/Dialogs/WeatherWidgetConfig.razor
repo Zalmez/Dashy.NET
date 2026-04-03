@@ -1,0 +1,63 @@
+@* Weather widget configuration fields *@
+
+<!-- Location -->
+<div class="mb-4">
+    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+        Location <span class="text-red-500">*</span>
+    </label>
+    <input type="text"
+           class="input-field @(_locationError ? "border-red-500 focus:ring-red-500" : "")"
+           placeholder="e.g. London, New York, Tokyo"
+           value="@Location"
+           @oninput="OnLocationInput"
+           @onblur="ValidateLocation" />
+    @if (_locationError)
+    {
+        <p class="text-xs text-red-500 mt-1">Please enter a location</p>
+    }
+</div>
+
+<!-- Unit -->
+<div class="mb-4">
+    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Temperature Unit</label>
+    <div class="flex gap-3">
+        <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="unit_@_id" value="celsius"
+                   checked="@(Unit == "celsius")"
+                   @onchange="SetCelsius"
+                   class="accent-blue-600" />
+            <span class="text-sm text-slate-700 dark:text-slate-300">°C &nbsp;Celsius</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="unit_@_id" value="fahrenheit"
+                   checked="@(Unit == "fahrenheit")"
+                   @onchange="SetFahrenheit"
+                   class="accent-blue-600" />
+            <span class="text-sm text-slate-700 dark:text-slate-300">°F &nbsp;Fahrenheit</span>
+        </label>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Location { get; set; } = "";
+    [Parameter] public EventCallback<string> LocationChanged { get; set; }
+    [Parameter] public string Unit { get; set; } = "celsius";
+    [Parameter] public EventCallback<string> UnitChanged { get; set; }
+
+    private bool _locationError;
+    private readonly string _id = Guid.NewGuid().ToString("N")[..6];
+
+    private async Task OnLocationInput(ChangeEventArgs e)
+    {
+        _locationError = false;
+        await LocationChanged.InvokeAsync(e.Value?.ToString() ?? "");
+    }
+
+    private void ValidateLocation()
+    {
+        _locationError = string.IsNullOrWhiteSpace(Location);
+    }
+
+    private Task SetCelsius(ChangeEventArgs _) => UnitChanged.InvokeAsync("celsius");
+    private Task SetFahrenheit(ChangeEventArgs _) => UnitChanged.InvokeAsync("fahrenheit");
+}

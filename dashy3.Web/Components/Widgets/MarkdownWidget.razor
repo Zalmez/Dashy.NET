@@ -1,0 +1,55 @@
+@inject IDashboardService DashboardService
+@rendermode InteractiveServer
+
+@* Markdown Widget - view/edit markdown content using Markdig *@
+
+@if (_isEditing || Widget.IsBeingEdited)
+{
+    <div class="h-full flex flex-col gap-3">
+        <textarea class="flex-1 w-full p-3 text-sm font-mono bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Write your markdown here..."
+                  @bind="_content"
+                  @bind:event="oninput"></textarea>
+        <button class="w-full flex items-center justify-center gap-2 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+                @onclick="Save">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg>
+            Save Changes
+        </button>
+    </div>
+}
+else
+{
+    <div class="h-full overflow-auto prose prose-sm dark:prose-invert max-w-none cursor-text"
+         @onclick="StartEditing">
+        @((MarkupString)_renderedHtml)
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public Widget Widget { get; set; } = default!;
+
+    private string _content = "";
+    private string _renderedHtml = "";
+    private bool _isEditing;
+
+    protected override void OnParametersSet()
+    {
+        _content = Widget.GetConfig("content", "# Welcome\n\nClick to edit this markdown widget.");
+        RenderMarkdown();
+    }
+
+    private void RenderMarkdown()
+    {
+        _renderedHtml = Markdig.Markdown.ToHtml(_content);
+    }
+
+    private void StartEditing() => _isEditing = true;
+
+    private async Task Save()
+    {
+        Widget.Config["content"] = _content;
+        await DashboardService.SaveWidgetAsync(Widget);
+        RenderMarkdown();
+        _isEditing = false;
+    }
+}

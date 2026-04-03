@@ -1,0 +1,62 @@
+@* Link Widget - displays a clickable link button with description *@
+
+<div class="flex flex-col items-center justify-center @(IsSmall ? "gap-2 py-2" : "gap-4 py-4")">
+    <a href="@_url" target="_blank" rel="noopener noreferrer"
+       class="w-full @GetButtonClass()">
+        @if (!IsSmall)
+        {
+            @if (!string.IsNullOrEmpty(_faviconUrl) && !_faviconError)
+            {
+                <img src="@_faviconUrl" class="w-10 h-10 rounded-lg object-contain bg-white p-1"
+                     alt="@_title"
+                     @onerror="() => _faviconError = true" />
+            }
+            else
+            {
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            }
+        }
+        <span class="@(IsSmall ? "text-sm" : "")">Open @_title</span>
+        @if (IsSmall)
+        {
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        }
+    </a>
+    @if (!string.IsNullOrEmpty(_description) && !IsSmall)
+    {
+        <p class="text-sm text-slate-600 dark:text-slate-400 text-center">@_description</p>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Widget Widget { get; set; } = default!;
+
+    private string _url = "#";
+    private string _title = "";
+    private string _description = "";
+    private string _faviconUrl = "";
+    private bool _faviconError = false;
+
+    private bool IsSmall => Widget.Size == WidgetSize.Small;
+
+    private string GetButtonClass() => IsSmall
+        ? "max-w-xs h-12 flex items-center justify-center gap-2 text-sm font-medium rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white transition-all shadow-sm hover:shadow-md px-4"
+        : "max-w-xs h-20 flex items-center justify-center gap-3 text-base font-semibold rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white transition-all shadow-md hover:shadow-lg px-4";
+
+    protected override void OnParametersSet()
+    {
+        _url = Widget.GetConfig("url", "https://example.com");
+        _title = Widget.Title;
+        _description = Widget.GetConfig("description", "");
+        _faviconError = false;
+
+        if (Uri.TryCreate(_url, UriKind.Absolute, out var uri))
+        {
+            _faviconUrl = $"https://www.google.com/s2/favicons?domain={uri.Host}&sz=64";
+        }
+        else
+        {
+            _faviconUrl = "";
+        }
+    }
+}

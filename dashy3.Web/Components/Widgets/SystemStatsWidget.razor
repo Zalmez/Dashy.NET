@@ -1,0 +1,106 @@
+@* System Stats Widget - displays live system stats fetched from /api/stats every 10 seconds *@
+@inject IHttpClientFactory HttpClientFactory
+@implements IAsyncDisposable
+@using System.Net.Http.Json
+
+<div class="h-full flex flex-col gap-4">
+    <!-- Memory heading -->
+    <div class="bg-slate-50 dark:bg-slate-900 rounded-lg p-3">
+        <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Memory</div>
+        <div class="text-xl font-bold text-slate-900 dark:text-white">
+            @(_stats is null ? "---" : $"{_stats.MemoryUsedMb / 1024.0:F1} GB / {_stats.MemoryTotalMb / 1024.0:F1} GB")
+        </div>
+        <!-- Memory progress bar -->
+        <div class="mt-2 h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+            <div class="h-full rounded-full transition-all duration-500 @MemBarColor"
+                 style="width: @(_stats is null ? "0" : $"{Math.Min(_stats.MemoryPercent, 100):F0}")%"></div>
+        </div>
+        <div class="text-xs text-slate-400 mt-1">@(_stats is null ? "---" : $"{_stats.MemoryPercent:F1}% used")</div>
+    </div>
+
+    <!-- Secondary stats row -->
+    <div class="grid grid-cols-3 gap-3">
+        <div class="bg-slate-50 dark:bg-slate-900 rounded-lg p-3">
+            <div class="text-xs text-slate-500 dark:text-slate-400">Uptime</div>
+            <div class="text-lg font-bold text-slate-900 dark:text-white">
+                @(_stats is null ? "---" : $"{_stats.UptimeHours:F1}h")
+            </div>
+        </div>
+        <div class="bg-slate-50 dark:bg-slate-900 rounded-lg p-3">
+            <div class="text-xs text-slate-500 dark:text-slate-400">Processes</div>
+            <div class="text-lg font-bold text-slate-900 dark:text-white">
+                @(_stats is null ? "---" : _stats.ProcessCount.ToString())
+            </div>
+        </div>
+        <div class="bg-slate-50 dark:bg-slate-900 rounded-lg p-3">
+            <div class="text-xs text-slate-500 dark:text-slate-400">CPU Cores</div>
+            <div class="text-lg font-bold text-slate-900 dark:text-white">
+                @(_stats is null ? "---" : _stats.ProcessorCount.ToString())
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Widget Widget { get; set; } = default!;
+
+    private SystemStats? _stats;
+    private PeriodicTimer? _timer;
+    private CancellationTokenSource _cts = new();
+
+    private string MemBarColor => _stats?.MemoryPercent switch
+    {
+        > 80 => "bg-red-500",
+        > 60 => "bg-yellow-400",
+        _ => "bg-green-500"
+    };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        await FetchStatsAsync();
+        StateHasChanged();
+
+        _timer = new PeriodicTimer(TimeSpan.FromSeconds(10));
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                while (await _timer.WaitForNextTickAsync(_cts.Token))
+                {
+                    await FetchStatsAsync();
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+            catch (OperationCanceledException) { }
+        });
+    }
+
+    private async Task FetchStatsAsync()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient("dashboards-api");
+            _stats = await client.GetFromJsonAsync<SystemStats>("/api/stats", _cts.Token);
+        }
+        catch { /* keep showing last known stats */ }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _cts.CancelAsync();
+        _timer?.Dispose();
+        _cts.Dispose();
+    }
+
+    private sealed class SystemStats
+    {
+        public double MemoryUsedMb { get; set; }
+        public double MemoryTotalMb { get; set; }
+        public double MemoryPercent { get; set; }
+        public double UptimeHours { get; set; }
+        public int ProcessCount { get; set; }
+        public int ProcessorCount { get; set; }
+    }
+}

@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\dashy3.ServiceDefaults\dashy3.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.StackExchange.Redis.OutputCaching" Version="13.2.1" />
+    <PackageReference Include="Markdig" Version="0.40.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.5" />
+  </ItemGroup>
+
+  <!-- Tailwind CSS Build -->
+  <PropertyGroup>
+    <NpmInstallStampFile>$(BaseIntermediateOutputPath).npm-install.stamp</NpmInstallStampFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Exclude node_modules from the build -->
+    <Content Remove="node_modules\**" />
+    <None Remove="node_modules\**" />
+  </ItemGroup>
+
+  <Target Name="NpmInstall" BeforeTargets="BeforeBuild" Inputs="package.json" Outputs="$(NpmInstallStampFile)">
+    <Exec Command="npm install" WorkingDirectory="$(ProjectDir)" />
+    <Touch Files="$(NpmInstallStampFile)" AlwaysCreate="true" />
+  </Target>
+
+  <Target Name="TailwindBuild" AfterTargets="NpmInstall" BeforeTargets="BeforeBuild">
+    <MakeDir Directories="$(ProjectDir)wwwroot\css" Condition="!Exists('$(ProjectDir)wwwroot\css')" />
+    <Exec Command="npx @tailwindcss/cli -i ./Styles/app.tailwind.css -o ./wwwroot/css/app.tailwind.css --minify" WorkingDirectory="$(ProjectDir)" Condition="'$(Configuration)' == 'Release'" />
+    <Exec Command="npx @tailwindcss/cli -i ./Styles/app.tailwind.css -o ./wwwroot/css/app.tailwind.css" WorkingDirectory="$(ProjectDir)" Condition="'$(Configuration)' != 'Release'" />
+  </Target>
+
+</Project>

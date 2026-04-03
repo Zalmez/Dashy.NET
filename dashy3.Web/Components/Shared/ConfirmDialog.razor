@@ -1,0 +1,32 @@
+@if (IsVisible)
+{
+    <div class="dialog-overlay" @onclick="HandleOverlayClick">
+        <div class="dialog-box" @onclick:stopPropagation="true">
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Title</h3>
+            <p class="text-sm text-slate-600 dark:text-slate-400 mb-6">@Description</p>
+            <div class="flex gap-3 justify-end">
+                <button class="px-4 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        @onclick="Cancel">
+                    Cancel
+                </button>
+                <button class="px-4 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors"
+                        @onclick="Confirm">
+                    @ConfirmLabel
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public string Title { get; set; } = "Are you sure?";
+    [Parameter] public string Description { get; set; } = "This action cannot be undone.";
+    [Parameter] public string ConfirmLabel { get; set; } = "Confirm";
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private async Task Confirm() => await OnConfirm.InvokeAsync();
+    private async Task Cancel() => await OnCancel.InvokeAsync();
+    private async Task HandleOverlayClick() => await OnCancel.InvokeAsync();
+}

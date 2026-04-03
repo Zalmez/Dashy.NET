@@ -1,0 +1,212 @@
+@* RSS Feed Widget - displays list of RSS feed items with optional auto-scroll *@
+@inject IHttpClientFactory HttpClientFactory
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div id="rss-scroll-@Widget.Id" class="h-full @(_autoScroll ? "overflow-hidden" : "overflow-auto")">
+    @if (_loading)
+    {
+        <div class="flex items-center justify-center h-full text-slate-400">
+            <svg class="animate-spin w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            <span class="text-sm">Loading feed...</span>
+        </div>
+    }
+    else if (_error is not null)
+    {
+        <div class="flex flex-col items-center justify-center h-full text-center px-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-red-400 mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <p class="text-sm text-red-500">@_error</p>
+        </div>
+    }
+    else if (_items.Count == 0)
+    {
+        <div class="flex flex-col items-center justify-center h-full text-center px-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-slate-400 mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1" fill="currentColor"/></svg>
+            <p class="text-sm text-slate-500 dark:text-slate-400">No feed items found.</p>
+        </div>
+    }
+    else
+    {
+        <div class="space-y-3">
+            <!-- Feed title + refresh button -->
+            <div class="flex items-center justify-between gap-2">
+                @if (!string.IsNullOrWhiteSpace(_feedTitle))
+                {
+                    <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide truncate">@_feedTitle</p>
+                }
+                else
+                {
+                    <span></span>
+                }
+                <button @onclick="ManualRefreshAsync"
+                        title="Refresh feed"
+                        class="flex-shrink-0 p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="23,4 23,10 17,10"/><polyline points="1,20 1,14 7,14"/>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                    </svg>
+                </button>
+            </div>
+            @foreach (var item in _items)
+            {
+                <a href="@item.Link" target="_blank" rel="noopener noreferrer"
+                   class="block p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 transition-colors group">
+                    <div class="flex items-start justify-between gap-2 mb-1">
+                        <h4 class="font-medium text-slate-900 dark:text-white group-hover:text-blue-500 transition-colors flex-1 text-sm">@item.Title</h4>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-400 group-hover:text-blue-500 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(item.Description))
+                    {
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mb-1 line-clamp-2">@item.Description</p>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(item.PubDate))
+                    {
+                        <span class="flex items-center gap-1 text-xs text-slate-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+                            @item.PubDate
+                        </span>
+                    }
+                </a>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Widget Widget { get; set; } = default!;
+
+    private bool _loading;
+    private string? _error;
+    private string? _feedTitle;
+    private List<RssItem> _items = [];
+    private bool _autoScroll;
+    private bool _scrollStarted;
+
+    // Track last fetched config to avoid re-fetching on every parent re-render
+    private string _lastUrl = "";
+    private int _lastLimit = -1;
+
+    private readonly CancellationTokenSource _refreshCts = new();
+
+    private record RssItem(string Title, string Link, string Description, string PubDate);
+
+    protected override void OnInitialized()
+    {
+        // Start background auto-refresh loop (every 2 minutes)
+        _ = AutoRefreshLoopAsync(_refreshCts.Token);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var url   = Widget.GetConfig("url", "");
+        var limit = Widget.GetConfig("limit", 10);
+        _autoScroll = Widget.GetConfig("autoScroll", false);
+
+        // Only re-fetch when the feed URL or limit actually changed
+        if (url == _lastUrl && limit == _lastLimit) return;
+
+        _lastUrl   = url;
+        _lastLimit = limit;
+        _scrollStarted = false;
+        await StopScrollAsync();
+        await LoadFeedAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_autoScroll && !_scrollStarted && _items.Count > 0)
+        {
+            _scrollStarted = true;
+            var speed = Widget.GetConfig("scrollSpeed", "medium") switch
+            {
+                "slow" => 20.0,
+                "fast" => 80.0,
+                _      => 40.0
+            };
+            await JS.InvokeVoidAsync("rssAutoScroll.start", Widget.Id, speed);
+        }
+    }
+
+    private async Task LoadFeedAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_lastUrl))
+        {
+            _error = "No feed URL configured. Edit the widget to set a URL.";
+            return;
+        }
+
+        _loading = true;
+        _error   = null;
+        _items   = [];
+        _scrollStarted = false;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("dashboards-api");
+            var response = await client.GetFromJsonAsync<RssFeedResponse>(
+                $"/api/rss?url={Uri.EscapeDataString(_lastUrl)}&limit={_lastLimit}");
+
+            if (response is not null)
+            {
+                _feedTitle = response.Title;
+                _items = response.Items
+                    .Select(i => new RssItem(i.Title, i.Link, i.Description, i.PubDate))
+                    .ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to load feed: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ManualRefreshAsync()
+    {
+        _scrollStarted = false;
+        await StopScrollAsync();
+        await LoadFeedAsync();
+    }
+
+    private async Task AutoRefreshLoopAsync(CancellationToken ct)
+    {
+        try
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromMinutes(2), ct);
+                await InvokeAsync(async () =>
+                {
+                    _scrollStarted = false;
+                    await StopScrollAsync();
+                    await LoadFeedAsync();
+                    StateHasChanged();
+                });
+            }
+        }
+        catch (OperationCanceledException) { /* expected on dispose */ }
+    }
+
+    private async Task StopScrollAsync()
+    {
+        try { await JS.InvokeVoidAsync("rssAutoScroll.stop", Widget.Id); }
+        catch { /* JS may not be available yet */ }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _refreshCts.CancelAsync();
+        _refreshCts.Dispose();
+        await StopScrollAsync();
+    }
+
+    private record RssFeedResponse(string Title, List<RssFeedItem> Items);
+    private record RssFeedItem(string Title, string Link, string Description, string PubDate);
+}
+

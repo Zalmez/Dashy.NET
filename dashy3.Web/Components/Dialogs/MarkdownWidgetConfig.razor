@@ -1,0 +1,23 @@
+@* Markdown widget configuration fields *@
+
+<!-- Content -->
+<div class="mb-4">
+    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+        Initial Content
+        <span class="text-xs font-normal text-slate-400 ml-1">(Markdown supported)</span>
+    </label>
+    <textarea class="input-field font-mono text-xs resize-none"
+              rows="8"
+              placeholder="# My Note&#10;&#10;Start writing **Markdown** here..."
+              value="@Content"
+              @oninput="e => ContentChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)">
+    </textarea>
+    <p class="text-xs text-slate-400 mt-1">
+        Supports headings, <strong>bold</strong>, <em>italic</em>, lists, and code blocks.
+    </p>
+</div>
+
+@code {
+    [Parameter] public string Content { get; set; } = "";
+    [Parameter] public EventCallback<string> ContentChanged { get; set; }
+}

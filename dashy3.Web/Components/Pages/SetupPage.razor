@@ -1,0 +1,314 @@
+@page "/setup"
+@rendermode InteractiveServer
+@layout EmptyLayout
+@using dashy3.Web.Services
+@using dashy3.Web.Models
+@using System.Net.Http.Json
+@inject IAuthService AuthService
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Nav
+
+<PageTitle>Setup — dashy3</PageTitle>
+
+<div class="min-h-screen bg-[#0e0e10] flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+        <!-- Logo -->
+        <div class="text-center mb-8">
+            <div class="w-16 h-16 bg-[#7c5cbf] rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                </svg>
+            </div>
+            <h1 class="text-2xl font-bold text-white">Welcome to dashy3</h1>
+            <p class="text-[#8b8b9e] mt-1 text-sm">Let's get you set up in a few quick steps</p>
+        </div>
+
+        <!-- Card -->
+        <div class="bg-[#1a1a2e] border border-[#2a2a3e] rounded-2xl p-8">
+
+            <!-- Step progress indicator -->
+            <div class="flex items-center justify-center mb-8">
+                @for (int i = 1; i <= 2; i++)
+                {
+                    var stepNum = i;
+                    var isDone = _step > stepNum;
+                    var isActive = _step == stepNum;
+                    <div class="flex items-center @(stepNum < 2 ? "flex-1" : "")">
+                        <div class="flex flex-col items-center">
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors
+                                        @(isDone ? "bg-[#7c5cbf] text-white" : isActive ? "bg-[#7c5cbf] text-white ring-2 ring-[#7c5cbf]/30" : "bg-[#2a2a3e] text-[#8b8b9e]")">
+                                @if (isDone)
+                                {
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                }
+                                else
+                                {
+                                    @stepNum
+                                }
+                            </div>
+                            <span class="text-xs mt-1 @(isActive || isDone ? "text-[#b0b0c3]" : "text-[#4a4a5e]")">
+                                @(stepNum == 1 ? "Account" : "SSO")
+                            </span>
+                        </div>
+                        @if (stepNum < 2)
+                        {
+                            <div class="flex-1 h-px mx-2 mb-4 @(_step > stepNum ? "bg-[#7c5cbf]" : "bg-[#2a2a3e]")"></div>
+                        }
+                    </div>
+                }
+            </div>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+                    @_error
+                </div>
+            }
+
+            <!-- ── Step 1: Admin Account ── -->
+            @if (_step == 1)
+            {
+                <div class="mb-5">
+                    <h2 class="text-base font-semibold text-white">Create Admin Account</h2>
+                    <p class="text-xs text-[#8b8b9e] mt-0.5">This will be the primary administrator account.</p>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-[#b0b0c3] mb-1.5">Display Name</label>
+                        <input @bind="_displayName" type="text" placeholder="Your name"
+                               class="@InputCss" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-[#b0b0c3] mb-1.5">Email</label>
+                        <input @bind="_email" type="email" placeholder="admin@example.com"
+                               class="@InputCss" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-[#b0b0c3] mb-1.5">Password</label>
+                        <input @bind="_password" type="password" placeholder="Minimum 8 characters"
+                               class="@InputCss" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-[#b0b0c3] mb-1.5">Confirm Password</label>
+                        <input @bind="_confirmPassword" type="password" placeholder="Repeat password"
+                               class="@InputCss" />
+                    </div>
+                </div>
+
+                <button type="button" @onclick="HandleStep1" disabled="@_loading"
+                        class="@PrimaryBtnCss mt-6">
+                    @(_loading ? "Creating account..." : "Create Admin Account →")
+                </button>
+            }
+            else if (_step == 2)
+            {
+                <div class="mb-5">
+                    <h2 class="text-base font-semibold text-white">Configure Single Sign-On</h2>
+                    <p class="text-xs text-[#8b8b9e] mt-0.5">Optional — connect an OIDC provider (Authentik, Keycloak, Google, etc.). You can always configure this later in the Admin Panel.</p>
+                </div>
+
+                @if (!_oidcExpanded)
+                {
+                    <div class="rounded-xl border border-[#2a2a3e] bg-[#12121e] p-5 flex items-start gap-4 mb-6">
+                        <div class="w-10 h-10 rounded-lg bg-[#7c5cbf]/20 flex items-center justify-center shrink-0 mt-0.5">
+                            <svg class="w-5 h-5 text-[#7c5cbf]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-white">Enable SSO for your organisation</p>
+                            <p class="text-xs text-[#8b8b9e] mt-1">Let users sign in with your existing identity provider. Recommended for teams.</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-3">
+                        <button type="button" @onclick="() => _oidcExpanded = true"
+                                class="flex-1 bg-[#7c5cbf] hover:bg-[#8d6dd0] text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm">
+                            Configure SSO
+                        </button>
+                        <button type="button" @onclick="FinishSetup"
+                                class="flex-1 bg-[#2a2a3e] hover:bg-[#3a3a4e] text-[#b0b0c3] font-medium py-2.5 px-4 rounded-lg transition-colors text-sm">
+                            Skip & Finish
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-[#b0b0c3] mb-1">Issuer / Authority URL</label>
+                            <input @bind="_oidcAuthority" type="url" placeholder="https://auth.example.com/realms/myrealm"
+                                   class="@InputCss" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-[#b0b0c3] mb-1">Client ID</label>
+                            <input @bind="_oidcClientId" type="text" placeholder="dashy3"
+                                   class="@InputCss" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-[#b0b0c3] mb-1">Client Secret</label>
+                            <input @bind="_oidcClientSecret" type="password" placeholder="••••••••"
+                                   class="@InputCss" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-[#b0b0c3] mb-1">Scopes</label>
+                            <input @bind="_oidcScopes" type="text" placeholder="openid profile email"
+                                   class="@InputCss" />
+                        </div>
+                    </div>
+
+                    <div class="mt-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-400 text-xs">
+                        ⚠️ SSO requires an application restart to take effect after saving.
+                    </div>
+
+                    <div class="flex gap-3 mt-4">
+                        <button type="button" @onclick="HandleStep2Save" disabled="@_loading"
+                                class="flex-1 @PrimaryBtnCss">
+                            @(_loading ? "Saving..." : "Save & Finish →")
+                        </button>
+                        <button type="button" @onclick="FinishSetup" disabled="@_loading"
+                                class="flex-1 bg-[#2a2a3e] hover:bg-[#3a3a4e] text-[#b0b0c3] font-medium py-2.5 px-4 rounded-lg transition-colors text-sm disabled:opacity-50">
+                            Skip
+                        </button>
+                    </div>
+                }
+            }
+
+        </div>
+    </div>
+</div>
+
+@code {
+    // ── Step tracking ──
+    private int _step = 1;
+
+    // ── Step 1 fields ──
+    private string _displayName = "";
+    private string _email = "";
+    private string _password = "";
+    private string _confirmPassword = "";
+
+    // ── Stored after step 1 ──
+    private string? _userId;
+    private string? _sessionToken;
+
+    // ── Step 2 fields ──
+    private bool _oidcExpanded;
+    private string _oidcAuthority = "";
+    private string _oidcClientId = "";
+    private string _oidcClientSecret = "";
+    private string _oidcScopes = "openid profile email";
+
+        // ── Shared state ──
+        private string? _error;
+        private bool _loading;
+
+    // ── CSS helpers ──
+    private const string InputCss = "w-full bg-[#0e0e10] border border-[#2a2a3e] rounded-lg px-3 py-2.5 text-white placeholder-[#4a4a5e] focus:outline-none focus:border-[#7c5cbf] focus:ring-1 focus:ring-[#7c5cbf] text-sm";
+    private const string PrimaryBtnCss = "w-full bg-[#7c5cbf] hover:bg-[#8d6dd0] disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var needsSetup = await AuthService.NeedsSetupAsync();
+        if (!needsSetup)
+            Nav.NavigateTo("/login", forceLoad: true);
+    }
+
+    // ── Step 1: Admin account ──
+    private async Task HandleStep1()
+    {
+        _error = null;
+
+        if (string.IsNullOrWhiteSpace(_displayName)) { _error = "Display name is required."; return; }
+        if (string.IsNullOrWhiteSpace(_email))        { _error = "Email is required."; return; }
+        if (_password.Length < 8)                     { _error = "Password must be at least 8 characters."; return; }
+        if (_password != _confirmPassword)            { _error = "Passwords do not match."; return; }
+
+        _loading = true;
+        var (success, error, sessionToken) = await AuthService.RegisterAsync(_email, _password, _displayName, "Admin");
+        _loading = false;
+
+        if (!success) { _error = error ?? "Setup failed. Please try again."; return; }
+
+                // Store token — we won't navigate to /auth/session until after step 2
+                _sessionToken = sessionToken;
+
+        // Extract userId from the pending session — we need it for authenticated API calls in steps 2 & 3
+        // The easiest approach: login again to get the user id from the API
+        _userId = await GetUserIdAsync();
+
+        _step = 2;
+    }
+
+    // ── Step 2: OIDC — skip and finish ──
+    private void FinishSetup()
+    {
+        Nav.NavigateTo($"/auth/session?token={_sessionToken}&returnUrl=/", forceLoad: true);
+    }
+
+    // ── Step 2: OIDC — save ──
+    private async Task HandleStep2Save()
+    {
+        _error = null;
+
+        if (string.IsNullOrWhiteSpace(_oidcAuthority)) { _error = "Authority URL is required."; return; }
+        if (string.IsNullOrWhiteSpace(_oidcClientId))  { _error = "Client ID is required."; return; }
+        if (string.IsNullOrWhiteSpace(_oidcClientSecret)) { _error = "Client Secret is required."; return; }
+
+        _loading = true;
+        try
+        {
+            var http = GetApiClient();
+            var res = await http.PutAsJsonAsync("/api/settings/oidc", new
+            {
+                authority = _oidcAuthority,
+                clientId = _oidcClientId,
+                clientSecret = _oidcClientSecret,
+                scopes = _oidcScopes,
+                callbackPath = "/signin-oidc",
+                isEnabled = true
+            });
+
+            if (!res.IsSuccessStatusCode)
+            {
+                _error = "Failed to save SSO settings. You can configure this later in Admin Panel.";
+                // Don't block — allow advancing
+            }
+        }
+        catch { /* non-blocking */ }
+        finally { _loading = false; }
+
+        // Finish setup
+        Nav.NavigateTo($"/auth/session?token={_sessionToken}&returnUrl=/", forceLoad: true);
+    }
+
+    // ── Helpers ──
+
+    private HttpClient GetApiClient()
+    {
+        var http = HttpClientFactory.CreateClient("dashboards-api");
+        if (!string.IsNullOrEmpty(_userId))
+            http.DefaultRequestHeaders.Remove("X-User-Id");
+        if (!string.IsNullOrEmpty(_userId))
+            http.DefaultRequestHeaders.Add("X-User-Id", _userId);
+        return http;
+    }
+
+    private async Task<string?> GetUserIdAsync()
+    {
+        try
+        {
+            var http = HttpClientFactory.CreateClient("dashboards-api");
+            var res = await http.PostAsJsonAsync("/api/auth/login", new { email = _email, password = _password });
+            if (!res.IsSuccessStatusCode) return null;
+            var user = await res.Content.ReadFromJsonAsync<UserLoginResponse>();
+            return user?.Id;
+        }
+        catch { return null; }
+    }
+
+    private record UserLoginResponse(string Id, string Email, string DisplayName);
+}

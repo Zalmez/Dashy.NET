@@ -1,0 +1,57 @@
+@* RSS widget configuration fields used inside AddWidgetDialog *@
+
+<!-- Feed URL -->
+<div class="mb-4">
+    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+        Feed URL <span class="text-red-500">*</span>
+    </label>
+    <input type="url"
+           class="input-field @(_urlError ? "border-red-500 focus:ring-red-500" : "")"
+           placeholder="https://example.com/feed.xml"
+           value="@Url"
+           @oninput="OnUrlInput"
+           @onblur="ValidateUrl" />
+    @if (_urlError)
+    {
+        <p class="text-xs text-red-500 mt-1">Please enter a valid absolute URL (e.g. https://feeds.example.com/rss)</p>
+    }
+</div>
+
+<!-- Items limit -->
+<div class="mb-4">
+    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Items to display</label>
+    <select class="input-field" value="@Limit" @onchange="OnLimitChange">
+        <option value="5">5</option>
+        <option value="10">10</option>
+        <option value="15">15</option>
+        <option value="20">20</option>
+    </select>
+</div>
+
+@code {
+    [Parameter] public string Url { get; set; } = "";
+    [Parameter] public EventCallback<string> UrlChanged { get; set; }
+    [Parameter] public int Limit { get; set; } = 10;
+    [Parameter] public EventCallback<int> LimitChanged { get; set; }
+
+    private bool _urlError;
+
+    private async Task OnUrlInput(ChangeEventArgs e)
+    {
+        var val = e.Value?.ToString() ?? "";
+        _urlError = false;
+        await UrlChanged.InvokeAsync(val);
+    }
+
+    private void ValidateUrl()
+    {
+        _urlError = !string.IsNullOrWhiteSpace(Url)
+                    && !Uri.TryCreate(Url, UriKind.Absolute, out _);
+    }
+
+    private async Task OnLimitChange(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var v))
+            await LimitChanged.InvokeAsync(v);
+    }
+}

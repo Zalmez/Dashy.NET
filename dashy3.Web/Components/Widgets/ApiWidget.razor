@@ -1,0 +1,110 @@
+@* API Widget - renders HTML/CSS content pushed via the API *@
+@inject IJSRuntime JS
+
+@{
+    var content = Widget.GetConfig("content", "");
+    var css     = Widget.GetConfig("css", "");
+}
+
+@if (string.IsNullOrWhiteSpace(content))
+{
+    <!-- Placeholder shown when no content has been pushed yet -->
+    <div class="h-full flex flex-col items-center justify-center text-center px-4 gap-4">
+        <div class="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="16,18 22,12 16,6"/><polyline points="8,6 2,12 8,18"/>
+            </svg>
+        </div>
+        <div>
+            <p class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">No content yet</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">Send HTML content to this widget ID via the API using your API key</p>
+            <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-700 rounded-lg px-3 py-2">
+                <code class="text-xs font-mono text-slate-800 dark:text-slate-100 flex-1 select-all break-all">@Widget.Id</code>
+                <button title="Copy widget ID"
+                        class="flex-shrink-0 p-1 rounded-md text-slate-400 hover:text-blue-500 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                        @onclick="CopyWidgetIdAsync">
+                    @if (_copied)
+                    {
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
+                    }
+                    else
+                    {
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    }
+                </button>
+            </div>
+            @if (_copied)
+            {
+                <p class="text-xs text-green-500 mt-1">Copied!</p>
+            }
+        </div>
+    </div>
+}
+else
+{
+    <!-- Scoped CSS: basic scoping — wraps all CSS in the widget container selector -->
+    @if (!string.IsNullOrWhiteSpace(css))
+    {
+        <style>
+            #api-w-@Widget.Id { @css }
+        </style>
+    }
+
+    <div id="api-w-@Widget.Id" class="h-full overflow-auto">
+        @((MarkupString)SanitizedHtml)
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public Widget Widget { get; set; } = default!;
+
+    private bool _copied;
+
+    private string SanitizedHtml =>
+        SanitizeHtml(Widget.GetConfig("content", ""));
+
+    private async Task CopyWidgetIdAsync()
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", Widget.Id);
+        _copied = true;
+        StateHasChanged();
+        await Task.Delay(2000);
+        _copied = false;
+        StateHasChanged();
+    }
+
+    private static string SanitizeHtml(string html)
+    {
+        if (string.IsNullOrEmpty(html)) return html;
+
+        // Remove <script> blocks
+        html = System.Text.RegularExpressions.Regex.Replace(
+            html,
+            @"<script[\s\S]*?</script>",
+            "",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        // Remove dangerous tags (self-closing and open variants)
+        html = System.Text.RegularExpressions.Regex.Replace(
+            html,
+            @"<(iframe|object|embed|form)[\s\S]*?>",
+            "",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        // Remove inline event handlers (on*="..." and on*='...')
+        html = System.Text.RegularExpressions.Regex.Replace(
+            html,
+            @"\bon\w+\s*=\s*([""']).*?\1",
+            "",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        // Remove javascript: URLs in href/src attributes
+        html = System.Text.RegularExpressions.Regex.Replace(
+            html,
+            @"(href|src)\s*=\s*([""'])\s*javascript:[^""']*\2",
+            "",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        return html;
+    }
+}

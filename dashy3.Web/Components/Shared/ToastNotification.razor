@@ -1,0 +1,53 @@
+@inject IToastService ToastService
+@implements IDisposable
+@rendermode InteractiveServer
+
+<div class="toast-container">
+    @foreach (var toast in _toasts)
+    {
+        <div class="toast toast-@toast.Type.ToLower()" @key="toast.Id">
+            <span class="text-lg">@GetIcon(toast.Type)</span>
+            <span>@toast.Message</span>
+            <button class="ml-auto text-current opacity-70 hover:opacity-100" @onclick="() => Remove(toast.Id)">✕</button>
+        </div>
+    }
+</div>
+
+@code {
+    private List<ToastItem> _toasts = [];
+
+    protected override void OnInitialized()
+    {
+        ToastService.OnToast += HandleToast;
+    }
+
+    private async void HandleToast(string message, string type)
+    {
+        var item = new ToastItem(Guid.NewGuid().ToString(), message, type);
+        _toasts.Add(item);
+        await InvokeAsync(StateHasChanged);
+
+        await Task.Delay(4000);
+        _toasts.Remove(item);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void Remove(string id)
+    {
+        _toasts.RemoveAll(t => t.Id == id);
+    }
+
+    private static string GetIcon(string type) => type switch
+    {
+        "Success" => "✓",
+        "Error" => "✕",
+        _ => "ℹ"
+    };
+
+    public void Dispose()
+    {
+        ToastService.OnToast -= HandleToast;
+    }
+
+    private record ToastItem(string Id, string Message, string Type);
+}

@@ -1,0 +1,124 @@
+@inject IDashboardService DashboardService
+@inject ISearchService SearchService
+@implements IDisposable
+
+@* Main dashboard content area with widget grid and sections *@
+
+@if (DashboardService.ActiveDashboard is null)
+{
+    <div class="h-full flex items-center justify-center">
+        <div class="text-center">
+            <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-2">No Dashboard Selected</h2>
+            <p class="text-slate-600 dark:text-slate-400">Create a new dashboard to get started</p>
+        </div>
+    </div>
+}
+else
+{
+    var dashboard = DashboardService.ActiveDashboard;
+    var allWidgets = dashboard.Widgets;
+    var topLevelWidgets = GetFilteredWidgets(dashboard.TopLevelWidgets).OrderBy(w => w.Order).ToList();
+    var layoutClass = GetLayoutClass(dashboard.LayoutMode);
+    var hasSearchQuery = !string.IsNullOrWhiteSpace(SearchService.SearchQuery);
+
+    <div class="h-full overflow-auto p-6">
+        <div class="max-w-screen-2xl mx-auto">
+
+            @* Search results header *@
+            @if (hasSearchQuery)
+            {
+                <div class="mb-4 flex items-center gap-2">
+                    <span class="text-sm text-slate-600 dark:text-slate-400">
+                        Showing results for "<span class="font-medium text-slate-900 dark:text-white">@SearchService.SearchQuery</span>"
+                    </span>
+                    <span class="text-sm text-slate-500">(@topLevelWidgets.Count widget@(topLevelWidgets.Count != 1 ? "s" : "") found)</span>
+                </div>
+            }
+
+            <!-- Top-level widgets (including section widgets) -->
+            <div class="@layoutClass gap-6 mb-6">
+                @foreach (var widget in topLevelWidgets)
+                {
+                    @if (widget.Type == WidgetType.Section)
+                    {
+                        <!-- Render section widget with its children -->
+                        <div class="col-span-full">
+                            <WidgetSection SectionWidget="@widget" AllWidgets="@allWidgets" LayoutClass="@layoutClass" SearchQuery="@SearchService.SearchQuery" />
+                        </div>
+                    }
+                    else
+                    {
+                        <WidgetBase Widget="@widget">
+                            <WidgetContent Widget="@widget" />
+                        </WidgetBase>
+                    }
+                }
+            </div>
+
+            <!-- Empty state -->
+            @if (dashboard.Widgets.Count == 0)
+            {
+                <div class="flex flex-col items-center justify-center min-h-[60vh]">
+                    <div class="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center mb-6">
+                        <span class="text-4xl">📊</span>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-2">Your Dashboard is Empty</h2>
+                    <p class="text-slate-600 dark:text-slate-400 text-center max-w-sm">
+                        Click the <strong>+</strong> button below to add your first widget and start customizing your dashboard.
+                    </p>
+                </div>
+            }
+            @* No search results state *@
+            else if (hasSearchQuery && topLevelWidgets.Count == 0)
+            {
+                <div class="flex flex-col items-center justify-center min-h-[40vh]">
+                    <div class="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-1">No widgets found</h3>
+                    <p class="text-slate-600 dark:text-slate-400 text-center max-w-sm">
+                        No widgets match "<span class="font-medium">@SearchService.SearchQuery</span>". Try a different search term.
+                    </p>
+                </div>
+            }
+        </div>
+
+        <AddWidgetDialog />
+    </div>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        DashboardService.StateChanged += OnStateChanged;
+        SearchService.SearchChanged += OnStateChanged;
+    }
+
+    private void OnStateChanged() => InvokeAsync(StateHasChanged);
+
+    private IEnumerable<Widget> GetFilteredWidgets(IEnumerable<Widget> widgets)
+    {
+        if (string.IsNullOrWhiteSpace(SearchService.SearchQuery))
+            return widgets;
+
+        return widgets.Where(w => 
+            SearchService.Matches(w.Title) || 
+            SearchService.Matches(w.Type) ||
+            // For sections, also check if any child widgets match
+            (w.Type == WidgetType.Section && DashboardService.ActiveDashboard?.GetChildWidgets(w.Id)
+                .Any(child => SearchService.Matches(child.Title) || SearchService.Matches(child.Type)) == true));
+    }
+
+    private static string GetLayoutClass(LayoutMode mode) => mode switch
+    {
+        LayoutMode.Horizontal => "flex flex-row flex-wrap",
+        LayoutMode.Vertical   => "flex flex-col",
+        _                     => "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+    };
+
+    public void Dispose()
+    {
+        DashboardService.StateChanged -= OnStateChanged;
+        SearchService.SearchChanged -= OnStateChanged;
+    }
+}

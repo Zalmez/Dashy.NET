@@ -1,0 +1,31 @@
+﻿@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.Authorization
+
+<Router AppAssembly="typeof(Program).Assembly">
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.DashboardLayout)">
+            <NotAuthorized>
+                @if (context.User.Identity?.IsAuthenticated == true)
+                {
+                    <p class="text-white p-4">You are not authorized to view this page.</p>
+                }
+                else
+                {
+                    <RedirectToLogin />
+                }
+            </NotAuthorized>
+            <Authorizing>
+                <div class="min-h-screen bg-[#0e0e10] flex items-center justify-center">
+                    <div class="text-[#8b8b9e] text-sm">Loading...</div>
+                </div>
+            </Authorizing>
+        </AuthorizeRouteView>
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <PageTitle>Not found</PageTitle>
+        <LayoutView Layout="typeof(Layout.DashboardLayout)">
+            <p class="text-white p-4">Sorry, there's nothing at this address.</p>
+        </LayoutView>
+    </NotFound>
+</Router>

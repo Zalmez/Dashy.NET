@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Restarting — dashy3</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0e0e10;
+      font-family: system-ui, -apple-system, sans-serif;
+      color: #e0e0f0;
+    }
+    .card {
+      text-align: center;
+      max-width: 380px;
+      padding: 2.5rem 2rem;
+    }
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid #2a2a3e;
+      border-top-color: #7c5cbf;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+      margin: 0 auto 1.5rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    h1 { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; }
+    p  { font-size: 0.875rem; color: #8b8b9e; line-height: 1.5; }
+    .note {
+      margin-top: 1.5rem;
+      padding: 0.75rem 1rem;
+      background: #1a1a2e;
+      border: 1px solid #2a2a3e;
+      border-radius: 0.5rem;
+      font-size: 0.75rem;
+      color: #8b8b9e;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="spinner"></div>
+    <h1>Application Restarting</h1>
+    <p>OIDC settings are being applied. You will be redirected automatically when the application is back online.</p>
+    <div class="note">
+      If using Aspire, restart the <strong>webfrontend</strong> resource from the dashboard if this takes more than 10 seconds.
+    </div>
+  </div>
+
+  <script>
+    const returnUrl = new URLSearchParams(location.search).get('returnUrl') || '/admin';
+    let attempts = 0;
+    const maxAttempts = 60;
+
+    async function poll() {
+      attempts++;
+      if (attempts > maxAttempts) {
+        document.querySelector('p').textContent =
+          'The application is taking longer than expected. Please refresh manually.';
+        document.querySelector('.spinner').style.display = 'none';
+        return;
+      }
+      try {
+        const res = await fetch('/health', { cache: 'no-store' });
+        if (res.ok) {
+          location.href = returnUrl;
+          return;
+        }
+      } catch {
+        // App is still down — keep polling
+      }
+      setTimeout(poll, 1500);
+    }
+
+    // Start polling after a short delay to give the app time to shut down
+    setTimeout(poll, 2000);
+  </script>
+</body>
+</html>

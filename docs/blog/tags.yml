@@ -1,0 +1,29 @@
+dashy:
+  label: Dashy.NET
+  permalink: /dashy
+  description: Posts about Dashy.NET dashboard application
+
+dotnet:
+  label: .NET
+  permalink: /dotnet
+  description: .NET development and features
+
+dashboard:
+  label: Dashboard
+  permalink: /dashboard
+  description: Dashboard and self-hosting topics
+
+documentation:
+  label: Documentation
+  permalink: /documentation
+  description: Documentation and guides
+
+docker:
+  label: Docker
+  permalink: /docker
+  description: Docker deployment and containerization
+
+widgets:
+  label: Widgets
+  permalink: /widgets
+  description: Widget development and customization

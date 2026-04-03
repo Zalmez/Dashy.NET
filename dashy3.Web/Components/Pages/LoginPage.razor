@@ -1,0 +1,181 @@
+@page "/login"
+@rendermode InteractiveServer
+@layout EmptyLayout
+@using dashy3.Web.Services
+@inject IAuthService AuthService
+@inject NavigationManager Nav
+@inject OidcFeatureFlag OidcFeature
+
+<PageTitle>Sign In — dashy3</PageTitle>
+
+<div class="min-h-screen bg-[#0e0e10] flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+        <!-- Logo / Title -->
+        <div class="text-center mb-8">
+            <div class="w-16 h-16 bg-[#7c5cbf] rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                </svg>
+            </div>
+            <h1 class="text-2xl font-bold text-white">Sign in to dashy3</h1>
+            <p class="text-[#8b8b9e] mt-1 text-sm">Enter your credentials to continue</p>
+        </div>
+
+        <!-- Login Card -->
+        <div class="bg-[#1a1a2e] border border-[#2a2a3e] rounded-2xl p-8">
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm">
+                    <div class="flex items-start gap-2">
+                        <svg class="w-4 h-4 text-red-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                        </svg>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-red-400 font-medium">@_errorTitle</p>
+                            @if (!string.IsNullOrEmpty(_errorDetail))
+                            {
+                                <p class="text-red-400/80 mt-1 text-xs break-words">@_errorDetail</p>
+                            }
+                        </div>
+                        <button @onclick="() => _error = null" class="text-red-400/60 hover:text-red-400 shrink-0">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            }
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-[#b0b0c3] mb-1.5">Email</label>
+                    <input @bind="_email"
+                           @bind:event="oninput"
+                           type="email"
+                           placeholder="you@example.com"
+                           @onkeydown="HandleKeyDown"
+                           class="w-full bg-[#0e0e10] border border-[#2a2a3e] rounded-lg px-3 py-2.5 text-white placeholder-[#4a4a5e] focus:outline-none focus:border-[#7c5cbf] focus:ring-1 focus:ring-[#7c5cbf] text-sm" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-[#b0b0c3] mb-1.5">Password</label>
+                    <input @bind="_password"
+                           @bind:event="oninput"
+                           type="password"
+                           placeholder="••••••••"
+                           @onkeydown="HandleKeyDown"
+                           class="w-full bg-[#0e0e10] border border-[#2a2a3e] rounded-lg px-3 py-2.5 text-white placeholder-[#4a4a5e] focus:outline-none focus:border-[#7c5cbf] focus:ring-1 focus:ring-[#7c5cbf] text-sm" />
+                </div>
+            </div>
+
+            <button @onclick="HandleLogin"
+                    disabled="@_loading"
+                    class="w-full mt-6 bg-[#7c5cbf] hover:bg-[#8d6dd0] disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm">
+                @if (_loading)
+                {
+                    <span>Signing in...</span>
+                }
+                else
+                {
+                    <span>Sign In</span>
+                }
+            </button>
+
+            @if (OidcFeature.IsEnabled)
+            {
+                <div class="mt-4">
+                    <div class="relative">
+                        <div class="absolute inset-0 flex items-center">
+                            <div class="w-full border-t border-[#2a2a3e]"></div>
+                        </div>
+                        <div class="relative flex justify-center text-xs">
+                            <span class="px-2 bg-[#1a1a2e] text-[#8b8b9e]">or</span>
+                        </div>
+                    </div>
+                    <a href="/challenge/oidc?returnUrl=/"
+                       class="mt-3 flex w-full items-center justify-center gap-2 bg-[#2a2a3e] hover:bg-[#3a3a4e] text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                        </svg>
+                        Sign in with SSO
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    /// <summary>Error code passed back from the OIDC middleware (e.g. "oidc_failed").</summary>
+    [Parameter, SupplyParameterFromQuery(Name = "error")]
+    public string? AuthError { get; set; }
+
+    /// <summary>Human-readable detail passed back from OnRemoteFailure.</summary>
+    [Parameter, SupplyParameterFromQuery(Name = "error_description")]
+    public string? AuthErrorDescription { get; set; }
+
+    private string _email = "";
+    private string _password = "";
+    private string? _error;
+    private string _errorTitle = "";
+    private string? _errorDetail;
+    private bool _loading;
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(AuthError))
+        {
+            (_errorTitle, _errorDetail) = AuthError switch
+            {
+                "oidc_failed" => ("SSO sign-in failed", AuthErrorDescription),
+                _ => ("Authentication error", AuthErrorDescription ?? AuthError)
+            };
+            _error = _errorTitle; // non-null triggers the error box
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && await AuthService.NeedsSetupAsync())
+        {
+            Nav.NavigateTo("/setup", forceLoad: true);
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await HandleLogin();
+    }
+
+    private async Task HandleLogin()
+    {
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_email) || string.IsNullOrWhiteSpace(_password))
+        {
+            _errorTitle = "Missing credentials";
+            _errorDetail = null;
+            _error = "Please enter your email and password.";
+            return;
+        }
+
+        _loading = true;
+        var (success, error, sessionToken) = await AuthService.LoginAsync(_email, _password);
+        _loading = false;
+
+        if (!success)
+        {
+            _errorTitle = "Sign-in failed";
+            _errorDetail = error ?? "Invalid credentials. Please try again.";
+            _error = _errorTitle;
+            return;
+        }
+
+        var returnUrl = string.IsNullOrEmpty(ReturnUrl) ? "/" : ReturnUrl;
+        Nav.NavigateTo($"/auth/session?token={sessionToken}&returnUrl={Uri.EscapeDataString(returnUrl)}", forceLoad: true);
+    }
+}

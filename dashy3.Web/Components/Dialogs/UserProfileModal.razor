@@ -1,0 +1,262 @@
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+@if (IsOpen)
+{
+    <div class="dialog-overlay" @onclick="HandleClose">
+        <div class="dialog-box max-w-lg w-full" style="max-height: 90vh; overflow-y: auto;" @onclick:stopPropagation="true">
+
+            <!-- Header -->
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <!-- Avatar preview -->
+                    <div class="w-12 h-12 rounded-full flex-shrink-0 overflow-hidden">
+                        @if (!string.IsNullOrEmpty(_avatarUrl))
+                        {
+                            <img src="@_avatarUrl" alt="@_displayName" class="w-full h-full object-cover" />
+                        }
+                        else
+                        {
+                            <div class="w-full h-full bg-gradient-to-br from-[#7c5cbf] to-[#5a3fa0] flex items-center justify-center text-white text-sm font-bold">
+                                @(User?.Initials ?? "?")
+                            </div>
+                        }
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-semibold text-white">Profile Settings</h2>
+                        <p class="text-xs text-slate-400">@(User?.Email ?? "")</p>
+                    </div>
+                </div>
+                <button class="p-1 rounded-lg text-slate-400 hover:bg-[#2a2a3e] transition-colors"
+                        @onclick="HandleClose">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-[#2a2a3e] mb-5">
+                <button class="px-4 py-2 text-sm font-medium transition-colors @(_activeTab == "profile" ? "border-b-2 border-[#7c5cbf] text-[#7c5cbf]" : "text-slate-400 hover:text-white")"
+                        @onclick='() => _activeTab = "profile"'>
+                    Profile
+                </button>
+                <button class="px-4 py-2 text-sm font-medium transition-colors @(_activeTab == "security" ? "border-b-2 border-[#7c5cbf] text-[#7c5cbf]" : "text-slate-400 hover:text-white")"
+                        @onclick='() => _activeTab = "security"'>
+                    Security
+                </button>
+            </div>
+
+            <!-- Profile Tab -->
+            @if (_activeTab == "profile")
+            {
+                <div class="space-y-4">
+                    <!-- Display Name -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Display Name</label>
+                        <input type="text"
+                               class="w-full px-3 py-2 text-sm bg-[#12122a] border border-[#2a2a3e] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#7c5cbf] focus:border-transparent"
+                               placeholder="Your name"
+                               @bind="_displayName" @bind:event="oninput" />
+                    </div>
+
+                    <!-- Avatar URL -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Avatar URL <span class="text-slate-500 font-normal">(optional)</span></label>
+                        <input type="url"
+                               class="w-full px-3 py-2 text-sm bg-[#12122a] border border-[#2a2a3e] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#7c5cbf] focus:border-transparent"
+                               placeholder="https://example.com/avatar.png"
+                               @bind="_avatarUrl" @bind:event="oninput" />
+                    </div>
+
+                    <!-- Email (read-only) -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Email</label>
+                        <input type="email"
+                               class="w-full px-3 py-2 text-sm bg-[#12122a] border border-[#2a2a3e] rounded-lg text-slate-500 cursor-not-allowed"
+                               value="@(User?.Email ?? "")"
+                               disabled />
+                    </div>
+
+                    <!-- Roles -->
+                    @if (User?.Roles?.Length > 0)
+                    {
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">Role(s)</label>
+                            <div class="flex flex-wrap gap-2">
+                                @foreach (var role in User.Roles)
+                                {
+                                    <span class="px-2.5 py-1 text-xs font-medium rounded-full @(role == "Admin" ? "bg-[#7c5cbf]/20 text-[#a78bd4] border border-[#7c5cbf]/40" : "bg-slate-700/50 text-slate-300 border border-slate-600/40")">
+                                        @role
+                                    </span>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Profile message -->
+                    @if (_profileMessage is not null)
+                    {
+                        <div class="px-3 py-2 rounded-lg text-sm @(_profileSuccess ? "bg-green-900/40 text-green-300 border border-green-700/40" : "bg-red-900/40 text-red-300 border border-red-700/40")">
+                            @_profileMessage
+                        </div>
+                    }
+
+                    <!-- Save button -->
+                    <div class="flex justify-end pt-1">
+                        <button class="px-5 py-2 text-sm font-medium rounded-lg bg-[#7c5cbf] hover:bg-[#6a4daa] disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors"
+                                disabled="@_profileSaving"
+                                @onclick="SaveProfile">
+                            @if (_profileSaving)
+                            {
+                                <span>Saving…</span>
+                            }
+                            else
+                            {
+                                <span>Save Changes</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+            }
+
+            <!-- Security Tab -->
+            @if (_activeTab == "security")
+            {
+                <div class="space-y-4">
+                    <!-- Current password -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Current Password</label>
+                        <input type="password"
+                               class="w-full px-3 py-2 text-sm bg-[#12122a] border border-[#2a2a3e] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#7c5cbf] focus:border-transparent"
+                               placeholder="Enter current password"
+                               @bind="_currentPassword" @bind:event="oninput" />
+                    </div>
+
+                    <!-- New password -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">New Password</label>
+                        <input type="password"
+                               class="w-full px-3 py-2 text-sm bg-[#12122a] border border-[#2a2a3e] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#7c5cbf] focus:border-transparent"
+                               placeholder="Enter new password"
+                               @bind="_newPassword" @bind:event="oninput" />
+                    </div>
+
+                    <!-- Confirm new password -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Confirm New Password</label>
+                        <input type="password"
+                               class="w-full px-3 py-2 text-sm bg-[#12122a] border border-[#2a2a3e] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#7c5cbf] focus:border-transparent"
+                               placeholder="Confirm new password"
+                               @bind="_confirmPassword" @bind:event="oninput" />
+                        @if (!string.IsNullOrEmpty(_newPassword) && !string.IsNullOrEmpty(_confirmPassword) && _newPassword != _confirmPassword)
+                        {
+                            <p class="mt-1 text-xs text-red-400">Passwords do not match.</p>
+                        }
+                    </div>
+
+                    <!-- Security message -->
+                    @if (_securityMessage is not null)
+                    {
+                        <div class="px-3 py-2 rounded-lg text-sm @(_securitySuccess ? "bg-green-900/40 text-green-300 border border-green-700/40" : "bg-red-900/40 text-red-300 border border-red-700/40")">
+                            @_securityMessage
+                        </div>
+                    }
+
+                    <!-- Change Password button -->
+                    <div class="flex justify-end pt-1">
+                        <button class="px-5 py-2 text-sm font-medium rounded-lg bg-[#7c5cbf] hover:bg-[#6a4daa] disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors"
+                                disabled="@(!CanChangePassword() || _securitySaving)"
+                                @onclick="ChangePassword">
+                            @if (_securitySaving)
+                            {
+                                <span>Changing…</span>
+                            }
+                            else
+                            {
+                                <span>Change Password</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+            }
+
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public UserInfo? User { get; set; }
+
+    private string _activeTab = "profile";
+
+    // Profile fields
+    private string _displayName = "";
+    private string _avatarUrl = "";
+    private bool _profileSaving;
+    private string? _profileMessage;
+    private bool _profileSuccess;
+
+    // Security fields
+    private string _currentPassword = "";
+    private string _newPassword = "";
+    private string _confirmPassword = "";
+    private bool _securitySaving;
+    private string? _securityMessage;
+    private bool _securitySuccess;
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen && User is not null)
+        {
+            _displayName = User.DisplayName;
+            _avatarUrl   = User.AvatarUrl ?? "";
+            _profileMessage  = null;
+            _securityMessage = null;
+            _currentPassword = "";
+            _newPassword     = "";
+            _confirmPassword = "";
+        }
+    }
+
+    private async Task HandleClose()
+    {
+        _activeTab = "profile";
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task SaveProfile()
+    {
+        _profileSaving  = true;
+        _profileMessage = null;
+        var (success, error) = await AuthService.UpdateProfileAsync(
+            _displayName.Trim(),
+            string.IsNullOrWhiteSpace(_avatarUrl) ? null : _avatarUrl.Trim());
+        _profileSaving  = false;
+        _profileSuccess = success;
+        _profileMessage = success ? "Profile updated successfully!" : (error ?? "An error occurred.");
+    }
+
+    private bool CanChangePassword() =>
+        !string.IsNullOrWhiteSpace(_currentPassword) &&
+        !string.IsNullOrWhiteSpace(_newPassword) &&
+        _newPassword == _confirmPassword;
+
+    private async Task ChangePassword()
+    {
+        if (!CanChangePassword()) return;
+        _securitySaving  = true;
+        _securityMessage = null;
+        var (success, error) = await AuthService.ChangePasswordAsync(_currentPassword, _newPassword);
+        _securitySaving  = false;
+        _securitySuccess = success;
+        _securityMessage = success ? "Password changed successfully!" : (error ?? "An error occurred.");
+        if (success)
+        {
+            _currentPassword = "";
+            _newPassword     = "";
+            _confirmPassword = "";
+        }
+    }
+}

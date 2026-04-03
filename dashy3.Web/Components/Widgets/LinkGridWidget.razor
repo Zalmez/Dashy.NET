@@ -1,0 +1,113 @@
+@* Link Grid Widget - favicon grid of bookmarked URLs *@
+
+<div class="h-full overflow-auto">
+    @if (_links.Count == 0)
+    {
+        <div class="h-full flex flex-col items-center justify-center text-center px-4 gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            <p class="text-sm text-slate-500 dark:text-slate-400">No links added yet. Edit the widget to add links.</p>
+        </div>
+    }
+    else
+    {
+        <div class="@GetGridClass() gap-3 p-1">
+            @foreach (var link in _links)
+            {
+                <a href="@link.Url"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   title="@(string.IsNullOrWhiteSpace(link.Label) ? GetDomain(link.Url) : link.Label)"
+                   class="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors group">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden bg-slate-100 dark:bg-slate-700">
+                        @if (!_faviconErrors.Contains(link.Url) && !string.IsNullOrWhiteSpace(GetFaviconUrl(link.Url)))
+                        {
+                            <img src="@GetFaviconUrl(link.Url)"
+                                 alt="@GetDomain(link.Url)"
+                                 class="w-6 h-6 object-contain"
+                                 @onerror="@(() => MarkFaviconError(link.Url))" />
+                        }
+                        else
+                        {
+                            <span class="text-sm font-bold @GetFallbackTextClass(link.Url) select-none">
+                                @GetFallbackLetters(link.Url)
+                            </span>
+                        }
+                    </div>
+                    <span class="text-xs text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white truncate w-full text-center max-w-[4rem] transition-colors">
+                        @(string.IsNullOrWhiteSpace(link.Label) ? GetDomain(link.Url) : link.Label)
+                    </span>
+                </a>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Widget Widget { get; set; } = default!;
+
+    private List<LinkEntry> _links = [];
+    private HashSet<string> _faviconErrors = [];
+
+    private record LinkEntry(string Url, string Label);
+
+    protected override void OnParametersSet()
+    {
+        _faviconErrors.Clear();
+
+        var rawLinks = Widget.GetConfig<List<Dictionary<string, object>>>("links", []);
+        _links = rawLinks.Select(d => new LinkEntry(
+            GetDictString(d, "url"),
+            GetDictString(d, "label")
+        )).Where(l => !string.IsNullOrWhiteSpace(l.Url)).ToList();
+    }
+
+    private string GetGridClass() => Widget.GetConfig("columns", 3) == 4
+        ? "grid grid-cols-4"
+        : "grid grid-cols-3";
+
+    private static string GetFaviconUrl(string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return "";
+        return $"https://www.google.com/s2/favicons?domain={uri.Host}&sz=64";
+    }
+
+    private static string GetDomain(string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return url;
+        return uri.Host.Replace("www.", "");
+    }
+
+    private static string GetFallbackLetters(string url)
+    {
+        var domain = GetDomain(url);
+        return domain.Length >= 2 ? domain[..2].ToUpper() : domain.ToUpper();
+    }
+
+    // Deterministic pastel color per domain using a stable hash
+    private static readonly string[] FallbackColors =
+    [
+        "text-blue-600 dark:text-blue-400",
+        "text-purple-600 dark:text-purple-400",
+        "text-green-600 dark:text-green-400",
+        "text-orange-600 dark:text-orange-400",
+        "text-pink-600 dark:text-pink-400",
+        "text-teal-600 dark:text-teal-400",
+        "text-red-600 dark:text-red-400",
+        "text-indigo-600 dark:text-indigo-400",
+    ];
+
+    private static string GetFallbackTextClass(string url)
+    {
+        var domain = GetDomain(url);
+        var idx = Math.Abs(domain.GetHashCode()) % FallbackColors.Length;
+        return FallbackColors[idx];
+    }
+
+    private void MarkFaviconError(string url) => _faviconErrors.Add(url);
+
+    private static string GetDictString(Dictionary<string, object> d, string key)
+    {
+        if (!d.TryGetValue(key, out var val)) return "";
+        return val is System.Text.Json.JsonElement je ? je.GetString() ?? "" : val?.ToString() ?? "";
+    }
+}

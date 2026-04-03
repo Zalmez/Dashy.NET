@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="dashy3.ApiService/dashy3.ApiService.csproj" />
+  <Project Path="dashy3.AppHost/dashy3.AppHost.csproj" />
+  <Project Path="dashy3.MigrationService/dashy3.MigrationService.csproj" />
+  <Project Path="dashy3.ServiceDefaults/dashy3.ServiceDefaults.csproj" />
+  <Project Path="dashy3.Web/dashy3.Web.csproj" />
+  <Project Path="dashy3.Tests/dashy3.Tests.csproj" />
+</Solution>

@@ -1,0 +1,334 @@
+@inject IDashboardService DashboardService
+@inject IToastService Toast
+@rendermode InteractiveServer
+
+@if (IsOpen && Dashboard is not null)
+{
+    <div class="dialog-overlay" @onclick="HandleClose">
+        <div class="dialog-box max-w-lg w-full" style="max-height: 90vh; overflow-y: auto;" @onclick:stopPropagation="true">
+
+            <!-- Header -->
+            <div class="flex items-center justify-between mb-5">
+                <div>
+                    <h2 class="text-lg font-semibold text-white">Share Dashboard</h2>
+                    <p class="text-xs text-slate-400 mt-0.5">@Dashboard.Name</p>
+                </div>
+                <button class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white transition-colors" @onclick="HandleClose">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Visibility Toggle (owner only) -->
+            @if (IsOwner)
+            {
+                <div class="mb-5 p-3 rounded-lg bg-slate-800 border border-slate-700">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-sm font-medium text-white">Public Dashboard</div>
+                            <div class="text-xs text-slate-400 mt-0.5">When enabled, anyone with access to Dashy can view this dashboard</div>
+                        </div>
+                        <button @onclick="ToggleVisibility"
+                                class="relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none @(Dashboard.Visibility == "Shared" ? "bg-blue-600" : "bg-slate-600")">
+                            <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out @(Dashboard.Visibility == "Shared" ? "translate-x-5" : "translate-x-0")"></span>
+                        </button>
+                    </div>
+                </div>
+            }
+
+            <!-- Add Collaborator (owner or editor) -->
+            @if (CanManage)
+            {
+                <div class="mb-5">
+                    <label class="block text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">Add People</label>
+                    <div class="relative">
+                        <input type="text"
+                               placeholder="Search by name or email..."
+                               class="w-full px-3 py-2 text-sm bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               @bind="_searchQuery"
+                               @bind:event="oninput"
+                               @bind:after="OnSearchChanged" />
+                        @if (_isSearching)
+                        {
+                            <div class="absolute right-3 top-1/2 -translate-y-1/2">
+                                <svg class="w-4 h-4 text-slate-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                </svg>
+                            </div>
+                        }
+                    </div>
+
+                    @if (_searchResults.Count > 0)
+                    {
+                        <div class="mt-1 rounded-lg border border-slate-700 bg-slate-800 overflow-hidden shadow-lg">
+                            @foreach (var user in _searchResults)
+                            {
+                                <button class="w-full flex items-center gap-3 px-3 py-2 hover:bg-slate-700 transition-colors text-left"
+                                        @onclick="() => SelectUser(user)">
+                                    <div class="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden">
+                                        @if (!string.IsNullOrEmpty(user.AvatarUrl))
+                                        {
+                                            <img src="@user.AvatarUrl" class="w-full h-full object-cover" />
+                                        }
+                                        else
+                                        {
+                                            <div class="w-full h-full bg-gradient-to-br from-[#7c5cbf] to-[#5a3fa0] flex items-center justify-center text-white text-xs font-bold">
+                                                @(user.DisplayName.Length > 0 ? user.DisplayName[0].ToString().ToUpper() : "?")
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-sm font-medium text-white truncate">@user.DisplayName</div>
+                                        <div class="text-xs text-slate-400 truncate">@user.Email</div>
+                                    </div>
+                                </button>
+                            }
+                        </div>
+                    }
+
+                    @if (_selectedUser is not null)
+                    {
+                        <div class="mt-2 flex items-center gap-2 p-2 rounded-lg bg-slate-800 border border-blue-600">
+                            <div class="w-7 h-7 rounded-full flex-shrink-0 overflow-hidden">
+                                @if (!string.IsNullOrEmpty(_selectedUser.AvatarUrl))
+                                {
+                                    <img src="@_selectedUser.AvatarUrl" class="w-full h-full object-cover" />
+                                }
+                                else
+                                {
+                                    <div class="w-full h-full bg-gradient-to-br from-[#7c5cbf] to-[#5a3fa0] flex items-center justify-center text-white text-xs font-bold">
+                                        @(_selectedUser.DisplayName.Length > 0 ? _selectedUser.DisplayName[0].ToString().ToUpper() : "?")
+                                    </div>
+                                }
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm text-white truncate">@_selectedUser.DisplayName</div>
+                            </div>
+                            <select @bind="_newPermission"
+                                    class="text-xs bg-slate-700 border border-slate-600 text-white rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                                <option value="Viewer">Viewer</option>
+                                <option value="Editor">Editor</option>
+                            </select>
+                            <button class="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                                    @onclick="AddCollaborator" disabled="@_isSaving">
+                                Add
+                            </button>
+                            <button class="p-1 text-slate-400 hover:text-white transition-colors" @onclick="ClearSelected">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
+
+            <!-- Collaborator List -->
+            <div>
+                <label class="block text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">
+                    People with access
+                    @if (_isLoadingCollaborators)
+                    {
+                        <span class="ml-1 text-slate-500">(loading…)</span>
+                    }
+                </label>
+
+                @if (_collaborators.Count == 0 && !_isLoadingCollaborators)
+                {
+                    <div class="text-sm text-slate-500 py-3 text-center">No collaborators yet</div>
+                }
+                else
+                {
+                    <div class="space-y-1">
+                        @foreach (var collab in _collaborators)
+                        {
+                            <div class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors">
+                                <div class="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden">
+                                    @if (!string.IsNullOrEmpty(collab.AvatarUrl))
+                                    {
+                                        <img src="@collab.AvatarUrl" class="w-full h-full object-cover" />
+                                    }
+                                    else
+                                    {
+                                        <div class="w-full h-full bg-gradient-to-br from-[#7c5cbf] to-[#5a3fa0] flex items-center justify-center text-white text-xs font-bold">
+                                            @(collab.DisplayName.Length > 0 ? collab.DisplayName[0].ToString().ToUpper() : "?")
+                                        </div>
+                                    }
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-sm font-medium text-white truncate">@collab.DisplayName</div>
+                                    <div class="text-xs text-slate-400 truncate">@collab.Email</div>
+                                </div>
+                                @if (collab.Permission == "Owner")
+                                {
+                                    <span class="text-xs px-2 py-0.5 rounded-full bg-purple-900 text-purple-300">Owner</span>
+                                }
+                                else if (CanManage)
+                                {
+                                    <select value="@collab.Permission"
+                                            @onchange="(e) => OnPermissionChanged(collab, e.Value?.ToString() ?? collab.Permission)"
+                                            class="text-xs bg-slate-700 border border-slate-600 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 @(collab.Permission == "Editor" ? "text-blue-400" : "text-slate-300")">
+                                        <option value="Viewer">Viewer</option>
+                                        <option value="Editor">Editor</option>
+                                    </select>
+                                    <button @onclick="() => RemoveCollaborator(collab)"
+                                            class="p-1.5 text-slate-500 hover:text-red-400 transition-colors rounded"
+                                            title="Remove">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                }
+                                else
+                                {
+                                    <span class="text-xs px-2 py-0.5 rounded-full @(collab.Permission == "Editor" ? "bg-blue-900 text-blue-300" : "bg-slate-700 text-slate-400")">
+                                        @collab.Permission
+                                    </span>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- Footer -->
+            <div class="mt-5 flex justify-end">
+                <button class="px-4 py-2 text-sm rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700 transition-colors"
+                        @onclick="HandleClose">Done</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public Dashboard? Dashboard { get; set; }
+
+    private bool IsOwner => Dashboard?.UserPermission == "Owner";
+    private bool CanManage => Dashboard?.UserPermission == "Owner" || Dashboard?.UserPermission == "Editor";
+
+    private List<CollaboratorInfo> _collaborators = [];
+    private List<UserSearchResult> _searchResults = [];
+    private UserSearchResult? _selectedUser;
+    private string _searchQuery = "";
+    private string _newPermission = "Viewer";
+    private bool _isLoadingCollaborators;
+    private bool _isSearching;
+    private bool _isSaving;
+    private System.Timers.Timer? _debounce;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsOpen && Dashboard is not null)
+        {
+            await LoadCollaboratorsAsync();
+        }
+    }
+
+    private async Task LoadCollaboratorsAsync()
+    {
+        _isLoadingCollaborators = true;
+        StateHasChanged();
+        _collaborators = await DashboardService.GetCollaboratorsAsync(Dashboard!.Id);
+        _isLoadingCollaborators = false;
+        StateHasChanged();
+    }
+
+    private async Task ToggleVisibility()
+    {
+        if (Dashboard is null) return;
+        var newVis = Dashboard.Visibility == "Shared" ? "Private" : "Shared";
+        await DashboardService.UpdateDashboardVisibilityAsync(Dashboard.Id, newVis);
+    }
+
+    private void OnSearchChanged()
+    {
+        _selectedUser = null;
+        _debounce?.Dispose();
+        if (string.IsNullOrWhiteSpace(_searchQuery))
+        {
+            _searchResults = [];
+            return;
+        }
+        _debounce = new System.Timers.Timer(300);
+        _debounce.Elapsed += async (_, _) =>
+        {
+            _debounce?.Dispose();
+            await InvokeAsync(async () =>
+            {
+                _isSearching = true;
+                StateHasChanged();
+                _searchResults = await DashboardService.SearchUsersAsync(_searchQuery);
+                // Filter out already-added collaborators and owner
+                _searchResults = _searchResults
+                    .Where(u => u.Id != Dashboard!.OwnerId && !_collaborators.Any(c => c.UserId == u.Id))
+                    .ToList();
+                _isSearching = false;
+                StateHasChanged();
+            });
+        };
+        _debounce.AutoReset = false;
+        _debounce.Start();
+    }
+
+    private void SelectUser(UserSearchResult user)
+    {
+        _selectedUser = user;
+        _searchQuery = "";
+        _searchResults = [];
+    }
+
+    private void ClearSelected()
+    {
+        _selectedUser = null;
+        _newPermission = "Viewer";
+    }
+
+    private async Task AddCollaborator()
+    {
+        if (_selectedUser is null || Dashboard is null) return;
+        _isSaving = true;
+        var ok = await DashboardService.AddCollaboratorAsync(Dashboard.Id, _selectedUser.Id, _newPermission);
+        if (ok)
+        {
+            Toast.ShowSuccess($"{_selectedUser.DisplayName} added as {_newPermission}");
+            ClearSelected();
+            await LoadCollaboratorsAsync();
+        }
+        _isSaving = false;
+    }
+
+    private async Task OnPermissionChanged(CollaboratorInfo collab, string newPermission)
+    {
+        if (Dashboard is null || newPermission == collab.Permission) return;
+        var ok = await DashboardService.UpdateCollaboratorAsync(Dashboard.Id, collab.UserId, newPermission);
+        if (ok)
+        {
+            collab.Permission = newPermission;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RemoveCollaborator(CollaboratorInfo collab)
+    {
+        if (Dashboard is null) return;
+        var ok = await DashboardService.RemoveCollaboratorAsync(Dashboard.Id, collab.UserId);
+        if (ok)
+        {
+            _collaborators.Remove(collab);
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleClose()
+    {
+        _debounce?.Dispose();
+        _searchQuery = "";
+        _searchResults = [];
+        _selectedUser = null;
+        await OnClose.InvokeAsync();
+    }
+}

@@ -1,0 +1,44 @@
+@* Dispatches to the correct widget implementation based on widget.Type *@
+
+@switch (Widget.Type)
+{
+    case "link":
+        <LinkWidget Widget="@Widget" />
+        break;
+    case "link-grid":
+        <LinkGridWidget Widget="@Widget" />
+        break;
+    case "system-stats":
+        <SystemStatsWidget Widget="@Widget" />
+        break;
+    case "weather":
+        <WeatherWidget Widget="@Widget" />
+        break;
+    case "markdown":
+        <MarkdownWidget Widget="@Widget" />
+        break;
+    case "status":
+        <StatusCheckWidget Widget="@Widget" />
+        break;
+    case "media":
+        <MediaWidget Widget="@Widget" />
+        break;
+    case "rss":
+        <RSSWidget Widget="@Widget" />
+        break;
+    case "cve":
+        <CveTrackerWidget Widget="@Widget" />
+        break;
+    case "api":
+        <ApiWidget Widget="@Widget" />
+        break;
+    default:
+        <div class="h-full flex items-center justify-center text-slate-500 dark:text-slate-400 text-sm">
+            Unknown widget type: @Widget.Type
+        </div>
+        break;
+}
+
+@code {
+    [Parameter, EditorRequired] public Widget Widget { get; set; } = default!;
+}
