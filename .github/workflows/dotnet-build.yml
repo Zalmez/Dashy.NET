@@ -22,3 +22,6 @@ jobs:
 
       - name: Build Solution
         run: dotnet build --configuration Release
+
+      - name: Run Tests
+        run: dotnet test --configuration Release --no-build --verbosity normal
