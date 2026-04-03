@@ -121,83 +121,45 @@ Widgets display dynamic information on your dashboard.
 
 Each widget type has its own configuration options:
 
-#### Clock Widget
-- **Time format**: 12-hour or 24-hour
-- **Show date**: Include date display
-- **Time zone**: Specify time zone
-
 #### Weather Widget
-- **Location**: City or coordinates
-- **Units**: Metric or Imperial
-- **Show forecast**: Display multi-day forecast
+- **Location**: City name (e.g. "London")
+- **Units**: `celsius` or `fahrenheit`
 
-## Header Buttons
+#### RSS Widget
+- **Feed URL**: RSS or Atom feed URL
+- **Limit**: Number of items to display (max 20)
 
-Customize the buttons that appear in the dashboard header.
-
-### Adding Header Buttons
-
-1. Enter Edit Mode
-2. Navigate to Header Button settings
-3. Add new buttons with:
-   - **Text**: Button label
-   - **URL**: Target link
-   - **Position**: Button order
-   - **Icon**: Optional icon
+#### CVE Tracker Widget
+- **Source**: `nvd` or `euvd`
+- **Keyword**: Optional search term
 
 ## Themes and Styling
 
-Customize the appearance of your dashboard.
+Customize the appearance of your dashboard from the **Settings** panel.
 
 ### Theme Options
 
+- **Dark Theme**: Default dark theme with purple accents
 - **Light Theme**: Clean, bright appearance
-- **Dark Theme**: Dark mode for reduced eye strain
-- **Custom CSS**: Advanced styling options
+- **High Contrast**: WCAG AA-compliant high-contrast theme
 
-### Layout Settings
-
-- **Item size**: Small, medium, or large items
-- **Item spacing**: Gap between items
-- **Section spacing**: Gap between sections
-- **Background**: Custom background images or colors
+See the [Theming guide](/docs/theming) for more details, including how to create custom themes.
 
 ## Authentication
 
 Configure user authentication and access control.
 
-### Authentication Providers
+### Authentication Methods
 
-Dashy.NET supports various authentication methods:
-- **Local accounts**: Username/password stored in database
-- **OAuth**: GitHub, Google, Microsoft, etc.
-- **LDAP**: Enterprise directory integration
-- **Disable authentication**: Open access (default)
+Dashy.NET supports the following authentication methods:
+- **Local accounts**: Username and password stored in the database
+- **OIDC/OAuth2**: Single sign-on via any OpenID Connect-compatible provider (Keycloak, Auth0, Azure AD, GitHub, Google, etc.)
+
+Authentication is required by default. The first user to register becomes the Admin.
 
 ### Setting Up Authentication
 
-1. Enter Edit Mode
-2. Navigate to Authentication settings
-3. Choose your authentication provider
-4. Configure provider-specific settings
-5. Set access permissions
-
-## Import/Export
-
-### Exporting Configuration
-
-You can export your dashboard configuration for backup or migration:
-1. Go to Settings
-2. Click "Export Configuration"
-3. Save the JSON file
-
-### Importing Configuration
-
-To import a previously exported configuration:
-1. Go to Settings
-2. Click "Import Configuration"  
-3. Select your JSON file
-4. Confirm the import
+See the [Authentication guide](/docs/authentication) for detailed setup instructions.
 
 ## Advanced Configuration
 
