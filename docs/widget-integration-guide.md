@@ -235,27 +235,17 @@ You can also add custom responsive behavior:
 
 ## Widget Registration
 
-Register your widget in `WidgetRegistryService`:
+Register your widget type in `dashy3.Web/Models/WidgetType.cs`:
 
 ```csharp
-// In Dashy.Net.Web/Services/WidgetDescriptors.cs
-public class MyWidgetDescriptor : IWidgetDescriptor
-{
-    public string Name => "My Widget";
-    public string Key => "my-widget";
-    public string Description => "Description of what the widget does";
-    public string IconClass => "fas fa-star";
-    
-    public List<WidgetOption> GetOptions()
-    {
-        return new List<WidgetOption>
-        {
-            new() { Key = "apiKey", Label = "API Key", Type = "text", Required = true },
-            new() { Key = "refreshInterval", Label = "Refresh (seconds)", Type = "number", DefaultValue = "60" }
-        };
-    }
-}
+// Add a constant for your type identifier
+public const string MyWidget = "my-widget";
+
+// Add an entry to the All list
+new(MyWidget, "My Widget", "star-icon", "Description of what the widget does"),
 ```
+
+Then dispatch to your component in `dashy3.Web/Components/Widgets/WidgetContent.razor` by adding a case for the new type.
 
 ## Accessibility
 

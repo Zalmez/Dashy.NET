@@ -34,7 +34,7 @@ To get Dashy.Net up and running on your local machine, you'll need the .NET 10 S
 
 2.  **Run the application using .NET Aspire:**
     ```bash
-    dotnet run --project Dashy.Net.AppHost
+    dotnet run --project dashy3.AppHost
     ```
 
 This will launch the .NET Aspire dashboard, which will start the Blazor frontend, the backend API service, and the PostgreSQL database. You can then navigate to the `webfrontend` URL shown in the dashboard.

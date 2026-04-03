@@ -36,6 +36,7 @@ Dashy.Net.Web/wwwroot/uploads
 # Node.js
 node_modules/
 package-lock.json
+!docs/package-lock.json
 
 # Generated CSS
 Dashy.Net.Web/wwwroot/css/app.generated.css

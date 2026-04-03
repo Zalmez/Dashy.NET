@@ -77,7 +77,7 @@ All visual styling is centralized in `/Styles/tokens.css` with CSS variables:
 ### Directory Structure
 
 ```
-Dashy.Net.Web/
+dashy3.Web/
 ├── Styles/
 │   ├── tokens.css          # Design tokens (colors, spacing, etc.)
 │   └── tailwind.css        # Tailwind configuration
