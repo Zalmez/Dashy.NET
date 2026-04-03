@@ -96,7 +96,7 @@ jobs:
             DEPLOY_APPHOST="false"
             
             # Check ApiService changes
-            if echo "$CHANGED_FILES" | grep -E "(Dashy\.Net\.ApiService/|Dashy\.net\.Shared/|Directory\.Build\.props|\.github/workflows/)" > /dev/null; then
+            if echo "$CHANGED_FILES" | grep -E "(dashy3\.ApiService/|dashy3\.ServiceDefaults/|Directory\.Build\.props|\.github/workflows/)" > /dev/null; then
               DEPLOY_APISERVICE="true"
               echo "✅ ApiService: Changes detected"
             else
@@ -104,7 +104,7 @@ jobs:
             fi
             
             # Check WebFrontend changes
-            if echo "$CHANGED_FILES" | grep -E "(Dashy\.Net\.Web/|Dashy\.net\.Shared/|Directory\.Build\.props|\.github/workflows/)" > /dev/null; then
+            if echo "$CHANGED_FILES" | grep -E "(dashy3\.Web/|dashy3\.ServiceDefaults/|Directory\.Build\.props|\.github/workflows/)" > /dev/null; then
               DEPLOY_WEBFRONTEND="true"
               echo "✅ WebFrontend: Changes detected"
             else
@@ -112,7 +112,7 @@ jobs:
             fi
             
             # Check AppHost changes
-            if echo "$CHANGED_FILES" | grep -E "(Dashy\.Net\.AppHost/|Directory\.Build\.props|\.github/workflows/)" > /dev/null; then
+            if echo "$CHANGED_FILES" | grep -E "(dashy3\.AppHost/|Directory\.Build\.props|\.github/workflows/)" > /dev/null; then
               DEPLOY_APPHOST="true"
               echo "✅ AppHost: Changes detected"
             else
@@ -185,7 +185,7 @@ jobs:
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83
         with:
           context: .
-          file: ./Dashy.Net.ApiService/Dockerfile
+          file: ./dashy3.ApiService/Dockerfile
           platforms: linux/amd64
           push: true
           provenance: false
@@ -220,7 +220,7 @@ jobs:
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83
         with:
           context: .
-          file: ./Dashy.Net.Web/Dockerfile
+          file: ./dashy3.Web/Dockerfile
           platforms: linux/amd64
           push: true
           provenance: false
