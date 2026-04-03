@@ -25,7 +25,7 @@ Switch themes from the **Settings** panel in the top navigation bar.
 
 Switch density from the **Settings** panel in the top navigation bar.
 
-## Customising Themes
+## Customizing Themes
 
 Themes are implemented using CSS custom properties (variables) defined in `dashy3.Web/Styles/tokens.css`. Each theme is applied as a class on the `<body>` element.
 

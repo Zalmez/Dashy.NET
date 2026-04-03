@@ -45,9 +45,7 @@ Dashy.NET supports any **OpenID Connect** (OIDC)-compatible identity provider, i
 3. Toggle **Enable OIDC** and save.
 4. The application will restart automatically to apply the new configuration.
 
-:::note
-The OIDC callback URL registered in your provider must be `https://<your-dashy-domain>/signin-oidc`.
-:::
+> **Note:** The OIDC callback URL registered in your provider must be `https://<your-dashy-domain>/signin-oidc`.
 
 ### Auto-Registration
 
