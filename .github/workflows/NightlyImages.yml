@@ -60,7 +60,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dashy.Net.ApiService/Dockerfile
+          file: ./dashy3.ApiService/Dockerfile
           push: true
           build-args: |
             GITHUB_REF_NAME=nightly-${{ steps.date.outputs.date }}
@@ -72,7 +72,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dashy.Net.Web/Dockerfile
+          file: ./dashy3.Web/Dockerfile
           push: true
           build-args: |
             GITHUB_REF_NAME=nightly-${{ steps.date.outputs.date }}
@@ -84,7 +84,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dashy.Net.MigrationService/Dockerfile
+          file: ./dashy3.MigrationService/Dockerfile
           push: true
           build-args: |
             GITHUB_REF_NAME=nightly-${{ steps.date.outputs.date }}
