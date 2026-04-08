@@ -67,11 +67,10 @@ Your preferences are saved automatically.
    ```bash
    git clone https://github.com/Zalmez/Dashy.NET.git
    cd Dashy.NET
-   git checkout copilot/ui-rework-for-dashy
    ```
 2. **Install Node Dependencies**
    ```bash
-   cd Dashy.Net.Web
+   cd dashy3.Web
    npm install
    ```
 3. **Build Tailwind CSS**
@@ -85,14 +84,14 @@ Your preferences are saved automatically.
    ```
 5. **Run**
    ```bash
-   dotnet run --project Dashy.Net.AppHost
+   dotnet run --project dashy3.AppHost
    ```
 
 #### Development Workflow
 
 During development, run CSS in watch mode:
 ```bash
-cd Dashy.Net.Web
+cd dashy3.Web
 npm run css:watch
 ```
 
@@ -110,11 +109,11 @@ Update your build pipeline to include:
 
 - name: Install Node dependencies
   run: npm install
-  working-directory: ./Dashy.Net.Web
+  working-directory: ./dashy3.Web
 
 - name: Build Tailwind CSS
   run: npm run css:build
-  working-directory: ./Dashy.Net.Web
+  working-directory: ./dashy3.Web
 
 - name: Build .NET
   run: dotnet build
@@ -131,7 +130,7 @@ Or for standalone projects, add to `.csproj`:
 
 ### Changing Themes
 
-Themes are defined in `/Dashy.Net.Web/Styles/tokens.css`. You can:
+Themes are defined in `/dashy3.Web/Styles/tokens.css`. You can:
 
 1. **Modify existing themes** by editing CSS variables:
    ```css
@@ -148,7 +147,7 @@ Themes are defined in `/Dashy.Net.Web/Styles/tokens.css`. You can:
      /* ... other tokens */
    }
    ```
-   Then register in `ThemeService.cs`:
+   Then register in `dashy3.Web/Services/ThemeService.cs`:
    ```csharp
    public List<Theme> AvailableThemes { get; } =
    [
@@ -187,7 +186,7 @@ The redesign is isolated in CSS and component wrappers. To roll back:
 
 1. **Quick Rollback** (revert to old CSS):
    ```bash
-   # In Dashy.Net.Web/Components/App.razor
+   # In dashy3.Web/Components/App.razor
    # Comment out:
    # <link rel="stylesheet" href="@Assets["css/app.generated.css"]" />
    ```
@@ -235,8 +234,8 @@ All data is safe because:
 
 **Steps**:
 1. Pull latest changes
-2. `npm install` in `Dashy.Net.Web`
-3. `npm run css:build` in `Dashy.Net.Web`
+2. `npm install` in `dashy3.Web`
+3. `npm run css:build` in `dashy3.Web`
 4. `dotnet build` in root
 5. Run and test
 

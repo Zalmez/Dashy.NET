@@ -9,7 +9,7 @@ This guide will help you get Dashy.NET up and running on your system. There are 
 ## Prerequisites
 
 ### For Local Development
-- [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - [Git](https://git-scm.com/) (for cloning the repository)
 
 ### For Docker Deployment
@@ -32,7 +32,7 @@ cd Dashy.NET
 The simplest way to run the entire application stack:
 
 ```bash
-dotnet run --project Dashy.Net.AppHost
+dotnet run --project dashy3.AppHost
 ```
 
 This command will:
@@ -76,25 +76,42 @@ The recommended approach for production deployments.
 
 ### Custom Docker Setup
 
-You can also run the individual services manually:
+If you prefer to run containers manually:
 
 ```bash
+# Create a network
+docker network create dashy-network
+
 # Start PostgreSQL
 docker run -d \
   --name dashy-postgres \
-  -e POSTGRES_DB=DashyNet \
+  --network dashy-network \
+  -e POSTGRES_DB=dashynet \
   -e POSTGRES_USER=dashynet \
   -e POSTGRES_PASSWORD=your-secure-password \
+  -v dashy-postgres-data:/var/lib/postgresql/data \
   -p 5432:5432 \
-  postgres:15
+  --restart unless-stopped \
+  postgres:16
 
-# Start Dashy.NET
+# Start the API service
 docker run -d \
-  --name dashy-net \
+  --name dashy-apiservice \
+  --network dashy-network \
+  -e ASPNETCORE_ENVIRONMENT=Production \
+  -e ConnectionStrings__dashy="Host=dashy-postgres;Database=dashynet;Username=dashynet;Password=your-secure-password" \
   -p 8080:80 \
-  -e ConnectionStrings__DefaultConnection="Host=dashy-postgres;Database=DashyNet;Username=dashynet;Password=your-secure-password" \
-  --link dashy-postgres \
-  zalmez/dashy-net:latest
+  --restart unless-stopped \
+  ghcr.io/zalmez/dashy.net/apiservice:latest
+
+# Start the web frontend
+docker run -d \
+  --name dashy-webfrontend \
+  --network dashy-network \
+  -e ASPNETCORE_ENVIRONMENT=Production \
+  -p 5000:80 \
+  --restart unless-stopped \
+  ghcr.io/zalmez/dashy.net/webfrontend:latest
 ```
 
 ## Environment Variables
@@ -103,7 +120,7 @@ When deploying Dashy.NET, you can customize its behavior using environment varia
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `ConnectionStrings__DefaultConnection` | PostgreSQL connection string | Required for Docker |
+| `ConnectionStrings__dashy` | PostgreSQL connection string | Required for Docker |
 | `ASPNETCORE_ENVIRONMENT` | Environment (Development/Production) | Production |
 | `ASPNETCORE_URLS` | URLs the app listens on | http://+:80 |
 
@@ -112,7 +129,7 @@ When deploying Dashy.NET, you can customize its behavior using environment varia
 To verify that Dashy.NET is running correctly:
 
 1. **Check the web interface**: Navigate to your application URL
-2. **Test the API**: Visit `/api/version` to see the API version
+2. **Test the API**: Visit `/health` to verify the API is running
 3. **Check logs**: Use `docker logs` (Docker) or check the console output (local development)
 
 ## Troubleshooting

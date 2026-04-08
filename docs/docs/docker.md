@@ -47,7 +47,7 @@ Open your browser and navigate to `http://localhost:8080`
 
 ## Docker Compose Configuration
 
-Here's the complete `docker-compose.yml` for reference (migration worker removed – migrations run automatically on API startup):
+Here's the complete `docker-compose.yml` for reference (migration worker removed ï¿½ migrations run automatically on API startup):
 
 ```yaml
 services:
@@ -152,26 +152,36 @@ docker network create dashy-network
 docker run -d \
   --name dashy-postgres \
   --network dashy-network \
-  -e POSTGRES_DB=DashyNet \
+  -e POSTGRES_DB=dashynet \
   -e POSTGRES_USER=dashynet \
   -e POSTGRES_PASSWORD=your-secure-password \
   -v dashy-postgres-data:/var/lib/postgresql/data \
   -p 5432:5432 \
   --restart unless-stopped \
-  postgres:15
+  postgres:16
 ```
 
 ### 3. Start Dashy.NET
 
 ```bash
+# Start the API service
 docker run -d \
-  --name dashy-net \
+  --name dashy-apiservice \
   --network dashy-network \
   -e ASPNETCORE_ENVIRONMENT=Production \
-  -e ConnectionStrings__DefaultConnection="Host=dashy-postgres;Database=DashyNet;Username=dashynet;Password=your-secure-password" \
+  -e ConnectionStrings__dashy="Host=dashy-postgres;Database=dashynet;Username=dashynet;Password=your-secure-password" \
   -p 8080:80 \
   --restart unless-stopped \
-  zalmez/dashy-net:latest
+  ghcr.io/zalmez/dashy.net/apiservice:latest
+
+# Start the web frontend
+docker run -d \
+  --name dashy-webfrontend \
+  --network dashy-network \
+  -e ASPNETCORE_ENVIRONMENT=Production \
+  -p 5000:80 \
+  --restart unless-stopped \
+  ghcr.io/zalmez/dashy.net/webfrontend:latest
 ```
 
 ## Persistent Data
@@ -197,21 +207,15 @@ Your dashboard configuration is stored in PostgreSQL. Ensure data persistence by
 #### Backup Database
 
 ```bash
-# Create backup
-docker exec dashy-postgres pg_dump -U dashynet DashyNet > backup.sql
-
-# Or with Docker Compose
-docker-compose exec postgres pg_dump -U dashynet DashyNet > backup.sql
+# Create backup (using the compose service name)
+docker-compose exec db pg_dump -U dashynet dashynet > backup.sql
 ```
 
 #### Restore Database
 
 ```bash
 # Restore backup
-docker exec -i dashy-postgres psql -U dashynet DashyNet < backup.sql
-
-# Or with Docker Compose
-docker-compose exec -T postgres psql -U dashynet DashyNet < backup.sql
+docker-compose exec -T db psql -U dashynet dashynet < backup.sql
 ```
 
 ## Reverse Proxy Configuration
@@ -237,8 +241,8 @@ server {
 
 ```yaml
 services:
-  web:
-    image: zalmez/dashy-net:latest
+  webfrontend:
+    image: ghcr.io/zalmez/dashy.net/webfrontend:latest
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.dashy.rule=Host(`your-domain.com`)"
@@ -265,8 +269,8 @@ Use a reverse proxy (Nginx, Traefik, Caddy) to handle SSL termination.
 
 ```yaml
 services:
-  web:
-    image: zalmez/dashy-net:latest
+  webfrontend:
+    image: ghcr.io/zalmez/dashy.net/webfrontend:latest
     environment:
       - ASPNETCORE_URLS=https://+:443;http://+:80
       - ASPNETCORE_Kestrel__Certificates__Default__Password=cert-password
@@ -274,8 +278,8 @@ services:
     volumes:
       - ./certs:/https
     ports:
-      - "8443:443"
-      - "8080:80"
+      - "5443:443"
+      - "5000:80"
 ```
 
 ## Health Checks
@@ -284,10 +288,10 @@ Add health checks to your Docker Compose:
 
 ```yaml
 services:
-  web:
-    image: zalmez/dashy-net:latest
+  webfrontend:
+    image: ghcr.io/zalmez/dashy.net/webfrontend:latest
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/api/version"]
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -306,8 +310,9 @@ docker-compose logs
 docker-compose logs -f
 
 # View logs for specific service
-docker-compose logs web
-docker-compose logs postgres
+docker-compose logs webfrontend
+docker-compose logs apiservice
+docker-compose logs db
 ```
 
 ### Log Configuration
@@ -357,19 +362,17 @@ services:
 **Container won't start**:
 ```bash
 # Check logs
-docker-compose logs web
+docker-compose logs webfrontend
+docker-compose logs apiservice
 
 # Check if ports are available
-netstat -tulpn | grep :8080
+netstat -tulpn | grep :5000
 ```
 
 **Database connection issues**:
 ```bash
-# Test database connection
-docker-compose exec web curl postgres:5432
-
 # Check database logs
-docker-compose logs postgres
+docker-compose logs db
 ```
 
 **Permission issues**:
@@ -383,8 +386,8 @@ sudo chown -R 999:999 ./data/postgres  # PostgreSQL UID
 **PostgreSQL optimization**:
 ```yaml
 services:
-  postgres:
-    image: postgres:15
+  db:
+    image: postgres:16
     environment:
       - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
     command: >
@@ -398,11 +401,10 @@ services:
 **Application optimization**:
 ```yaml
 services:
-  web:
-    image: zalmez/dashy-net:latest
+  webfrontend:
+    image: ghcr.io/zalmez/dashy.net/webfrontend:latest
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      - COMPlus_ThreadPool_ForceMinWorkerThreads=50
     deploy:
       resources:
         limits:

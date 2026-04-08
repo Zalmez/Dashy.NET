@@ -8,79 +8,97 @@ Widgets are dynamic components that display real-time information on your Dashy.
 
 ## Available Widgets
 
-### Clock Widget
+### Link Shortcut (`link`)
 
-Display current time and date with customizable formatting.
-
-**Features:**
-- Multiple time zones support
-- 12-hour or 24-hour format
-- Date display options
-- Customizable styling
+A clickable button that opens a URL. Ideal for quick navigation to your most-used services.
 
 **Configuration:**
-- **Time Zone**: Select from available time zones
-- **Format**: Choose 12-hour or 24-hour display
-- **Show Date**: Toggle date visibility
-- **Style**: Size and color customization
+- **URL**: Target link
+- **Description**: Optional subtitle shown on the button
+- **Open in new tab**: Whether to open the link in a new browser tab
 
-### Weather Widget
+### Link Grid (`link-grid`)
 
-Show current weather conditions and forecasts.
-
-**Features:**
-- Current weather conditions
-- Multi-day forecast
-- Location-based weather data
-- Temperature in Celsius or Fahrenheit
+A compact favicon grid of bookmarked URLs, perfect for organizing many links in a small space.
 
 **Configuration:**
-- **Location**: City name or coordinates
-- **Units**: Metric or Imperial
-- **API Key**: OpenWeatherMap API key (required)
-- **Show Forecast**: Enable multi-day forecast
+- **Links**: List of URL and label pairs
 
-### System Status Widget
+### System Stats (`system-stats`)
 
-Monitor system health and performance metrics.
+Displays live system performance metrics fetched from the API every 10 seconds.
 
 **Features:**
-- CPU usage
-- Memory consumption
-- Disk space
-- Network activity
+- Memory usage (used / total)
+- CPU uptime
+- Process count
+- Processor count
+
+### Weather (`weather`)
+
+Shows current weather conditions for a specified location using [Open-Meteo](https://open-meteo.com/) (no API key required).
 
 **Configuration:**
-- **Refresh Interval**: How often to update (seconds)
-- **Show Details**: Display detailed metrics
-- **Thresholds**: Warning levels for alerts
+- **Location**: City name (e.g. "London" or "New York")
+- **Units**: `celsius` or `fahrenheit`
 
-### RSS Feed Widget
+### Markdown Notes (`markdown`)
 
-Display recent posts from RSS feeds.
-
-**Features:**
-- Multiple feed support
-- Customizable item count
-- Link previews
-- Publication dates
+A full-featured markdown editor and viewer. Write notes, checklists, or any rich text content directly on your dashboard.
 
 **Configuration:**
-- **Feed URL**: RSS/Atom feed URL
-- **Item Count**: Number of items to display
-- **Show Dates**: Display publication dates
-- **Open Links**: Same tab or new tab
+- **Content**: Markdown text (editable in-place on the dashboard)
+
+### Status Checks (`status`)
+
+Monitors the health of services by making HTTP requests and displaying their status.
+
+**Configuration:**
+- **Services**: List of service names and URLs to monitor
+
+### Media Player (`media`)
+
+Music and media playback controls widget.
+
+### RSS Feed (`rss`)
+
+Fetches and displays the latest items from an RSS or Atom feed, with optional auto-scroll.
+
+**Configuration:**
+- **Feed URL**: RSS or Atom feed URL
+- **Limit**: Number of items to display (maximum 20)
+- **Auto-scroll**: Automatically scroll through items
+
+### CVE Tracker (`cve`)
+
+Tracks recent security vulnerabilities from the [NVD](https://nvd.nist.gov/) (National Vulnerability Database) or [EUVD](https://euvd.enisa.europa.eu/) (EU Vulnerability Database).
+
+**Configuration:**
+- **Source**: `nvd` or `euvd`
+- **Keyword**: Filter vulnerabilities by keyword (optional)
+- **Limit**: Number of CVEs to display
+
+### Section Drawer (`section`)
+
+A collapsible container that groups other widgets together. Sections can be nested one level deep.
+
+### API Widget (`api`)
+
+Renders custom HTML and CSS content that is pushed to the widget via the REST API. Perfect for automation scripts or external services that need to display dynamic content on your dashboard.
+
+**Configuration:**
+- **Content**: HTML content (pushed via `PUT /api/widgets/{id}/content`)
+- **CSS**: Optional scoped CSS styles
 
 ## Adding Widgets
 
 ### Through the UI
 
 1. **Enter Edit Mode**: Click the edit button on your dashboard
-2. **Select Section**: Choose where to add the widget
-3. **Add Widget**: Click "Add Widget" or the "+" button
-4. **Choose Type**: Select from available widget types
-5. **Configure**: Set widget-specific options
-6. **Save**: Apply changes to your dashboard
+2. **Click the "+" button**: In the section where you want to add a widget
+3. **Choose Type**: Select from available widget types
+4. **Configure**: Set widget-specific options
+5. **Save**: Apply changes to your dashboard
 
 ### Widget Configuration
 
@@ -88,112 +106,58 @@ Each widget has common and specific configuration options:
 
 #### Common Options
 - **Title**: Display name for the widget
-- **Size**: Widget dimensions (small, medium, large)
-- **Position**: Where in the section to place the widget
-- **Refresh Rate**: How often to update data
-
-#### Widget-Specific Options
-Each widget type has its own configuration parameters as detailed in the sections above.
+- **Icon**: Optional icon (Lucide icon name)
+- **Size**: Widget dimensions (Small, Medium, Large)
 
 ## Widget Development
 
-Dashy.NET supports custom widget development for advanced users.
+Custom widgets are Blazor components added directly to the `dashy3.Web` project.
 
 ### Widget Structure
 
-Widgets in Dashy.NET are Blazor components that implement the `IWidgetDescriptor` interface:
+Each widget is a `.razor` component stored in `dashy3.Web/Components/Widgets/`. The component receives the `Widget` model and can access its configuration via `Widget.GetConfig<T>(key, defaultValue)`.
 
-```csharp
-public interface IWidgetDescriptor
-{
-    string Name { get; }
-    string Description { get; }
-    Type ComponentType { get; }
-    Dictionary<string, object> DefaultSettings { get; }
-}
+```razor
+@* MyCustomWidget.razor *@
+@inherits WidgetBase
+
+<div class="p-4">
+    <h3>@Widget.Title</h3>
+    <p>@Widget.GetConfig("message", "Hello!")</p>
+</div>
 ```
 
-### Creating a Custom Widget
+Register the new widget type in `dashy3.Web/Models/WidgetType.cs`:
 
-1. **Create Widget Component**:
-   ```csharp
-   @inherits WidgetBase
-   
-   <div class="custom-widget">
-       <h3>@Title</h3>
-       <p>@Data</p>
-   </div>
-   
-   @code {
-       [Parameter] public string Title { get; set; }
-       private string Data { get; set; }
-       
-       protected override async Task OnInitializedAsync()
-       {
-           // Initialize widget data
-           await LoadDataAsync();
-       }
-   }
-   ```
+```csharp
+public const string MyCustom = "my-custom";
 
-2. **Create Widget Descriptor**:
-   ```csharp
-   public class CustomWidgetDescriptor : IWidgetDescriptor
-   {
-       public string Name => "Custom Widget";
-       public string Description => "A custom widget example";
-       public Type ComponentType => typeof(CustomWidget);
-       
-       public Dictionary<string, object> DefaultSettings => new()
-       {
-           { "title", "My Custom Widget" },
-           { "refreshInterval", 30 }
-       };
-   }
-   ```
+// Add to the All list:
+new(MyCustom, "My Custom Widget", "star-icon", "A custom widget example"),
+```
 
-3. **Register Widget**:
-   ```csharp
-   // In Program.cs or startup
-   services.AddTransient<IWidgetDescriptor, CustomWidgetDescriptor>();
-   ```
+Then add a case to `WidgetContent.razor` to dispatch to your new component.
 
 ### Widget Best Practices
 
-- **Performance**: Use appropriate refresh intervals
-- **Error Handling**: Handle API failures gracefully  
-- **Responsiveness**: Ensure widgets work on mobile devices
-- **Accessibility**: Include proper ARIA labels
-- **Styling**: Follow the dashboard theme system
+- **Performance**: Fetch data on `OnInitializedAsync` and refresh on a timer only when necessary
+- **Error Handling**: Handle API failures gracefully and show a user-friendly error state
+- **Responsiveness**: Ensure widgets work well at all three sizes (Small, Medium, Large)
+- **Theming**: Use CSS variables from the design token system instead of hard-coded colours
+- **Accessibility**: Include appropriate ARIA labels and ensure keyboard navigability
 
-## Widget API Integration
+## API Widget Integration
 
-### External APIs
+The **API Widget** (`api`) is designed for external integrations. You can push HTML/CSS content to it programmatically using the REST API:
 
-Many widgets require external API integration:
+```bash
+curl -X PUT https://your-dashy-instance/api/widgets/{widgetId}/content \
+  -H "X-Api-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{"content": "<p>Hello from the API!</p>", "css": "p { color: green; }"}'
+```
 
-#### Weather APIs
-- **OpenWeatherMap**: Free tier available
-- **AccuWeather**: Comprehensive weather data
-- **WeatherAPI**: Simple integration
-
-#### System Monitoring
-- **Prometheus**: Metrics collection
-- **Grafana**: Visualization integration
-- **Custom APIs**: Your own monitoring endpoints
-
-#### Social Media
-- **RSS Feeds**: Standard RSS/Atom support
-- **Twitter API**: Tweet integration
-- **GitHub API**: Repository information
-
-### API Key Management
-
-Store API keys securely:
-
-1. **Environment Variables**: Set via Docker/system environment
-2. **Configuration UI**: Store encrypted in database
-3. **Key Vault**: Azure Key Vault or similar services
+See the [API Reference](/docs/api-reference) for full details on authentication and available endpoints.
 
 ## Troubleshooting Widgets
 
@@ -201,53 +165,19 @@ Store API keys securely:
 
 **Widget not updating**:
 - Check refresh interval settings
-- Verify API key validity
-- Check network connectivity
-- Review browser console for errors
+- Verify network connectivity from the server to external APIs
+- Review the browser console and server logs for errors
 
-**Widget display issues**:
-- Clear browser cache
-- Check responsive design settings
-- Verify CSS conflicts
+**Weather widget shows "Location not found"**:
+- Check the spelling of the city name
+- Try a more specific location (e.g. "London, UK")
 
-**API rate limiting**:
-- Increase refresh intervals
-- Use API key if available
-- Check API documentation for limits
+**RSS widget shows no items**:
+- Verify the feed URL is accessible from the server
+- Ensure the URL points to a valid RSS or Atom feed
 
-### Widget Logs
-
-Enable widget logging for troubleshooting:
-
-```csharp
-// In appsettings.json
-{
-  "Logging": {
-    "LogLevel": {
-      "Dashy.Net.Widgets": "Debug"
-    }
-  }
-}
-```
-
-## Widget Gallery
-
-### Community Widgets
-
-The Dashy.NET community has created additional widgets:
-- **Cryptocurrency Prices**: Live crypto market data
-- **Stock Tickers**: Real-time stock information  
-- **Calendar Events**: Google Calendar integration
-- **Server Monitoring**: Server health dashboards
-
-### Contributing Widgets
-
-To contribute a widget to Dashy.NET:
-
-1. **Develop**: Create your widget following the guidelines
-2. **Test**: Ensure it works across different configurations
-3. **Document**: Add configuration and usage documentation
-4. **Submit**: Create a pull request with your widget
+**API widget shows placeholder**:
+- No content has been pushed yet; use `PUT /api/widgets/{id}/content` to send content
 
 ## Next Steps
 
