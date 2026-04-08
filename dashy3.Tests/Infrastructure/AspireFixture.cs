@@ -13,7 +13,8 @@ public class AspireFixture : IAsyncLifetime
     private string? _cleanupAdminId;
     private HttpClient? _cleanupAdminClient;
 
-    public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(120);
+    // CI cold starts (container pulls/builds, health checks) can easily exceed 2 minutes.
+    public static readonly TimeSpan DefaultTimeout = TimeSpan.FromMinutes(8);
 
     public DistributedApplication App => _app ?? throw new InvalidOperationException("Fixture not initialized.");
 
@@ -33,18 +34,16 @@ public class AspireFixture : IAsyncLifetime
         // Do NOT add StandardResilienceHandler — it causes slow retries in tests
         // Fast failure is preferable for integration tests
 
-        _app = await appHost.BuildAsync(ct).WaitAsync(DefaultTimeout, ct);
-        await _app.StartAsync(ct).WaitAsync(DefaultTimeout, ct);
+        _app = await appHost.BuildAsync(ct);
+        await _app.StartAsync(ct);
 
         // Wait for the API service to be healthy before any tests run
         await _app.ResourceNotifications
-            .WaitForResourceHealthyAsync("apiservice", ct)
-            .WaitAsync(DefaultTimeout, ct);
+            .WaitForResourceHealthyAsync("apiservice", ct);
 
         // Wait for webfrontend too (used by WebSmokeTests)
         await _app.ResourceNotifications
-            .WaitForResourceHealthyAsync("webfrontend", ct)
-            .WaitAsync(DefaultTimeout, ct);
+            .WaitForResourceHealthyAsync("webfrontend", ct);
 
         // Create a dedicated admin used only for test cleanup.
         // If the user already exists from a prior run, log in to recover the ID.
