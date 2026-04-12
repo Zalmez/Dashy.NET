@@ -26,8 +26,12 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: trust dev certs
-        run: dotnet dev-certs https --trust
+      - name: Trust Certificate on Linux
+        run: |
+          dotnet dev-certs https -ep ~/.aspnet/https/localhost.crt --format PEM
+          sudo cp ~/.aspnet/https/localhost.crt /usr/local/share/ca-certificates/aspnet-localhost.crt
+          sudo update-ca-certificates
+
       - name: Build Solution
         run: dotnet build --configuration Release
 
