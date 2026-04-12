@@ -45,6 +45,9 @@ jobs:
       - name: Build Solution
         run: dotnet build --configuration Release --no-restore
 
+      - name: trust dev certs
+        run: SSL_CERT_DIR="$HOME/.aspnet/dev-certs/trust" dotnet dev-certs https --trust
+
       - name: Run Tests
         run: dotnet test --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=results.trx" --results-directory ./test-results
 
