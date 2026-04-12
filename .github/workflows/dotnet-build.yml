@@ -29,7 +29,7 @@ jobs:
       - name: trust dev certs
         run: dotnet dev-certs https --trust
         env:
-          SSL_CERT_DIR: "$(HOME)/.aspnet/dev-certs/trust"
+          SSL_CERT_DIR: "${{ env.HOME }}/.aspnet/dev-certs/trust"
       - name: Build Solution
         run: dotnet build --configuration Release
 
