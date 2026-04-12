@@ -8,8 +8,10 @@ var isTestRun = string.Equals(
 var cache = builder.AddRedis("cache");
 
 var postgres = builder.AddPostgres("postgres").WithContainerName("dashgres")
-    .WithDataVolume("dashgres")
-    .WithPgAdmin();
+    .WithDataVolume("dashgres");
+
+if (!isTestRun)
+    postgres.WithPgAdmin();
 
 var db = postgres.AddDatabase("dashy3db");
 
