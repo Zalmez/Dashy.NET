@@ -26,9 +26,6 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Install Aspire Workload
-        run: dotnet workload install aspire
-
       - name: Build Solution
         run: dotnet build --configuration Release
 
