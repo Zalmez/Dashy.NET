@@ -12,6 +12,7 @@ public class AspireFixture : IAsyncLifetime
     private DistributedApplication? _app;
     private string? _cleanupAdminId;
     private HttpClient? _cleanupAdminClient;
+    private string? _previousTestingFlag;
 
     // CI cold starts (container pulls/builds, health checks) can easily exceed 2 minutes.
     public static readonly TimeSpan DefaultTimeout = TimeSpan.FromMinutes(8);
@@ -22,6 +23,9 @@ public class AspireFixture : IAsyncLifetime
     {
         using var cts = new CancellationTokenSource(DefaultTimeout);
         var ct = cts.Token;
+
+        _previousTestingFlag = Environment.GetEnvironmentVariable("DASHY3_TESTING");
+        Environment.SetEnvironmentVariable("DASHY3_TESTING", "true");
 
         var appHost = await DistributedApplicationTestingBuilder
             .CreateAsync<Projects.dashy3_AppHost>(ct);
@@ -58,6 +62,8 @@ public class AspireFixture : IAsyncLifetime
         _cleanupAdminClient?.Dispose();
         if (_app is not null)
             await _app.DisposeAsync();
+
+        Environment.SetEnvironmentVariable("DASHY3_TESTING", _previousTestingFlag);
     }
 
     /// <summary>Creates an HttpClient targeting the apiservice resource.</summary>
