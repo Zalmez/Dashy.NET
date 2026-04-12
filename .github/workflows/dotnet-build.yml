@@ -18,7 +18,7 @@ jobs:
       - name: Setup .NET 10 SDK
         uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7
         with:
-          dotnet-version: "10.0.102"
+          dotnet-version: "10.0.x"
 
       - name: Log in to Docker Hub
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121
@@ -28,6 +28,8 @@ jobs:
 
       - name: trust dev certs
         run: dotnet dev-certs https --trust
+        env:
+          SSL_CERT_DIR: "$(HOME)/.aspnet/dev-certs/trust"
       - name: Build Solution
         run: dotnet build --configuration Release
 
