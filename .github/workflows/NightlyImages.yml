@@ -1,92 +1,110 @@
-﻿name: Nightly Build
+name: Nightly Build
 
 on:
-  schedule:
-    - cron: "0 3 * * *"
+    schedule:
+        - cron: "0 3 * * *"
+    workflow_dispatch:
 
 permissions:
-  contents: read
-  packages: write
+    contents: read
+    packages: write
+
+concurrency:
+    group: nightly-${{ github.ref }}
+    cancel-in-progress: true
 
 env:
-  REGISTRY: ghcr.io
+    REGISTRY: ghcr.io
 
 jobs:
-  build-and-push-nightly:
-    if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
+    build-and-push-nightly:
+        runs-on: ubuntu-latest
+        timeout-minutes: 45
 
-    steps:
-      - name: Get current date
-        id: date
-        run: echo "date=$(date +'%Y%m%d')" >> "$GITHUB_OUTPUT"
+        steps:
+            - name: Get current date
+              id: date
+              run: echo "date=$(date +'%Y%m%d')" >> "$GITHUB_OUTPUT"
 
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+            - name: Checkout repository
+              uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
+              with:
+                  fetch-depth: 1
 
-      - name: Check for new commits
-        id: check_commits
-        run: |
-          # Get the timestamp of the latest commit on the main branch
-          latest_commit_timestamp=$(git log -1 --format=%ct origin/main)
+            - name: Check for new commits
+              id: check-commits
+              run: |
+                  latest_commit_timestamp=$(git log -1 --format=%ct)
+                  one_day_ago_timestamp=$(date -d '24 hours ago' +%s)
 
-          # Get the timestamp for 24 hours ago
-          # The schedule runs daily, so we check for any commit in that window.
-          one_day_ago_timestamp=$(date -d '24 hours ago' +%s)
+                  if [[ "$latest_commit_timestamp" -gt "$one_day_ago_timestamp" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+                    echo "proceed=true" >> "$GITHUB_OUTPUT"
+                  else
+                    echo "proceed=false" >> "$GITHUB_OUTPUT"
+                  fi
 
-          echo "Latest commit was at: $(date -d @$latest_commit_timestamp)"
-          echo "Cutoff time is: $(date -d @$one_day_ago_timestamp)"
+            - name: Set up Docker Buildx
+              if: steps.check-commits.outputs.proceed == 'true'
+              uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435
 
-          if [[ "$latest_commit_timestamp" -gt "$one_day_ago_timestamp" ]]; then
-            echo "✅ New commits found within the last 24 hours."
-            echo "proceed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "🛑 No new commits found in the last 24 hours. Halting workflow."
-            echo "proceed=false" >> "$GITHUB_OUTPUT"
-          fi
+            - name: Log in to GitHub Container Registry
+              if: steps.check-commits.outputs.proceed == 'true'
+              uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef
+              with:
+                  registry: ${{ env.REGISTRY }}
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Log in to the GitHub Container Registry
-        if: steps.check_commits.outputs.proceed == 'true'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+            - name: Build and push ApiService image
+              if: steps.check-commits.outputs.proceed == 'true'
+              uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83
+              with:
+                  context: .
+                  file: ./dashy3.ApiService/Dockerfile
+                  push: true
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
+                  build-args: |
+                      GITHUB_REF_NAME=nightly-${{ steps.date.outputs.date }}
+                      GITHUB_REF_TYPE=tag
+                  tags: |
+                      ${{ env.REGISTRY }}/${{ github.repository }}/apiservice:nightly
+                      ${{ env.REGISTRY }}/${{ github.repository }}/apiservice:nightly-${{ steps.date.outputs.date }}
 
-      - name: Build and Push ApiService Image
-        if: steps.check_commits.outputs.proceed == 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./dashy3.ApiService/Dockerfile
-          push: true
-          build-args: |
-            GITHUB_REF_NAME=nightly-${{ steps.date.outputs.date }}
-            GITHUB_REF_TYPE=tag
-          tags: ${{ env.REGISTRY }}/${{ github.repository }}/apiservice:nightly
+            - name: Build and push WebFrontend image
+              if: steps.check-commits.outputs.proceed == 'true'
+              uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83
+              with:
+                  context: .
+                  file: ./dashy3.Web/Dockerfile
+                  push: true
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
+                  build-args: |
+                      GITHUB_REF_NAME=nightly-${{ steps.date.outputs.date }}
+                      GITHUB_REF_TYPE=tag
+                  tags: |
+                      ${{ env.REGISTRY }}/${{ github.repository }}/webfrontend:nightly
+                      ${{ env.REGISTRY }}/${{ github.repository }}/webfrontend:nightly-${{ steps.date.outputs.date }}
 
-      - name: Build and Push WebFrontend Image
-        if: steps.check_commits.outputs.proceed == 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./dashy3.Web/Dockerfile
-          push: true
-          build-args: |
-            GITHUB_REF_NAME=nightly-${{ steps.date.outputs.date }}
-            GITHUB_REF_TYPE=tag
-          tags: ${{ env.REGISTRY }}/${{ github.repository }}/webfrontend:nightly
+            - name: Build and push MigrationService image
+              if: steps.check-commits.outputs.proceed == 'true'
+              uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83
+              with:
+                  context: .
+                  file: ./dashy3.MigrationService/Dockerfile
+                  push: true
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
+                  build-args: |
+                      GITHUB_REF_NAME=nightly-${{ steps.date.outputs.date }}
+                      GITHUB_REF_TYPE=tag
+                  tags: |
+                      ${{ env.REGISTRY }}/${{ github.repository }}/migrationservice:nightly
+                      ${{ env.REGISTRY }}/${{ github.repository }}/migrationservice:nightly-${{ steps.date.outputs.date }}
 
-      - name: Build and Push MigrationService Image
-        if: steps.check_commits.outputs.proceed == 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./dashy3.MigrationService/Dockerfile
-          push: true
-          build-args: |
-            GITHUB_REF_NAME=nightly-${{ steps.date.outputs.date }}
-            GITHUB_REF_TYPE=tag
-          tags: ${{ env.REGISTRY }}/${{ github.repository }}/migrationservice:nightly
+            - name: Nightly summary
+              if: always()
+              run: |
+                  echo "# Nightly Build" >> "$GITHUB_STEP_SUMMARY"
+                  echo "proceed=${{ steps.check-commits.outputs.proceed }}" >> "$GITHUB_STEP_SUMMARY"
