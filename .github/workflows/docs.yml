@@ -3,10 +3,14 @@ name: Deploy Documentation to GitHub Pages
 on:
   push:
     branches: [main]
-    paths: ["docs/**"]
+    paths:
+      - "docs/**"
+      - ".github/workflows/docs.yml"
   pull_request:
     branches: [main]
-    paths: ["docs/**"]
+    paths:
+      - "docs/**"
+      - ".github/workflows/docs.yml"
   workflow_dispatch:
 
 permissions:
@@ -25,9 +29,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: ./docs
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
@@ -45,10 +46,18 @@ jobs:
         id: pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d
 
+      - name: Validate Docusaurus project
+        working-directory: ./docs
+        run: |
+          test -f package.json
+          npm pkg get scripts.docusaurus
+
       - name: Install dependencies
+        working-directory: ./docs
         run: npm ci
 
       - name: Build website
+        working-directory: ./docs
         run: npm run build
 
       - name: Upload artifact

@@ -28,17 +28,3 @@
   --ifm-color-primary-lightest: #4fddbf;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
-
-/* Custom logo sizing for navbar */
-.navbar__logo {
-  height: 45px !important;
-  width: auto !important;
-  max-width: 135px !important;
-  padding: 5px 0 !important;
-}
-
-.navbar__logo img {
-  height: 100% !important;
-  width: auto !important;
-  object-fit: contain !important;
-}
