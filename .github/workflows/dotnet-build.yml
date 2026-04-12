@@ -26,6 +26,8 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: trust dev certs
+        run: dotnet dev-certs https --trust
       - name: Build Solution
         run: dotnet build --configuration Release
 
