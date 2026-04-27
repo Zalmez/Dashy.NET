@@ -5,9 +5,9 @@ import type * as Preset from '@docusaurus/preset-classic';
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
-  title: 'Dashy.NET',
-  tagline: 'A self-hosted, personal dashboard built for you',
-  favicon: 'img/favicon.png',
+  title: 'Dashy Documentation',
+  tagline: 'Self-hosted personal dashboard powered by .NET and Aspire',
+  favicon: 'img/favicon.ico',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
@@ -26,7 +26,6 @@ const config: Config = {
   projectName: 'Dashy.NET', // Usually your repo name.
 
   onBrokenLinks: 'throw',
-  onBrokenMarkdownLinks: 'warn',
 
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you
@@ -45,18 +44,7 @@ const config: Config = {
           editUrl:
             'https://github.com/Zalmez/Dashy.NET/tree/main/docs/',
         },
-        blog: {
-          showReadingTime: true,
-          feedOptions: {
-            type: ['rss', 'atom'],
-            xslt: true,
-          },
-          editUrl:
-            'https://github.com/Zalmez/Dashy.NET/tree/main/docs/',
-          onInlineTags: 'warn',
-          onInlineAuthors: 'warn',
-          onUntruncatedBlogPosts: 'warn',
-        },
+        blog: false,
         theme: {
           customCss: './src/css/custom.css',
         },
@@ -65,12 +53,15 @@ const config: Config = {
   ],
 
   themeConfig: {
-    image: 'img/dashynet-logo.png',
+    image: 'img/docusaurus-social-card.jpg',
+    colorMode: {
+      respectPrefersColorScheme: true,
+    },
     navbar: {
-      title: 'Dashy.NET',
+      title: 'Dashy Docs',
       logo: {
-        alt: 'Dashy.NET Logo',
-        src: 'img/dashynet-logo.png',
+        alt: 'Dashy Logo',
+        src: 'img/logo.svg',
       },
       items: [
         {
@@ -79,66 +70,12 @@ const config: Config = {
           position: 'left',
           label: 'Documentation',
         },
-        {to: '/blog', label: 'Blog', position: 'left'},
         {
           href: 'https://github.com/Zalmez/Dashy.NET',
           label: 'GitHub',
           position: 'right',
         },
       ],
-    },
-    footer: {
-      style: 'dark',
-      links: [
-        {
-          title: 'Documentation',
-          items: [
-            {
-              label: 'Getting Started',
-              to: '/docs/intro',
-            },
-            {
-              label: 'Installation',
-              to: '/docs/installation',
-            },
-            {
-              label: 'Configuration',
-              to: '/docs/configuration',
-            },
-          ],
-        },
-        {
-          title: 'Community',
-          items: [
-            {
-              label: 'GitHub Issues',
-              href: 'https://github.com/Zalmez/Dashy.NET/issues',
-            },
-            {
-              label: 'GitHub Discussions',
-              href: 'https://github.com/Zalmez/Dashy.NET/discussions',
-            },
-          ],
-        },
-        {
-          title: 'More',
-          items: [
-            {
-              label: 'Blog',
-              to: '/blog',
-            },
-            {
-              label: 'GitHub',
-              href: 'https://github.com/Zalmez/Dashy.NET',
-            },
-            {
-              label: 'Original Dashy',
-              href: 'https://github.com/Lissy93/dashy',
-            },
-          ],
-        },
-      ],
-      copyright: `Copyright © ${new Date().getFullYear()} Dashy.NET. Licensed under GNU AGPLv3. Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,

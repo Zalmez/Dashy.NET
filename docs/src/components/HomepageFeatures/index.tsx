@@ -11,33 +11,32 @@ type FeatureItem = {
 
 const FeatureList: FeatureItem[] = [
   {
-    title: 'Built with .NET',
-    Svg: require('@site/static/img/builtwith.svg').default,
+    title: 'Easy to Use',
+    Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
     description: (
       <>
-        Dashy.NET is built entirely on the .NET platform using Blazor for the frontend 
-        and .NET Aspire for orchestration, providing a modern, performant, and 
-        cross-platform dashboarding experience.
+        Docusaurus was designed from the ground up to be easily installed and
+        used to get your website up and running quickly.
       </>
     ),
   },
   {
-    title: 'Easy Configuration',
-    Svg: require('@site/static/img/easyconfig.svg').default,
+    title: 'Focus on What Matters',
+    Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
     description: (
       <>
-        Configure your entire dashboard through an intuitive web interface. 
-        No YAML files or complex configuration required - just point, click, and customize.
+        Docusaurus lets you focus on your docs, and we&apos;ll do the chores. Go
+        ahead and move your docs into the <code>docs</code> directory.
       </>
     ),
   },
   {
-    title: 'Widget System',
-    Svg: require('@site/static/img/widgetsystem.svg').default,
+    title: 'Powered by React',
+    Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
     description: (
       <>
-        Display dynamic information with built-in widgets like real-time clocks, 
-        weather forecasts, and system monitors. Easily extensible for custom widgets.
+        Extend or customize your website layout by reusing React. Docusaurus can
+        be extended while reusing the same header and footer.
       </>
     ),
   },
