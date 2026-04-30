@@ -11,6 +11,9 @@ using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var runMigrationsInApiService = builder.Configuration.GetValue<bool?>("Database:RunMigrationsInApiService")
+    ?? builder.Environment.IsDevelopment();
+
 builder.AddServiceDefaults();
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
@@ -65,11 +68,50 @@ if (app.Environment.IsDevelopment())
 
 using (var scope = app.Services.CreateScope())
 {
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    foreach (var role in new[] { "Admin", "User" })
+    var dbContext = scope.ServiceProvider.GetRequiredService<DashboardDbContext>();
+    var startupLogger = scope.ServiceProvider
+        .GetRequiredService<ILoggerFactory>()
+        .CreateLogger("Startup");
+
+    if (runMigrationsInApiService)
     {
-        if (!await roleManager.RoleExistsAsync(role))
-            await roleManager.CreateAsync(new IdentityRole(role));
+        await dbContext.Database.MigrateAsync();
+    }
+    else
+    {
+        startupLogger.LogInformation(
+            "Skipping API service database migration because Database:RunMigrationsInApiService is disabled.");
+    }
+
+    if (!await RolesTableExistsAsync(dbContext))
+    {
+        startupLogger.LogWarning(
+            "Skipping role seeding because Identity schema is not ready (AspNetRoles table missing).");
+    }
+    else
+    {
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        foreach (var role in new[] { "Admin", "User" })
+        {
+            if (!await roleManager.RoleExistsAsync(role))
+                await roleManager.CreateAsync(new IdentityRole(role));
+        }
+    }
+}
+
+static async Task<bool> RolesTableExistsAsync(DashboardDbContext dbContext)
+{
+    var conn = dbContext.Database.GetDbConnection();
+    await conn.OpenAsync();
+    try
+    {
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'AspNetRoles')";
+        return (bool)(await cmd.ExecuteScalarAsync())!;
+    }
+    finally
+    {
+        await conn.CloseAsync();
     }
 }
 

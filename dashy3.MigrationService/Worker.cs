@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using dashy3.ApiService.Data;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -22,6 +23,7 @@ public class Worker(
             using var scope = serviceProvider.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<DashboardDbContext>();
             await RunMigrationAsync(dbContext, cancellationToken);
+            await EnsureRolesAsync(dbContext, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -81,6 +83,52 @@ public class Worker(
                 var sql = historyRepo.GetInsertScript(new HistoryRow(migrationId, "8.0.0"));
                 await dbContext.Database.ExecuteSqlRawAsync(sql, cancellationToken);
             }
+        }
+    }
+
+    private static async Task EnsureRolesAsync(DashboardDbContext dbContext, CancellationToken cancellationToken)
+    {
+        if (!await RolesTableExistsAsync(dbContext, cancellationToken))
+            return;
+
+        var existing = await dbContext.Roles
+            .Select(r => r.Name)
+            .ToListAsync(cancellationToken);
+
+        var existingSet = existing
+            .Where(n => !string.IsNullOrWhiteSpace(n))
+            .Select(n => n!)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var roleName in new[] { "Admin", "User" })
+        {
+            if (existingSet.Contains(roleName))
+                continue;
+
+            dbContext.Roles.Add(new IdentityRole
+            {
+                Name = roleName,
+                NormalizedName = roleName.ToUpperInvariant(),
+                ConcurrencyStamp = Guid.NewGuid().ToString()
+            });
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private static async Task<bool> RolesTableExistsAsync(DashboardDbContext dbContext, CancellationToken cancellationToken)
+    {
+        var conn = dbContext.Database.GetDbConnection();
+        await conn.OpenAsync(cancellationToken);
+        try
+        {
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'AspNetRoles')";
+            return (bool)(await cmd.ExecuteScalarAsync(cancellationToken))!;
+        }
+        finally
+        {
+            await conn.CloseAsync();
         }
     }
 }
