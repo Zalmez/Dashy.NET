@@ -10,6 +10,12 @@ window.rssAutoScroll = (() => {
 
             let paused = false;
             let lastTimestamp = null;
+            let waitingAtBottom = false;
+            let waitStartTime = null;
+            let scrollingToTop = false;
+            let scrollToTopStart = null;
+            const bottomWaitDuration = 2000;
+            const scrollToTopDuration = 800;
 
             const onEnter = () => paused = true;
             const onLeave = () => paused = false;
@@ -20,26 +26,62 @@ window.rssAutoScroll = (() => {
                 const instance = instances[id];
                 if (!instance) return;
 
-                if (lastTimestamp !== null && !paused) {
-                    const delta = timestamp - lastTimestamp;
-                    el.scrollTop += (pixelsPerSecond * delta) / 1000;
+                if (!paused) {
+                    if (waitingAtBottom) {
+                        if (waitStartTime === null) {
+                            waitStartTime = timestamp;
+                        }
 
-                    // Seamlessly loop back to top when we reach the bottom
-                    if (el.scrollTop >= el.scrollHeight - el.clientHeight - 1) {
-                        el.scrollTop = 0;
+                        const waitElapsed = timestamp - waitStartTime;
+                        if (waitElapsed >= bottomWaitDuration) {
+                            waitingAtBottom = false;
+                            waitStartTime = null;
+                            scrollingToTop = true;
+                        }
                     }
+                    else if (scrollingToTop) {
+                        if (scrollToTopStart === null) {
+                            scrollToTopStart = timestamp;
+                        }
+
+                        const elapsed = timestamp - scrollToTopStart;
+                        const progress = Math.min(elapsed / scrollToTopDuration, 1);
+
+                        const easeProgress = progress < 0.5
+                            ? 2 * progress * progress
+                            : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+                        const startScroll = instance.scrollStartPosition;
+                        el.scrollTop = startScroll - (startScroll * easeProgress);
+
+                        if (progress >= 1) {
+                            scrollingToTop = false;
+                            scrollToTopStart = null;
+                            el.scrollTop = 0;
+                            lastTimestamp = timestamp;
+                        }
+                    }
+                    else if (lastTimestamp !== null) {
+                        const delta = timestamp - lastTimestamp;
+                        el.scrollTop += (pixelsPerSecond * delta) / 1000;
+
+                        if (el.scrollTop >= el.scrollHeight - el.clientHeight - 1) {
+                            waitingAtBottom = true;
+                            waitStartTime = null;
+                            instance.scrollStartPosition = el.scrollTop;
+                        }
+                    }
+                    lastTimestamp = timestamp;
                 }
-                lastTimestamp = timestamp;
                 instance.raf = requestAnimationFrame(step);
             };
 
-            // Brief delay before starting so the user can read the top items first
             const timeout = setTimeout(() => {
                 if (!instances[id]) return;
                 instances[id].raf = requestAnimationFrame(step);
             }, 2500);
 
-            instances[id] = { raf: null, timeout, el, onEnter, onLeave };
+            instances[id] = { raf: null, timeout, el, onEnter, onLeave, scrollStartPosition: 0 };
         },
 
         stop(id) {
