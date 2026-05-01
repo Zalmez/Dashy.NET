@@ -1,7 +1,7 @@
 @* Weather Widget - displays current weather conditions *@
 @inject IHttpClientFactory HttpClientFactory
 
-<div class="h-full flex flex-col">
+<div class="h-full flex flex-col overflow-hidden">
     @if (_loading)
     {
         <div class="flex-1 flex items-center justify-center text-slate-400 dark:text-slate-500">
@@ -22,30 +22,66 @@
     }
     else
     {
-        <!-- Current weather -->
-        <div class="flex-1 flex flex-col items-center justify-center">
-            @WeatherIcon(_weatherCode)
-            <div class="text-5xl font-bold text-slate-900 dark:text-white mb-2">@_temperature°@_unit</div>
-            <div class="text-lg text-slate-600 dark:text-slate-400 mb-1">@_description</div>
-            <div class="text-sm text-slate-500 dark:text-slate-500">@_location</div>
-        </div>
+        <!-- Compact grid layout for small, traditional layout for medium+ -->
+        <div class="h-full flex flex-col">
+            <!-- Small: Compact grid layout -->
+            <div class="sm:hidden flex-1 grid grid-rows-[auto_1fr] gap-1 p-1.5 overflow-hidden">
+                <!-- Top: Icon + Temp -->
+                <div class="flex items-center justify-center gap-1.5">
+                    <div class="flex-shrink-0 w-8 h-8">
+                        @WeatherIcon(_weatherCode)
+                    </div>
+                    <div class="flex flex-col min-w-0">
+                        <div class="text-xl font-bold text-slate-900 dark:text-white leading-none">@_temperature°@_unit</div>
+                        <div class="text-[10px] text-slate-500 dark:text-slate-400 leading-tight truncate">@_location</div>
+                    </div>
+                </div>
+                <!-- Bottom: Stats in 3 columns -->
+                <div class="grid grid-cols-3 gap-1 min-h-0">
+                    <div class="flex flex-col items-center justify-center gap-0.5 bg-slate-50 dark:bg-slate-800 rounded p-0.5 min-h-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-blue-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                        <div class="text-[10px] font-bold text-slate-900 dark:text-white leading-none">@_humidity%</div>
+                    </div>
+                    <div class="flex flex-col items-center justify-center gap-0.5 bg-slate-50 dark:bg-slate-800 rounded p-0.5 min-h-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-slate-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg>
+                        <div class="text-[10px] font-bold text-slate-900 dark:text-white leading-none">@_windSpeed<span class="text-[10px] font-normal">km/h</span></div>
+                    </div>
+                    <div class="flex flex-col items-center justify-center gap-0.5 bg-slate-50 dark:bg-slate-800 rounded p-0.5 min-h-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-slate-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+                        <div class="text-[10px] font-bold text-slate-900 dark:text-white leading-none">@_cloudCover%</div>
+                    </div>
+                </div>
+            </div>
 
-        <!-- Weather details -->
-        <div class="grid grid-cols-3 gap-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-            <div class="flex flex-col items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-blue-500 mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
-                <div class="text-xs text-slate-500 dark:text-slate-400">Humidity</div>
-                <div class="text-sm font-semibold text-slate-900 dark:text-white">@_humidity%</div>
-            </div>
-            <div class="flex flex-col items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg>
-                <div class="text-xs text-slate-500 dark:text-slate-400">Wind</div>
-                <div class="text-sm font-semibold text-slate-900 dark:text-white">@_windSpeed km/h</div>
-            </div>
-            <div class="flex flex-col items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
-                <div class="text-xs text-slate-500 dark:text-slate-400">Clouds</div>
-                <div class="text-sm font-semibold text-slate-900 dark:text-white">@_cloudCover%</div>
+            <!-- Medium+: Traditional centered layout -->
+            <div class="hidden sm:flex flex-1 flex-col">
+                <div class="flex-1 flex flex-col items-center justify-center min-h-0 py-1 px-2 gap-0.5">
+                    <div class="flex-shrink-0 max-h-12 md:max-h-14 mb-1">
+                        @WeatherIcon(_weatherCode)
+                    </div>
+                    <div class="text-3xl md:text-4xl lg:text-5xl font-bold text-slate-900 dark:text-white leading-none">@_temperature°@_unit</div>
+                    <div class="text-sm md:text-base text-slate-600 dark:text-slate-400 text-center w-full line-clamp-1 leading-tight">@_description</div>
+                    <div class="text-xs text-slate-500 dark:text-slate-500 text-center w-full line-clamp-1 leading-tight">@_location</div>
+                </div>
+
+                <!-- Weather details -->
+                <div class="flex-shrink-0 grid grid-cols-3 gap-2 md:gap-3 py-2 md:py-3 border-t border-slate-200 dark:border-slate-700">
+                    <div class="flex flex-col items-center gap-0.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 md:w-5 md:h-5 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 leading-tight">Humidity</div>
+                        <div class="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white leading-tight">@_humidity%</div>
+                    </div>
+                    <div class="flex flex-col items-center gap-0.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 md:w-5 md:h-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 leading-tight">Wind</div>
+                        <div class="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white leading-tight">@_windSpeed km/h</div>
+                    </div>
+                    <div class="flex flex-col items-center gap-0.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 md:w-5 md:h-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 leading-tight">Clouds</div>
+                        <div class="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white leading-tight">@_cloudCover%</div>
+                    </div>
+                </div>
             </div>
         </div>
     }
