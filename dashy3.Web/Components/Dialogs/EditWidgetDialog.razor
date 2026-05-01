@@ -171,6 +171,28 @@
                             Comma-separated keywords to filter CVEs by product, vendor, or description. Leave empty to show all.
                         </p>
                     </div>
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-slate-700 dark:text-slate-300">Auto-scroll</p>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Automatically scroll through items. Pauses on hover.</p>
+                        </div>
+                        <button type="button"
+                                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors @(_cveAutoScroll ? "bg-blue-600" : "bg-slate-200 dark:bg-slate-700")"
+                                @onclick="() => _cveAutoScroll = !_cveAutoScroll">
+                            <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform @(_cveAutoScroll ? "translate-x-6" : "translate-x-1")"></span>
+                        </button>
+                    </div>
+                    @if (_cveAutoScroll)
+                    {
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Scroll Speed</label>
+                            <select class="input-field" @bind="_cveScrollSpeed">
+                                <option value="slow">Slow</option>
+                                <option value="medium">Medium</option>
+                                <option value="fast">Fast</option>
+                            </select>
+                        </div>
+                    }
                     <div class="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs text-amber-700 dark:text-amber-300">
                         <strong>Note:</strong> Only HIGH and CRITICAL severity CVEs with a CVSS score ≥ 7.0 are displayed. Results are sorted with the most recent first.
                     </div>
@@ -260,6 +282,8 @@
     private string _cveSource = "nvd";
     private int _cveLimit = 10;
     private string _cveKeywords = "";
+    private bool _cveAutoScroll = false;
+    private string _cveScrollSpeed = "medium";
 
     private bool _apiIdCopied;
 
@@ -309,6 +333,8 @@
                 _cveSource = Widget.GetConfig<string>("source", "nvd");
                 _cveLimit = Widget.GetConfig<int>("limit", 10);
                 _cveKeywords = Widget.GetConfig<string>("keywords", "");
+                _cveAutoScroll = Widget.GetConfig<bool>("autoScroll", false);
+                _cveScrollSpeed = Widget.GetConfig<string>("scrollSpeed", "medium");
                 break;
 
             case WidgetType.LinkGrid:
@@ -376,6 +402,8 @@
                 ["source"] = _cveSource,
                 ["limit"]  = _cveLimit,
                 ["keywords"] = _cveKeywords,
+                ["autoScroll"]  = _cveAutoScroll,
+                ["scrollSpeed"] = _cveScrollSpeed,
             },
             WidgetType.LinkGrid => new()
             {

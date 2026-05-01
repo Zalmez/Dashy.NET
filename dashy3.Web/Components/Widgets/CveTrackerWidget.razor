@@ -1,6 +1,7 @@
 @* CVE Tracker Widget - displays security vulnerabilities from NVD or EUVD *@
 @inject IHttpClientFactory HttpClientFactory
-@implements IDisposable
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
 <div class="h-full flex flex-col gap-4">
     <!-- Header with source and refresh -->
@@ -53,7 +54,7 @@
     else
     {
         <!-- CVE List -->
-        <div class="flex-1 overflow-auto space-y-3">
+        <div id="cve-scroll-@Widget.Id" class="flex-1 @(_autoScroll ? "overflow-hidden" : "overflow-auto") space-y-3">
             @foreach (var cve in _cves)
             {
                 var (bgClass, badgeClass, borderClass) = GetSeverityClasses(cve.Severity);
@@ -94,6 +95,10 @@
     private string _source = "NVD";
     private List<CveItem> _cves = [];
     private string _lastSource = "";
+    private int _lastLimit = -1;
+    private string _lastKeywords = "";
+    private bool _autoScroll;
+    private bool _scrollStarted;
     private readonly CancellationTokenSource _refreshCts = new();
 
     protected override void OnInitialized()
@@ -104,12 +109,40 @@
     protected override async Task OnParametersSetAsync()
     {
         var source = Widget.GetConfig("source", "nvd").ToLowerInvariant();
+        var limit = Widget.GetConfig("limit", 10);
+        var keywords = Widget.GetConfig("keywords", "");
         _source = source == "euvd" ? "EUVD" : "NVD";
+        _autoScroll = Widget.GetConfig("autoScroll", false);
 
-        if (source != _lastSource)
+        // Only re-fetch when the source, limit, or keywords actually changed
+        if (source != _lastSource || limit != _lastLimit || keywords != _lastKeywords)
         {
             _lastSource = source;
+            _lastLimit = limit;
+            _lastKeywords = keywords;
+            _scrollStarted = false;
+            await StopScrollAsync();
             await LoadCvesAsync();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_autoScroll && !_scrollStarted && _cves.Count > 0)
+        {
+            _scrollStarted = true;
+            var speed = Widget.GetConfig("scrollSpeed", "medium") switch
+            {
+                "slow" => 20.0,
+                "fast" => 80.0,
+                _      => 40.0
+            };
+            await JS.InvokeVoidAsync("cveAutoScroll.start", Widget.Id, speed);
+        }
+        else if (!_autoScroll && _scrollStarted)
+        {
+            _scrollStarted = false;
+            await StopScrollAsync();
         }
     }
 
@@ -117,6 +150,7 @@
     {
         _loading = true;
         _error = null;
+        _scrollStarted = false;
         StateHasChanged();
 
         try
@@ -152,7 +186,12 @@
         }
     }
 
-    private async Task RefreshAsync() => await LoadCvesAsync();
+    private async Task RefreshAsync()
+    {
+        _scrollStarted = false;
+        await StopScrollAsync();
+        await LoadCvesAsync();
+    }
 
     private async Task AutoRefreshLoopAsync(CancellationToken ct)
     {
@@ -167,7 +206,17 @@
         catch (TaskCanceledException) { }
     }
 
-    public void Dispose() => _refreshCts.Cancel();
+    private async Task StopScrollAsync()
+    {
+        try { await JS.InvokeVoidAsync("cveAutoScroll.stop", Widget.Id); }
+        catch { /* JS may not be available yet */ }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _refreshCts.CancelAsync();
+        await StopScrollAsync();
+    }
 
     private static (string bg, string badge, string border) GetSeverityClasses(string severity) => severity switch
     {

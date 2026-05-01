@@ -6,12 +6,12 @@ var isTestRun = string.Equals(
     StringComparison.OrdinalIgnoreCase);
 
 var cache = builder.AddRedis("cache");
-
+var registryEndpoint = builder.AddParameterFromConfiguration("registryEndpoint", "REGISTRY_ENDPOINT");
+var registryRepository = builder.AddParameterFromConfiguration("registryRepository", "REGISTRY_REPOSITORY");
 #pragma warning disable ASPIRECOMPUTE003
 var registry = builder.AddContainerRegistry(
-    "<name>",
-    "<endpoint>",
-    "<repository>"
+    "ghcr",
+	registryEndpoint
 );
 
 var postgres = builder.AddPostgres("postgres").WithContainerName("dashgres")
