@@ -128,7 +128,9 @@ static DashboardDto ToDashboardDto(DashboardEntity d, string? userPermission = n
         d.Widgets.OrderBy(w => w.Order).Select(ToWidgetDto).ToList(),
         d.OwnerId,
         d.Visibility,
-        userPermission);
+        userPermission,
+        d.AutoScroll,
+        d.ScrollSpeed);
 
 static async Task CreatePersonalDashboardAsync(DashboardDbContext db, string userId, string displayName)
 {
@@ -292,8 +294,10 @@ api.MapPut("/dashboards/{id}", async (string id, UpdateDashboardRequest req, Htt
         return Results.StatusCode(403);
     entity.Name = req.Name;
     entity.LayoutMode = req.LayoutMode;
+    entity.AutoScroll = req.AutoScroll;
+    entity.ScrollSpeed = req.ScrollSpeed;
     await db.SaveChangesAsync();
-    return Results.Ok(new DashboardDto(entity.Id, entity.Name, entity.LayoutMode, [], entity.OwnerId, entity.Visibility, "Owner"));
+    return Results.Ok(new DashboardDto(entity.Id, entity.Name, entity.LayoutMode, [], entity.OwnerId, entity.Visibility, "Owner", entity.AutoScroll, entity.ScrollSpeed));
 });
 
 api.MapDelete("/dashboards/{id}", async (string id, HttpRequest request, DashboardDbContext db) =>

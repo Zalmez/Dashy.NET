@@ -27,6 +27,8 @@ public class Dashboard
     public List<Widget> Widgets { get; set; } = [];
     public string? OwnerId { get; set; }
     public string Visibility { get; set; } = "Private";
+    public bool AutoScroll { get; set; } = false;
+    public string ScrollSpeed { get; set; } = "medium";
 
     /// <summary>"Owner" | "Editor" | "Viewer" | null (public view only). Set server-side per caller.</summary>
     public string? UserPermission { get; set; }

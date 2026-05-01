@@ -17,6 +17,7 @@ public interface IDashboardService
     Task RenameDashboardAsync(string id, string name);
     Task SetDashboardLayoutAsync(string id, LayoutMode mode);
     Task<bool> UpdateDashboardVisibilityAsync(string id, string visibility);
+    Task UpdateDashboardAutoScrollAsync(string id, bool autoScroll, string scrollSpeed);
     Task DeleteDashboardAsync(string id);
 
     Task AddWidgetAsync(Widget widget);

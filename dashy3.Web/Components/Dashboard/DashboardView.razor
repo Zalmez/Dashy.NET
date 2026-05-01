@@ -1,6 +1,7 @@
 @inject IDashboardService DashboardService
 @inject ISearchService SearchService
-@implements IDisposable
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
 @* Main dashboard content area with widget grid and sections *@
 
@@ -88,10 +89,52 @@ else
 }
 
 @code {
+    private bool _scrollStarted;
+    private string? _lastDashboardId;
+    private bool _lastAutoScroll;
+    private string _lastScrollSpeed = "";
+
     protected override void OnInitialized()
     {
         DashboardService.StateChanged += OnStateChanged;
         SearchService.SearchChanged += OnStateChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        var dashboard = DashboardService.ActiveDashboard;
+        if (dashboard is null) return;
+
+        // Track if dashboard or scroll settings changed
+        var dashboardChanged = dashboard.Id != _lastDashboardId;
+        var scrollSettingsChanged = dashboard.AutoScroll != _lastAutoScroll || dashboard.ScrollSpeed != _lastScrollSpeed;
+
+        if (dashboardChanged || scrollSettingsChanged)
+        {
+            _lastDashboardId = dashboard.Id;
+            _lastAutoScroll = dashboard.AutoScroll;
+            _lastScrollSpeed = dashboard.ScrollSpeed;
+            _scrollStarted = false;
+            await StopScrollAsync();
+        }
+
+        // Start scrolling if enabled and not already started
+        if (dashboard.AutoScroll && !_scrollStarted && dashboard.Widgets.Count > 0)
+        {
+            _scrollStarted = true;
+            var speed = dashboard.ScrollSpeed switch
+            {
+                "slow" => 20.0,
+                "fast" => 80.0,
+                _ => 40.0
+            };
+            await JS.InvokeVoidAsync("dashboardAutoScroll.start", speed);
+        }
+        else if (!dashboard.AutoScroll && _scrollStarted)
+        {
+            _scrollStarted = false;
+            await StopScrollAsync();
+        }
     }
 
     private void OnStateChanged() => InvokeAsync(StateHasChanged);
@@ -116,9 +159,16 @@ else
         _                     => "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
     };
 
-    public void Dispose()
+    private async Task StopScrollAsync()
+    {
+        try { await JS.InvokeVoidAsync("dashboardAutoScroll.stop"); }
+        catch { /* JS may not be available yet */ }
+    }
+
+    public async ValueTask DisposeAsync()
     {
         DashboardService.StateChanged -= OnStateChanged;
         SearchService.SearchChanged -= OnStateChanged;
+        await StopScrollAsync();
     }
 }

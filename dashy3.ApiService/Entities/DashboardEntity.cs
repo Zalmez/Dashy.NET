@@ -6,6 +6,8 @@ public class DashboardEntity
     public string Name { get; set; } = "Dashboard";
     public string LayoutMode { get; set; } = "Auto";
     public int Order { get; set; }
+    public bool AutoScroll { get; set; } = false;
+    public string ScrollSpeed { get; set; } = "medium";
 
     public List<WidgetEntity> Widgets { get; set; } = [];
     public string? OwnerId { get; set; }

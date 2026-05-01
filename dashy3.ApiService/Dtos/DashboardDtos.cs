@@ -11,7 +11,9 @@ public record DashboardDto(
     List<WidgetDto> Widgets,
     string? OwnerId,
     string Visibility,
-    string? UserPermission); // "Owner" | "Editor" | "Viewer" | null (public view)
+    string? UserPermission,
+    bool AutoScroll,
+    string ScrollSpeed); // "Owner" | "Editor" | "Viewer" | null (public view)
 
 public record WidgetDto(
     string Id,
@@ -36,7 +38,7 @@ public record CreateDashboardRequest(string Name, string LayoutMode = "Auto", st
 
 public record UpdateDashboardVisibilityRequest(string Visibility);
 
-public record UpdateDashboardRequest(string Name, string LayoutMode);
+public record UpdateDashboardRequest(string Name, string LayoutMode, bool AutoScroll, string ScrollSpeed);
 
 public record CreateWidgetRequest(
     string Type,

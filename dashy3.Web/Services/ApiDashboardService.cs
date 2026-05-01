@@ -121,7 +121,12 @@ public class ApiDashboardService(
         try
         {
             var req = await AddUserIdAsync(new HttpRequestMessage(HttpMethod.Put, $"/api/dashboards/{id}"));
-            req.Content = JsonContent.Create(new { name, layoutMode = dashboard.LayoutMode.ToString() });
+            req.Content = JsonContent.Create(new { 
+                name, 
+                layoutMode = dashboard.LayoutMode.ToString(),
+                autoScroll = dashboard.AutoScroll,
+                scrollSpeed = dashboard.ScrollSpeed
+            });
             var res = await http.SendAsync(req);
             res.EnsureSuccessStatusCode();
         }
@@ -146,7 +151,12 @@ public class ApiDashboardService(
         try
         {
             var req = await AddUserIdAsync(new HttpRequestMessage(HttpMethod.Put, $"/api/dashboards/{id}"));
-            req.Content = JsonContent.Create(new { name = dashboard.Name, layoutMode = mode.ToString() });
+            req.Content = JsonContent.Create(new { 
+                name = dashboard.Name, 
+                layoutMode = mode.ToString(),
+                autoScroll = dashboard.AutoScroll,
+                scrollSpeed = dashboard.ScrollSpeed
+            });
             var res = await http.SendAsync(req);
             res.EnsureSuccessStatusCode();
         }
@@ -189,6 +199,39 @@ public class ApiDashboardService(
             toast.ShowError($"Failed to update visibility: {ex.Message}");
             NotifyStateChanged();
             return false;
+        }
+    }
+
+    public async Task UpdateDashboardAutoScrollAsync(string id, bool autoScroll, string scrollSpeed)
+    {
+        var dashboard = _dashboards.FirstOrDefault(d => d.Id == id);
+        if (dashboard is null) return;
+
+        var oldAutoScroll = dashboard.AutoScroll;
+        var oldScrollSpeed = dashboard.ScrollSpeed;
+        dashboard.AutoScroll = autoScroll;
+        dashboard.ScrollSpeed = scrollSpeed;
+        NotifyStateChanged();
+
+        try
+        {
+            var req = await AddUserIdAsync(new HttpRequestMessage(HttpMethod.Put, $"/api/dashboards/{id}"));
+            req.Content = JsonContent.Create(new { 
+                name = dashboard.Name, 
+                layoutMode = dashboard.LayoutMode.ToString(),
+                autoScroll,
+                scrollSpeed
+            });
+            var res = await http.SendAsync(req);
+            res.EnsureSuccessStatusCode();
+        }
+        catch (Exception ex)
+        {
+            dashboard.AutoScroll = oldAutoScroll;
+            dashboard.ScrollSpeed = oldScrollSpeed;
+            logger.LogError(ex, "Failed to update auto-scroll for dashboard {DashboardId}", id);
+            toast.ShowError($"Failed to update auto-scroll: {ex.Message}");
+            NotifyStateChanged();
         }
     }
 
