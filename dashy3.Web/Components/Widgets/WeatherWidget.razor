@@ -1,4 +1,3 @@
-@* Weather Widget - displays current weather conditions *@
 @inject IHttpClientFactory HttpClientFactory
 
 <div class="h-full flex flex-col overflow-hidden">
@@ -22,11 +21,8 @@
     }
     else
     {
-        <!-- Compact grid layout for small, traditional layout for medium+ -->
         <div class="h-full flex flex-col">
-            <!-- Small: Compact grid layout -->
             <div class="sm:hidden flex-1 grid grid-rows-[auto_1fr] gap-1 p-1.5 overflow-hidden">
-                <!-- Top: Icon + Temp -->
                 <div class="flex items-center justify-center gap-1.5">
                     <div class="flex-shrink-0 w-8 h-8">
                         @WeatherIcon(_weatherCode)
@@ -36,7 +32,6 @@
                         <div class="text-[10px] text-slate-500 dark:text-slate-400 leading-tight truncate">@_location</div>
                     </div>
                 </div>
-                <!-- Bottom: Stats in 3 columns -->
                 <div class="grid grid-cols-3 gap-1 min-h-0">
                     <div class="flex flex-col items-center justify-center gap-0.5 bg-slate-50 dark:bg-slate-800 rounded p-0.5 min-h-0">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-blue-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
@@ -53,7 +48,6 @@
                 </div>
             </div>
 
-            <!-- Medium+: Traditional centered layout -->
             <div class="hidden sm:flex flex-1 flex-col">
                 <div class="flex-1 flex flex-col items-center justify-center min-h-0 py-1 px-2 gap-0.5">
                     <div class="flex-shrink-0 max-h-12 md:max-h-14 mb-1">
@@ -64,7 +58,6 @@
                     <div class="text-xs text-slate-500 dark:text-slate-500 text-center w-full line-clamp-1 leading-tight">@_location</div>
                 </div>
 
-                <!-- Weather details -->
                 <div class="flex-shrink-0 grid grid-cols-3 gap-2 md:gap-3 py-2 md:py-3 border-t border-slate-200 dark:border-slate-700">
                     <div class="flex flex-col items-center gap-0.5">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 md:w-5 md:h-5 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
@@ -87,6 +80,8 @@
     }
 </div>
 
+@implements IAsyncDisposable
+
 @code {
     [Parameter, EditorRequired] public Widget Widget { get; set; } = default!;
 
@@ -103,27 +98,60 @@
 
     private string _lastLocation = "";
     private string _lastUnit = "";
+    private int _lastRefreshInterval = 0;
+    private CancellationTokenSource? _refreshCts;
+    private bool _firstLoad = true;
 
     protected override async Task OnParametersSetAsync()
     {
         var loc = Widget.GetConfig("location", "San Francisco");
         var unit = Widget.GetConfig("unit", "celsius");
+        var refreshInterval = int.TryParse(Widget.GetConfig("refreshInterval", "10"), out var interval) ? interval : 10;
 
-        if (loc == _lastLocation && unit == _lastUnit)
+        var configChanged = loc != _lastLocation || unit != _lastUnit || refreshInterval != _lastRefreshInterval;
+
+        if (!configChanged && !_firstLoad)
             return;
 
         _lastLocation = loc;
         _lastUnit = unit;
+        _lastRefreshInterval = refreshInterval;
         _location = loc;
         _unit = string.Equals(unit, "fahrenheit", StringComparison.OrdinalIgnoreCase) ? "F" : "C";
+        _firstLoad = false;
 
+        _refreshCts?.Cancel();
+        _refreshCts = new CancellationTokenSource();
+        _ = AutoRefreshLoopAsync(_refreshCts.Token);
+
+        await LoadWeatherAsync();
+    }
+
+    private async Task AutoRefreshLoopAsync(CancellationToken ct)
+    {
+        try
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromMinutes(_lastRefreshInterval), ct);
+                if (!ct.IsCancellationRequested)
+                {
+                    await LoadWeatherAsync();
+                }
+            }
+        }
+        catch (OperationCanceledException) {  }
+    }
+
+    private async Task LoadWeatherAsync()
+    {
         _loading = true;
         _error = null;
 
         try
         {
             var http = HttpClientFactory.CreateClient("dashboards-api");
-            var url = $"/api/weather?location={Uri.EscapeDataString(loc)}&unit={Uri.EscapeDataString(unit)}";
+            var url = $"/api/weather?location={Uri.EscapeDataString(_lastLocation)}&unit={Uri.EscapeDataString(_lastUnit)}";
             var result = await http.GetFromJsonAsync<WeatherResult>(url);
 
             if (result is not null)
@@ -145,7 +173,18 @@
         finally
         {
             _loading = false;
+            await InvokeAsync(StateHasChanged);
         }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_refreshCts is not null)
+        {
+            _refreshCts.Cancel();
+            _refreshCts.Dispose();
+        }
+        await Task.CompletedTask;
     }
 
     private static RenderFragment WeatherIcon(int code) => builder =>

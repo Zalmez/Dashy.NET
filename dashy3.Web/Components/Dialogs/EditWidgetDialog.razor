@@ -52,7 +52,8 @@
             else if (Widget.Type == WidgetType.Weather)
             {
                 <WeatherWidgetConfig @bind-Location="_weatherLocation"
-                                     @bind-Unit="_weatherUnit" />
+                                     @bind-Unit="_weatherUnit"
+                                     @bind-RefreshInterval="_weatherRefreshInterval" />
             }
             else if (Widget.Type == WidgetType.Markdown)
             {
@@ -270,6 +271,7 @@
     private string _linkDescription = "";
     private string _weatherLocation = "";
     private string _weatherUnit = "celsius";
+    private int _weatherRefreshInterval = 10;
     private string _markdownContent = "";
     private List<StatusWidgetConfig.StatusServiceEntry> _statusServices = [];
     private string _rssUrl = "";
@@ -307,6 +309,7 @@
             case WidgetType.Weather:
                 _weatherLocation = Widget.GetConfig<string>("location", "");
                 _weatherUnit = Widget.GetConfig<string>("unit", "celsius");
+                _weatherRefreshInterval = Widget.GetConfig<int>("refreshInterval", 10);
                 break;
 
             case WidgetType.Markdown:
@@ -378,7 +381,7 @@
         return Widget.Type switch
         {
             WidgetType.Link     => new() { ["url"] = _linkUrl, ["description"] = _linkDescription },
-            WidgetType.Weather  => new() { ["location"] = _weatherLocation, ["unit"] = _weatherUnit },
+            WidgetType.Weather  => new() { ["location"] = _weatherLocation, ["unit"] = _weatherUnit, ["refreshInterval"] = _weatherRefreshInterval },
             WidgetType.Markdown => new() { ["content"] = _markdownContent },
             WidgetType.Status   => new()
             {

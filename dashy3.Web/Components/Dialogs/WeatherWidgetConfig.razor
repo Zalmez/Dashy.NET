@@ -38,11 +38,27 @@
     </div>
 </div>
 
+<!-- Refresh Interval -->
+<div class="mb-4">
+    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+        Auto-refresh Interval
+    </label>
+    <select class="input-field" value="@RefreshInterval" @onchange="OnRefreshIntervalChange">
+        <option value="5">Every 5 minutes</option>
+        <option value="10">Every 10 minutes</option>
+        <option value="15">Every 15 minutes</option>
+        <option value="30">Every 30 minutes</option>
+    </select>
+    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Weather data will automatically refresh at this interval</p>
+</div>
+
 @code {
     [Parameter] public string Location { get; set; } = "";
     [Parameter] public EventCallback<string> LocationChanged { get; set; }
     [Parameter] public string Unit { get; set; } = "celsius";
     [Parameter] public EventCallback<string> UnitChanged { get; set; }
+    [Parameter] public int RefreshInterval { get; set; } = 10;
+    [Parameter] public EventCallback<int> RefreshIntervalChanged { get; set; }
 
     private bool _locationError;
     private readonly string _id = Guid.NewGuid().ToString("N")[..6];
@@ -60,4 +76,13 @@
 
     private Task SetCelsius(ChangeEventArgs _) => UnitChanged.InvokeAsync("celsius");
     private Task SetFahrenheit(ChangeEventArgs _) => UnitChanged.InvokeAsync("fahrenheit");
+
+    private Task OnRefreshIntervalChange(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var interval))
+        {
+            return RefreshIntervalChanged.InvokeAsync(interval);
+        }
+        return Task.CompletedTask;
+    }
 }
