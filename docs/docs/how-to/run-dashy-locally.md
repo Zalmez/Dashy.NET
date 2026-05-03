@@ -14,7 +14,7 @@ You already know Dashy and want a fast, repeatable local run process.
 2. Start the application:
 
 ```bash
-dotnet run --project dashy3.AppHost
+aspire run
 ```
 
 3. Open Aspire dashboard.

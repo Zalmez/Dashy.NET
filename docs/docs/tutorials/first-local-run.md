@@ -23,7 +23,7 @@ Start the full Dashy stack with Aspire and open the web UI.
 2. Run the AppHost:
 
 ```bash
-dotnet run --project dashy3.AppHost
+aspire run
 ```
 
 3. Wait for Aspire resources to become healthy.

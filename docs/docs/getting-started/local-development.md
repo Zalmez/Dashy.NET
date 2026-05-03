@@ -17,7 +17,7 @@ Dashy uses .NET Aspire to orchestrate all required services during development.
 From the repository root:
 
 ```bash
-dotnet run --project dashy3.AppHost
+aspire run
 ```
 
 This starts:
