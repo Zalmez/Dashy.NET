@@ -101,7 +101,7 @@ public class DashboardApiTests(AspireFixture fixture)
 
         var updateRes = await client.PutAsJsonAsync($"/api/dashboards/{dashboard!.Id}", new
         {
-            name = "Updated Name", layoutMode = "grid"
+            name = "Updated Name", layoutMode = "grid", autoScroll = false, scrollSpeed = "medium"
         });
 
         Assert.Equal(HttpStatusCode.OK, updateRes.StatusCode);
