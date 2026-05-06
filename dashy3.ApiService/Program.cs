@@ -30,21 +30,35 @@ builder.Services.AddOpenApi(options =>
             Name = "X-Api-Key",
             Description = "API key for automation and integration scenarios."
         };
+        document.Components.SecuritySchemes["UserId"] = new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.ApiKey,
+            In = ParameterLocation.Header,
+            Name = "X-User-Id",
+            Description = "User identity header for authenticated frontend sessions."
+        };
         return Task.CompletedTask;
     });
     options.AddOperationTransformer((operation, context, cancellationToken) =>
     {
         var desc = context.Description;
-        var isApiKeyEndpoint =
+        var acceptsApiKey =
             (desc.HttpMethod == "GET" && desc.RelativePath == "api/dashboards") ||
             (desc.HttpMethod == "PUT" && desc.RelativePath == "api/widgets/{widgetId}/content");
-        if (isApiKeyEndpoint)
+        if (acceptsApiKey)
         {
-            operation.Security ??= [];
-            operation.Security.Add(new OpenApiSecurityRequirement
-            {
-                [new OpenApiSecuritySchemeReference("ApiKey")] = []
-            });
+            // Both X-Api-Key and X-User-Id are accepted; express as alternatives (OR).
+            operation.Security =
+            [
+                new OpenApiSecurityRequirement
+                {
+                    [new OpenApiSecuritySchemeReference("ApiKey")] = []
+                },
+                new OpenApiSecurityRequirement
+                {
+                    [new OpenApiSecuritySchemeReference("UserId")] = []
+                }
+            ];
         }
         return Task.CompletedTask;
     });
