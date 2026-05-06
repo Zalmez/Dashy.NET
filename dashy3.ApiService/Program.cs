@@ -7,6 +7,7 @@ using dashy3.ApiService.Entities;
 using dashy3.ApiService.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,7 +17,38 @@ var runMigrationsInApiService = builder.Configuration.GetValue<bool?>("Database:
 
 builder.AddServiceDefaults();
 builder.Services.AddProblemDetails();
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer((document, context, cancellationToken) =>
+    {
+        document.Components ??= new OpenApiComponents();
+        document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
+        document.Components.SecuritySchemes["ApiKey"] = new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.ApiKey,
+            In = ParameterLocation.Header,
+            Name = "X-Api-Key",
+            Description = "API key for automation and integration scenarios."
+        };
+        return Task.CompletedTask;
+    });
+    options.AddOperationTransformer((operation, context, cancellationToken) =>
+    {
+        var desc = context.Description;
+        var isApiKeyEndpoint =
+            (desc.HttpMethod == "GET" && desc.RelativePath == "api/dashboards") ||
+            (desc.HttpMethod == "PUT" && desc.RelativePath == "api/widgets/{widgetId}/content");
+        if (isApiKeyEndpoint)
+        {
+            operation.Security ??= [];
+            operation.Security.Add(new OpenApiSecurityRequirement
+            {
+                [new OpenApiSecuritySchemeReference("ApiKey")] = []
+            });
+        }
+        return Task.CompletedTask;
+    });
+});
 
 builder.Services.AddHttpClient("weather", c => { c.Timeout = TimeSpan.FromSeconds(10); });
 
